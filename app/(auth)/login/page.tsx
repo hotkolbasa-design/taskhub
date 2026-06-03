@@ -85,8 +85,11 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 rounded-lg py-2.5 bg-[#4F8EF7] text-white text-sm font-medium hover:bg-[#3a7ae4] disabled:opacity-50 transition-colors cursor-pointer"
+          className="mt-2 rounded-lg py-2.5 bg-[#4F8EF7] text-white text-sm font-medium hover:bg-[#3a7ae4] disabled:opacity-70 transition-colors cursor-pointer flex items-center justify-center gap-2"
         >
+          {loading && (
+            <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
+          )}
           {loading ? 'Вход…' : 'Войти'}
         </button>
       </form>
