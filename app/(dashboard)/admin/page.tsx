@@ -4,16 +4,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import AdminUserActions from '@/components/admin-user-actions'
 import AdminNameEdit from '@/components/admin-name-edit'
 
-const statusLabel: Record<string, { label: string; color: string; bg: string }> = {
-  active:   { label: 'Активен',   color: 'var(--green)',  bg: 'rgba(45,212,160,0.12)' },
-  pending:  { label: 'Ожидает',   color: 'var(--yellow)', bg: 'rgba(247,192,79,0.12)' },
-  inactive: { label: 'Неактивен', color: 'var(--text2)',  bg: 'rgba(136,146,164,0.12)' },
-}
-
-const roleLabel: Record<string, { label: string; color: string; bg: string }> = {
-  admin:    { label: 'Admin',    color: 'var(--accent)', bg: 'rgba(79,142,247,0.12)' },
-  employee: { label: 'Employee', color: 'var(--text2)',  bg: 'rgba(136,146,164,0.12)' },
-}
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -106,9 +96,6 @@ function Row({
   currentUserId: string
   isLast: boolean
 }) {
-  const s = statusLabel[profile.status] ?? statusLabel.inactive
-  const r = roleLabel[profile.role] ?? roleLabel.employee
-
   return (
     <div
       className="flex items-center gap-4 px-5 py-3.5"
@@ -128,9 +115,6 @@ function Row({
         </p>
       </div>
 
-      <Badge label={r.label} color={r.color} bg={r.bg} />
-      <Badge label={s.label} color={s.color} bg={s.bg} />
-
       <AdminUserActions
         userId={profile.id}
         status={profile.status}
@@ -141,13 +125,3 @@ function Row({
   )
 }
 
-function Badge({ label, color, bg }: { label: string; color: string; bg: string }) {
-  return (
-    <span
-      className="text-xs px-2 py-0.5 rounded-md shrink-0"
-      style={{ color, background: bg }}
-    >
-      {label}
-    </span>
-  )
-}
