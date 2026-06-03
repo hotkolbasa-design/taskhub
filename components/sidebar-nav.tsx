@@ -172,7 +172,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
                 {displayName}
               </span>
               {hovered && (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--text2)', shrink: 0 }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--text2)', flexShrink: 0 }}>
                   <path d="M8.5 1.5l2 2L3 11H1v-2L8.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
