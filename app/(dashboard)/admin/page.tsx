@@ -8,15 +8,16 @@ import AdminNameEdit from '@/components/admin-name-edit'
 export default async function AdminPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
   if (!user) redirect('/login')
 
   const { data: myProfile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, status')
     .eq('id', user.id)
     .single()
 
-  if (myProfile?.role !== 'admin') redirect('/dashboard')
+  if (!myProfile || myProfile.role !== 'admin') redirect('/dashboard')
 
   const admin = createAdminClient()
 
