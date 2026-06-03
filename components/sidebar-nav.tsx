@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -60,12 +61,13 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
   const router = useRouter()
 
   const displayName = profile?.full_name || profile?.login || 'Пользователь'
+  const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
+    setSigningOut(true)
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.refresh()
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   return (
@@ -117,15 +119,21 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full transition-colors"
-          style={{ color: 'var(--text2)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--red)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text2)')}
+          disabled={signingOut}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full transition-colors disabled:opacity-60"
+          style={{ color: signingOut ? 'var(--text2)' : 'var(--text2)' }}
+          onMouseEnter={(e) => { if (!signingOut) e.currentTarget.style.color = 'var(--red)' }}
+          onMouseLeave={(e) => { if (!signingOut) e.currentTarget.style.color = 'var(--text2)' }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 2.5H3A1.5 1.5 0 001.5 4v8A1.5 1.5 0 003 13.5h3M10.5 11l3-3-3-3M13.5 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Выйти
+          {signingOut ? (
+            <span className="w-4 h-4 rounded-full border border-t-transparent animate-spin shrink-0"
+              style={{ borderColor: 'var(--text2)', borderTopColor: 'transparent' }} />
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 2.5H3A1.5 1.5 0 001.5 4v8A1.5 1.5 0 003 13.5h3M10.5 11l3-3-3-3M13.5 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+          {signingOut ? 'Выход…' : 'Выйти'}
         </button>
       </div>
     </aside>
