@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
       <SidebarNav profile={profile} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto h-full">
         {children}
       </main>
     </div>
