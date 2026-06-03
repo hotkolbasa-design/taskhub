@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -60,41 +59,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const initialName = profile?.full_name || profile?.login || 'Пользователь'
-  const [displayName, setDisplayName] = useState(initialName)
-  const [editing, setEditing] = useState(false)
-  const [editValue, setEditValue] = useState(initialName)
-  const [hovered, setHovered] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (editing) inputRef.current?.select()
-  }, [editing])
-
-  async function saveName() {
-    const trimmed = editValue.trim()
-    if (!trimmed || trimmed === displayName) {
-      setEditing(false)
-      setEditValue(displayName)
-      return
-    }
-    setDisplayName(trimmed)
-    setEditing(false)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('profiles').update({ full_name: trimmed }).eq('id', user.id)
-      router.refresh()
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') saveName()
-    if (e.key === 'Escape') {
-      setEditing(false)
-      setEditValue(displayName)
-    }
-  }
+  const displayName = profile?.full_name || profile?.login || 'Пользователь'
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -138,47 +103,16 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
       {/* Пользователь + выход */}
       <div className="px-3 pb-4 flex flex-col gap-1" style={{ borderTop: '1px solid var(--border)' }}>
-        <div
-          className="flex items-center gap-2.5 px-3 py-3 rounded-lg cursor-pointer"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          onClick={() => { if (!editing) { setEditing(true); setEditValue(displayName) } }}
-          style={{ background: hovered && !editing ? 'var(--surface2)' : 'transparent', transition: 'background 0.15s' }}
-          title="Нажмите чтобы изменить имя"
-        >
+        <div className="flex items-center gap-2.5 px-3 py-3">
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
             style={{ background: 'var(--accent)', color: '#fff' }}
           >
             {displayName[0].toUpperCase()}
           </div>
-
-          {editing ? (
-            <input
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={saveName}
-              onKeyDown={handleKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 text-sm bg-transparent outline-none min-w-0"
-              style={{
-                color: 'var(--text)',
-                borderBottom: '1px solid var(--accent)',
-              }}
-            />
-          ) : (
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              <span className="text-sm truncate" style={{ color: 'var(--text)' }}>
-                {displayName}
-              </span>
-              {hovered && (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--text2)', flexShrink: 0 }}>
-                  <path d="M8.5 1.5l2 2L3 11H1v-2L8.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-          )}
+          <span className="text-sm truncate" style={{ color: 'var(--text)' }}>
+            {displayName}
+          </span>
         </div>
 
         <button

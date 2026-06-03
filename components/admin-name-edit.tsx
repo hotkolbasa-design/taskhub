@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { updateUserName } from '@/app/(dashboard)/admin/actions'
 
 export default function AdminNameEdit({ userId, name }: { userId: string; name: string }) {
+  const router = useRouter()
   const [display, setDisplay] = useState(name)
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(name)
@@ -24,6 +26,7 @@ export default function AdminNameEdit({ userId, name }: { userId: string; name: 
     setDisplay(trimmed)
     setEditing(false)
     await updateUserName(userId, trimmed)
+    router.refresh()
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
