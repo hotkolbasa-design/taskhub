@@ -1,12 +1,27 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const reasonMessages: Record<string, string> = {
+  inactive: 'Ваш аккаунт деактивирован. Обратитесь к администратору.',
+  pending:  'Ваш аккаунт ожидает подтверждения администратора.',
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const reason = searchParams.get('reason')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +48,13 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm">
       <h1 className="text-2xl font-semibold text-white mb-8 text-center">Вход</h1>
+
+      {reason && reasonMessages[reason] && (
+        <div className="mb-4 px-4 py-3 rounded-lg text-sm text-center"
+          style={{ background: 'rgba(247,192,79,0.12)', color: 'var(--yellow)', border: '1px solid rgba(247,192,79,0.2)' }}>
+          {reasonMessages[reason]}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Email">
@@ -79,6 +101,7 @@ export default function LoginPage() {
     </div>
   )
 }
+
 
 const inputCls =
   'w-full rounded-lg px-3 py-2.5 bg-[#1C2232] border border-[#2A3347] text-white text-sm outline-none focus:border-[#4F8EF7] transition-colors placeholder-gray-600'

@@ -14,9 +14,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, login, role')
+    .select('full_name, login, role, status')
     .eq('id', user.id)
     .maybeSingle()
+
+  if (profile?.status === 'inactive') redirect('/login?reason=inactive')
+  if (profile?.status === 'pending') redirect('/login?reason=pending')
 
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
