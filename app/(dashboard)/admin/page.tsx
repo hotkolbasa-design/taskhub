@@ -43,7 +43,7 @@ export default async function AdminPage() {
   return (
     <div className="p-8 max-w-5xl">
       <h1 className="text-xl font-semibold mb-8" style={{ color: 'var(--text)' }}>
-        Панель администратора
+        Пользователи
       </h1>
 
       {pending.length > 0 && (
