@@ -52,12 +52,16 @@ export default function AdminUserActions({ userId, status, role, isSelf }: Props
   const s = statusConfig[currentStatus as keyof typeof statusConfig] ?? statusConfig.inactive
   const r = roleConfig[currentRole as keyof typeof roleConfig] ?? roleConfig.employee
 
-  if (isSelf) {
+  const isProtected = isSelf || currentRole === 'admin'
+
+  if (isProtected) {
     return (
       <div className="flex items-center gap-2">
         <Badge label={r.label} color={r.color} bg={r.bg} />
         <Badge label={s.label} color={s.color} bg={s.bg} />
-        <span className="text-xs" style={{ color: 'var(--text2)' }}>вы</span>
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>
+          {isSelf ? 'вы' : 'admin'}
+        </span>
       </div>
     )
   }
