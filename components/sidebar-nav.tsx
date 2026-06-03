@@ -84,6 +84,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       await supabase.from('profiles').update({ full_name: trimmed }).eq('id', user.id)
+      router.refresh()
     }
   }
 

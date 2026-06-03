@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import AdminUserActions from '@/components/admin-user-actions'
+import AdminNameEdit from '@/components/admin-name-edit'
 
 const statusLabel: Record<string, { label: string; color: string; bg: string }> = {
   active:   { label: 'Активен',   color: 'var(--green)',  bg: 'rgba(45,212,160,0.12)' },
@@ -121,9 +122,7 @@ function Row({
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
-          {profile.full_name || profile.login}
-        </p>
+        <AdminNameEdit userId={profile.id} name={profile.full_name || profile.login} />
         <p className="text-xs truncate" style={{ color: 'var(--text2)' }}>
           {email} · @{profile.login}
         </p>

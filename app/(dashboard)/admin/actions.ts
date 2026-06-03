@@ -38,3 +38,10 @@ export async function setRole(userId: string, role: 'admin' | 'employee') {
   await admin.from('profiles').update({ role }).eq('id', userId)
   revalidatePath('/admin')
 }
+
+export async function updateUserName(userId: string, fullName: string) {
+  await requireAdmin()
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ full_name: fullName }).eq('id', userId)
+  revalidatePath('/admin')
+}
