@@ -112,7 +112,7 @@ function Row({
       <div className="flex-1 min-w-0">
         <AdminNameEdit userId={profile.id} name={profile.full_name || profile.login} />
         <p className="text-xs truncate" style={{ color: 'var(--text2)' }}>
-          {email} · @{profile.login}
+          {email}
         </p>
       </div>
 
