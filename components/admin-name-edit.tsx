@@ -10,6 +10,7 @@ export default function AdminNameEdit({ userId, name }: { userId: string; name: 
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(name)
   const [hovered, setHovered] = useState(false)
+  const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -25,14 +26,24 @@ export default function AdminNameEdit({ userId, name }: { userId: string; name: 
     }
     setDisplay(trimmed)
     setEditing(false)
+    setSaving(true)
     await updateUserName(userId, trimmed)
     router.refresh()
+    setSaving(false)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') save()
     if (e.key === 'Escape') { setEditing(false); setValue(display) }
   }
+
+  if (saving) return (
+    <div className="flex items-center gap-2">
+      <div className="w-3.5 h-3.5 rounded-full border border-t-transparent animate-spin"
+        style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }} />
+      <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{display}</span>
+    </div>
+  )
 
   return (
     <div
