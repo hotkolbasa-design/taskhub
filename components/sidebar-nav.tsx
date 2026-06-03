@@ -10,6 +10,19 @@ type Profile = {
   role: string | null
 }
 
+const adminItem = {
+  href: '/admin',
+  label: 'Администратор',
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2 13.5c0-2.485 2.686-4.5 6-4.5s6 2.015 6 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="13" cy="4" r="2" fill="currentColor" />
+      <path d="M12.5 3.5l.5.5 1-1" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+}
+
 const navItems = [
   {
     href: '/dashboard',
@@ -71,7 +84,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
       {/* Навигация */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
-        {navItems.map(({ href, label, icon }) => {
+        {[...navItems, ...(profile?.role === 'admin' ? [adminItem] : [])].map(({ href, label, icon }) => {
           const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
           return (
             <Link
