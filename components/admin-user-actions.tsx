@@ -86,9 +86,13 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
 function StaticBadge({ info }: { info: Option }) {
   return (
     <span
-      className="text-xs px-2.5 py-1 rounded-md select-none"
+      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md select-none"
       style={{ color: info.color, background: info.bg }}
     >
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: info.color }}
+      />
       {info.label}
     </span>
   )
