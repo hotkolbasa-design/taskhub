@@ -37,7 +37,7 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
 
   async function handleRoleChange(next: string) {
     if (next === currentRole) return
-    setCurrentRole(next)   // мгновенно
+    setCurrentRole(next)
     setSavingRole(true)
     await setRole(userId, next as 'admin' | 'employee')
     setSavingRole(false)
@@ -45,48 +45,29 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
 
   async function handleStatusChange(next: string) {
     if (next === currentStatus) return
-    setCurrentStatus(next) // мгновенно
+    setCurrentStatus(next)
     setSavingStatus(true)
     await setStatus(userId, next as 'active' | 'inactive')
     setSavingStatus(false)
   }
 
-  if (!canEdit) {
-    return (
-      <div className="flex items-center gap-2">
-        <div style={{ width: 100 }}>
-          <StaticBadge info={roleInfo} />
-        </div>
-        <div style={{ width: 108 }}>
-          <StaticBadge info={statusInfo} />
-        </div>
-        <span className="text-xs" style={{ color: 'var(--text2)' }}>
-          {isSelf ? 'вы' : 'admin'}
-        </span>
-      </div>
-    )
-  }
-
   const selectableStatuses = currentStatus === 'pending' ? STATUSES : STATUSES.filter(s => s.value !== 'pending')
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <div style={{ width: 100 }}>
-        <Dropdown
-          options={ROLES}
-          value={currentRole}
-          saving={savingRole}
-          onChange={handleRoleChange}
-        />
+        {canEdit
+          ? <Dropdown options={ROLES} value={currentRole} saving={savingRole} onChange={handleRoleChange} />
+          : <StaticBadge info={roleInfo} />}
       </div>
       <div style={{ width: 108 }}>
-        <Dropdown
-          options={selectableStatuses}
-          value={currentStatus}
-          saving={savingStatus}
-          onChange={handleStatusChange}
-        />
+        {canEdit
+          ? <Dropdown options={selectableStatuses} value={currentStatus} saving={savingStatus} onChange={handleStatusChange} />
+          : <StaticBadge info={statusInfo} />}
       </div>
+      <span className="text-xs" style={{ width: 28, color: 'var(--text2)' }}>
+        {!canEdit ? (isSelf ? 'вы' : 'admin') : ''}
+      </span>
     </div>
   )
 }
