@@ -121,11 +121,10 @@ function Dropdown({ options, value, saving, onChange }: {
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
         style={{
           color: current.color,
-          background: open ? current.bg : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${open ? current.color + '60' : 'rgba(255,255,255,0.08)'}`,
+          background: current.bg,
         }}
-        onMouseEnter={e => { if (!open) (e.currentTarget as HTMLElement).style.background = current.bg }}
-        onMouseLeave={e => { if (!open) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1.2)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1)' }}
       >
         {/* Индикатор сохранения */}
         <span
@@ -139,12 +138,6 @@ function Dropdown({ options, value, saving, onChange }: {
           }}
         />
         {current.label}
-        <svg
-          width="10" height="10" viewBox="0 0 10 10" fill="none"
-          style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        >
-          <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
       </button>
 
       {/* Список */}
