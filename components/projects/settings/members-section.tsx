@@ -21,6 +21,99 @@ const ROLE_OPTIONS = [
   { value: 'viewer', label: 'Наблюдатель', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
 ]
 
+function UserDropdown({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: Profile[]
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = options.find(o => o.id === value)
+
+  useEffect(() => {
+    if (!open) return
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+        style={{
+          background: 'var(--surface2)',
+          border: '1px solid var(--border)',
+          color: selected ? 'var(--text)' : 'var(--text2)',
+        }}
+      >
+        {selected ? (
+          <>
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+              style={{ background: 'var(--accent)', color: '#fff' }}
+            >
+              {(selected.full_name || selected.login)[0].toUpperCase()}
+            </span>
+            <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
+          </>
+        ) : (
+          <span className="flex-1">Выбрать пользователя...</span>
+        )}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 w-full"
+          style={{
+            background: 'var(--surface2)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          {options.map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => { onChange(opt.id); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
+              style={{ color: opt.id === value ? 'var(--accent)' : 'var(--text)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <span
+                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+                style={{ background: opt.id === value ? 'var(--accent)' : 'var(--surface)', color: '#fff' }}
+              >
+                {(opt.full_name || opt.login)[0].toUpperCase()}
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="truncate font-medium">{opt.full_name || opt.login}</span>
+                {opt.full_name && <span className="text-xs truncate" style={{ color: 'var(--text2)' }}>{opt.login}</span>}
+              </div>
+              {opt.id === value && (
+                <svg className="ml-auto shrink-0" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5.5L4 7.5L8 3" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RoleDropdown({
   value,
   onChange,
@@ -234,23 +327,11 @@ export default function MembersSection({
           </p>
         ) : (
           <div className="flex gap-2">
-            <select
+            <UserDropdown
               value={addingId}
-              onChange={e => setAddingId(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-              style={{
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                color: addingId ? 'var(--text)' : 'var(--text2)',
-              }}
-            >
-              <option value="">Выбрать пользователя...</option>
-              {notMembers.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name || p.login}
-                </option>
-              ))}
-            </select>
+              onChange={setAddingId}
+              options={notMembers}
+            />
 
             <RoleDropdown
               value={addingRole}
