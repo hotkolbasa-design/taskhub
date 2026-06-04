@@ -6,16 +6,14 @@ import NavigationLoader from '@/components/navigation-loader'
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) redirect('/login')
+  if (!session) redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, login, role, status')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .maybeSingle()
 
   if (profile?.status === 'inactive') redirect('/login?reason=inactive')

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(curl *)",
+      "Bash(lsof *)",
+      "Bash(kill *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(python3 *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(mkdir *)",
+      "Bash(tail *)",
+      "Bash(sleep *)"
+    ]
+  }
+}
