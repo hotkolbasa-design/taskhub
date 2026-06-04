@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { addMember, updateMemberRole, removeMember } from '@/app/(dashboard)/projects/[id]/settings/actions'
 
@@ -16,10 +16,82 @@ type Profile = {
   login: string
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: 'Владелец',
-  member: 'Участник',
-  viewer: 'Наблюдатель',
+const ROLE_OPTIONS = [
+  { value: 'member', label: 'Участник', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  { value: 'viewer', label: 'Наблюдатель', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
+]
+
+function RoleDropdown({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (v: 'member' | 'viewer') => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = ROLE_OPTIONS.find(o => o.value === value) ?? ROLE_OPTIONS[0]
+
+  useEffect(() => {
+    if (!open) return
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => !disabled && setOpen(o => !o)}
+        disabled={disabled}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+        style={{ background: current.bg, color: current.color }}
+        onMouseEnter={e => { if (!disabled) e.currentTarget.style.filter = 'brightness(1.2)' }}
+        onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)' }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: current.color }} />
+        {current.label}
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[140px]"
+          style={{
+            background: 'var(--surface2)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          {ROLE_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value as 'member' | 'viewer'); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left"
+              style={{ color: opt.value === value ? opt.color : 'var(--text)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />
+              {opt.label}
+              {opt.value === value && (
+                <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5.5L4 7.5L8 3" stroke={opt.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function MembersSection({
@@ -84,7 +156,7 @@ export default function MembersSection({
       </h2>
 
       {/* Список участников */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         {members.map(m => {
           const name = m.profile?.full_name || m.profile?.login || 'Неизвестный'
           const isOwner = m.role === 'owner'
@@ -97,7 +169,6 @@ export default function MembersSection({
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
               style={{ background: 'var(--surface2)' }}
             >
-              {/* Аватар */}
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
                 style={{ background: 'var(--accent)', color: '#fff' }}
@@ -105,35 +176,28 @@ export default function MembersSection({
                 {name[0].toUpperCase()}
               </div>
 
-              {/* Имя */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
-                  {name} {isSelf && <span style={{ color: 'var(--text2)', fontWeight: 400 }}>(вы)</span>}
+                  {name}{' '}
+                  {isSelf && <span style={{ color: 'var(--text2)', fontWeight: 400 }}>(вы)</span>}
                 </p>
                 <p className="text-xs truncate" style={{ color: 'var(--text2)' }}>
                   {m.profile?.login}
                 </p>
               </div>
 
-              {/* Роль */}
               {isOwner ? (
-                <span className="text-xs px-2.5 py-1 rounded-md" style={{ background: 'rgba(79,142,247,0.15)', color: 'var(--accent)' }}>
+                <span className="text-xs px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(79,142,247,0.15)', color: 'var(--accent)' }}>
                   Владелец
                 </span>
               ) : (
-                <select
+                <RoleDropdown
                   value={m.role}
+                  onChange={role => handleRoleChange(m.user_id, role)}
                   disabled={loading}
-                  onChange={e => handleRoleChange(m.user_id, e.target.value as 'member' | 'viewer')}
-                  className="text-xs px-2 py-1 rounded-md outline-none cursor-pointer"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                >
-                  <option value="member">Участник</option>
-                  <option value="viewer">Наблюдатель</option>
-                </select>
+                />
               )}
 
-              {/* Удалить */}
               {!isOwner && (
                 <button
                   onClick={() => handleRemove(m.user_id)}
@@ -161,15 +225,24 @@ export default function MembersSection({
       </div>
 
       {/* Добавить участника */}
-      {notMembers.length > 0 && (
-        <div className="flex flex-col gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-          <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Добавить участника</p>
+      <div className="flex flex-col gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+        <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Добавить участника</p>
+
+        {notMembers.length === 0 ? (
+          <p className="text-xs" style={{ color: 'var(--text2)', opacity: 0.5 }}>
+            Все пользователи системы уже добавлены в проект
+          </p>
+        ) : (
           <div className="flex gap-2">
             <select
               value={addingId}
               onChange={e => setAddingId(e.target.value)}
               className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: addingId ? 'var(--text)' : 'var(--text2)' }}
+              style={{
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                color: addingId ? 'var(--text)' : 'var(--text2)',
+              }}
             >
               <option value="">Выбрать пользователя...</option>
               {notMembers.map(p => (
@@ -179,15 +252,10 @@ export default function MembersSection({
               ))}
             </select>
 
-            <select
+            <RoleDropdown
               value={addingRole}
-              onChange={e => setAddingRole(e.target.value as 'member' | 'viewer')}
-              className="px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-            >
-              <option value="member">Участник</option>
-              <option value="viewer">Наблюдатель</option>
-            </select>
+              onChange={setAddingRole}
+            />
 
             <button
               onClick={handleAdd}
@@ -202,8 +270,8 @@ export default function MembersSection({
               Добавить
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
