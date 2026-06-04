@@ -47,10 +47,27 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span
-            className="text-xs px-2 py-0.5 rounded-md"
+            title={ROLE_LABEL[project.my_role]}
+            className="flex items-center justify-center w-6 h-6 rounded-md"
             style={{ background: 'var(--surface2)', color: 'var(--text2)' }}
           >
-            {ROLE_LABEL[project.my_role] ?? project.my_role}
+            {project.my_role === 'owner' && (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 9h10M2 9L1 4l3 2.5L6 2l2 4.5L11 4l-1 5H2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+            {project.my_role === 'member' && (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="4" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M2 10c0-2.21 1.79-4 4-4s4 1.79 4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            )}
+            {project.my_role === 'viewer' && (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4z" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            )}
           </span>
           {/* Кнопка удаления */}
           {confirming ? (

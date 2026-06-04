@@ -57,7 +57,7 @@ export async function getProjects(userId: string, isAdmin: boolean): Promise<Pro
     default_assignee_id: p.default_assignee_id,
     created_by: p.created_by,
     created_at: p.created_at,
-    my_role: roleMap[p.id] ?? 'viewer',
+    my_role: (roleMap[p.id] ?? 'viewer') as import('@/types').ProjectMemberRole,
     member_count: countMap[p.id] ?? 0,
   }))
 }
