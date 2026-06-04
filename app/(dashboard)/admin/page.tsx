@@ -29,12 +29,14 @@ export default async function AdminPage() {
   const { data: { users: authUsers } } = await admin.auth.admin.listUsers()
   const emailMap = Object.fromEntries(authUsers.map((u) => [u.id, u.email]))
 
+  const isSuperAdmin = (emailMap[user.id] ?? '') === 'director@goschool.kz'
+
   const pending = profiles?.filter((p) => p.status === 'pending') ?? []
   const rest = profiles?.filter((p) => p.status !== 'pending') ?? []
 
   return (
     <div className="p-8 max-w-5xl">
-      <h1 className="text-xl font-semibold mb-8" style={{ color: 'var(--text)' }}>
+<h1 className="text-xl font-semibold mb-8" style={{ color: 'var(--text)' }}>
         Пользователи
       </h1>
 
@@ -53,6 +55,7 @@ export default async function AdminPage() {
                 profile={profile}
                 email={emailMap[profile.id]}
                 currentUserId={user.id}
+                isSuperAdmin={isSuperAdmin}
                 isLast={i === pending.length - 1}
               />
             ))}
@@ -77,6 +80,7 @@ export default async function AdminPage() {
               profile={profile}
               email={emailMap[profile.id]}
               currentUserId={user.id}
+              isSuperAdmin={isSuperAdmin}
               isLast={i === rest.length - 1}
             />
           ))}
@@ -90,11 +94,13 @@ function Row({
   profile,
   email,
   currentUserId,
+  isSuperAdmin,
   isLast,
 }: {
   profile: { id: string; full_name: string; login: string; role: string; status: string }
   email: string | undefined
   currentUserId: string
+  isSuperAdmin: boolean
   isLast: boolean
 }) {
   return (
@@ -121,6 +127,7 @@ function Row({
         status={profile.status}
         role={profile.role}
         isSelf={profile.id === currentUserId}
+        isSuperAdmin={isSuperAdmin}
       />
     </div>
   )

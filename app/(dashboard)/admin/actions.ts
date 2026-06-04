@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+const SUPERADMIN_EMAIL = 'director@goschool.kz'
+
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,37 +18,54 @@ async function requireAdmin() {
     .single()
 
   if (profile?.role !== 'admin') throw new Error('Forbidden')
+  return user
 }
 
-async function guardTarget(userId: string) {
+async function isSuperAdmin(callerId: string): Promise<boolean> {
   const admin = createAdminClient()
-  const { data } = await admin.from('profiles').select('role').eq('id', userId).single()
-  if (data?.role === 'admin') throw new Error('Cannot modify another admin')
+  const { data } = await admin.auth.admin.getUserById(callerId)
+  return data?.user?.email === SUPERADMIN_EMAIL
+}
+
+async function guardTarget(userId: string, callerId: string) {
+  const admin = createAdminClient()
+  const { data: target } = await admin.from('profiles').select('role').eq('id', userId).single()
+  if (target?.role !== 'admin') return
+
+  if (!(await isSuperAdmin(callerId))) throw new Error('Only superadmin can modify admins')
 }
 
 export async function approveUser(userId: string) {
-  await requireAdmin()
-  await guardTarget(userId)
+  const caller = await requireAdmin()
+  await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ status: 'active' }).eq('id', userId)
   revalidatePath('/admin')
 }
 
 export async function deactivateUser(userId: string) {
-  await requireAdmin()
-  await guardTarget(userId)
+  const caller = await requireAdmin()
+  await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ status: 'inactive' }).eq('id', userId)
   revalidatePath('/admin')
 }
 
+export async function setStatus(userId: string, status: 'active' | 'inactive') {
+  const caller = await requireAdmin()
+  await guardTarget(userId, caller.id)
+  const admin = createAdminClient()
+  await admin.from('profiles').update({ status }).eq('id', userId)
+  revalidatePath('/admin')
+}
+
 export async function setRole(userId: string, role: 'admin' | 'employee') {
-  await requireAdmin()
-  if (role === 'admin') {
-    // Повышение до admin разрешено — только понижение с admin заблокировано
-  } else {
-    await guardTarget(userId)
+  const caller = await requireAdmin()
+  // Только суперадмин может назначать роль admin или менять её
+  if (role === 'admin' && !(await isSuperAdmin(caller.id))) {
+    throw new Error('Only superadmin can assign admin role')
   }
+  await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ role }).eq('id', userId)
   revalidatePath('/admin')

@@ -1,64 +1,60 @@
 'use client'
 
 import { useState } from 'react'
-import { approveUser, deactivateUser, setRole } from '@/app/(dashboard)/admin/actions'
+import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
 
 type Props = {
   userId: string
   status: string
   role: string
   isSelf: boolean
+  isSuperAdmin: boolean
 }
 
-export default function AdminUserActions({ userId, status, role, isSelf }: Props) {
+const ROLES = [
+  { value: 'employee', label: 'Employee', color: 'var(--text2)',  bg: 'rgba(136,146,164,0.15)' },
+  { value: 'admin',    label: 'Admin',    color: 'var(--accent)', bg: 'rgba(79,142,247,0.15)'  },
+]
+
+const STATUSES = [
+  { value: 'active',   label: 'Активен',   color: 'var(--green)',  bg: 'rgba(45,212,160,0.15)'  },
+  { value: 'inactive', label: 'Неактивен', color: 'var(--red)',    bg: 'rgba(247,92,110,0.15)'  },
+  { value: 'pending',  label: 'Ожидает',   color: 'var(--yellow)', bg: 'rgba(247,192,79,0.15)'  },
+]
+
+export default function AdminUserActions({ userId, status, role, isSelf, isSuperAdmin }: Props) {
   const [currentStatus, setCurrentStatus] = useState(status)
   const [currentRole, setCurrentRole] = useState(role)
-  const [loadingStatus, setLoadingStatus] = useState(false)
   const [loadingRole, setLoadingRole] = useState(false)
+  const [loadingStatus, setLoadingStatus] = useState(false)
 
-  async function toggleStatus() {
-    if (loadingStatus) return
-    setLoadingStatus(true)
-    if (currentStatus === 'active') {
-      setCurrentStatus('inactive')
-      await deactivateUser(userId)
-    } else {
-      setCurrentStatus('active')
-      await approveUser(userId)
-    }
-    setLoadingStatus(false)
-  }
+  // Суперадмин редактирует всех кроме себя. Обычный admin — только employee.
+  const canEdit = !isSelf && (isSuperAdmin || currentRole !== 'admin')
 
-  async function toggleRole() {
-    if (loadingRole) return
+  const roleInfo   = ROLES.find(r => r.value === currentRole)   ?? ROLES[0]
+  const statusInfo = STATUSES.find(s => s.value === currentStatus) ?? STATUSES[0]
+
+  async function handleRoleChange(next: string) {
+    if (next === currentRole || loadingRole) return
     setLoadingRole(true)
-    const next = currentRole === 'admin' ? 'employee' : 'admin'
     setCurrentRole(next)
-    await setRole(userId, next)
+    await setRole(userId, next as 'admin' | 'employee')
     setLoadingRole(false)
   }
 
-  const statusConfig = {
-    active:   { label: 'Активен',   color: 'var(--green)',  bg: 'rgba(45,212,160,0.12)' },
-    inactive: { label: 'Неактивен', color: 'var(--red)',    bg: 'rgba(247,92,110,0.12)' },
-    pending:  { label: 'Ожидает',   color: 'var(--yellow)', bg: 'rgba(247,192,79,0.12)' },
+  async function handleStatusChange(next: string) {
+    if (next === currentStatus || loadingStatus) return
+    setLoadingStatus(true)
+    setCurrentStatus(next)
+    await setStatus(userId, next as 'active' | 'inactive')
+    setLoadingStatus(false)
   }
 
-  const roleConfig = {
-    admin:    { label: 'Admin',    color: 'var(--accent)', bg: 'rgba(79,142,247,0.12)' },
-    employee: { label: 'Employee', color: 'var(--text2)',  bg: 'rgba(136,146,164,0.12)' },
-  }
-
-  const s = statusConfig[currentStatus as keyof typeof statusConfig] ?? statusConfig.inactive
-  const r = roleConfig[currentRole as keyof typeof roleConfig] ?? roleConfig.employee
-
-  const isProtected = isSelf || currentRole === 'admin'
-
-  if (isProtected) {
+  if (!canEdit) {
     return (
       <div className="flex items-center gap-2">
-        <Badge label={r.label} color={r.color} bg={r.bg} />
-        <Badge label={s.label} color={s.color} bg={s.bg} />
+        <StaticBadge info={roleInfo} />
+        <StaticBadge info={statusInfo} />
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
           {isSelf ? 'вы' : 'admin'}
         </span>
@@ -66,65 +62,100 @@ export default function AdminUserActions({ userId, status, role, isSelf }: Props
     )
   }
 
+  const selectableStatuses = currentStatus === 'pending'
+    ? STATUSES
+    : STATUSES.filter(s => s.value !== 'pending')
+
   return (
     <div className="flex items-center gap-2">
-      <button
-        onClick={toggleRole}
-        disabled={loadingRole}
-        title="Нажмите чтобы сменить роль"
-        className="transition-opacity disabled:opacity-50"
-      >
-        <Badge label={r.label} color={r.color} bg={r.bg} clickable />
-      </button>
-
-      <button
-        onClick={toggleStatus}
-        disabled={loadingStatus || currentStatus === 'pending'}
-        title={
-          currentStatus === 'pending'
-            ? 'Нажмите «Активировать» чтобы подтвердить'
-            : currentStatus === 'active'
-            ? 'Нажмите чтобы деактивировать'
-            : 'Нажмите чтобы активировать'
-        }
-        className="transition-opacity disabled:opacity-50"
-      >
-        <Badge label={s.label} color={s.color} bg={s.bg} clickable={currentStatus !== 'pending'} />
-      </button>
-
-      {currentStatus === 'pending' && (
-        <button
-          disabled={loadingStatus}
-          onClick={toggleStatus}
-          className="text-xs px-2.5 py-1 rounded-md transition-colors disabled:opacity-50"
-          style={{ background: 'rgba(45,212,160,0.15)', color: 'var(--green)' }}
-        >
-          Активировать
-        </button>
-      )}
+      <DropdownSelect
+        options={ROLES}
+        value={currentRole}
+        loading={loadingRole}
+        onChange={handleRoleChange}
+      />
+      <DropdownSelect
+        options={selectableStatuses}
+        value={currentStatus}
+        loading={loadingStatus}
+        onChange={handleStatusChange}
+      />
     </div>
   )
 }
 
-function Badge({
-  label, color, bg, clickable,
-}: {
-  label: string; color: string; bg: string; clickable?: boolean
-}) {
+function StaticBadge({ info }: { info: { label: string; color: string; bg: string } }) {
   return (
     <span
-      className="text-xs px-2 py-0.5 rounded-md shrink-0 select-none"
-      style={{
-        color,
-        background: bg,
-        cursor: clickable ? 'pointer' : 'default',
-        outline: clickable ? `1px solid transparent` : 'none',
-        transition: 'outline 0.15s',
-      }}
-      onMouseEnter={(e) => { if (clickable) (e.currentTarget as HTMLElement).style.outline = `1px solid ${color}` }}
-      onMouseLeave={(e) => { if (clickable) (e.currentTarget as HTMLElement).style.outline = '1px solid transparent' }}
+      className="text-xs px-2.5 py-1 rounded-md shrink-0 select-none"
+      style={{ color: info.color, background: info.bg }}
     >
-      {label}
+      {info.label}
     </span>
+  )
+}
+
+function DropdownSelect({
+  options,
+  value,
+  loading,
+  onChange,
+}: {
+  options: { value: string; label: string; color: string; bg: string }[]
+  value: string
+  loading: boolean
+  onChange: (val: string) => void
+}) {
+  const current = options.find(o => o.value === value) ?? options[0]
+
+  return (
+    <div
+      className="relative inline-flex items-center rounded-md"
+      style={{
+        opacity: loading ? 0.6 : 1,
+        transition: 'opacity 0.15s',
+        background: 'var(--surface2)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      {/* Цветная точка — индикатор текущего значения */}
+      <span
+        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full pointer-events-none"
+        style={{ background: current.color }}
+      />
+      <select
+        value={value}
+        disabled={loading}
+        onChange={e => onChange(e.target.value)}
+        className="text-xs rounded-md cursor-pointer pl-6 pr-6 py-1"
+        style={{
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          color: 'var(--text)',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          fontFamily: 'inherit',
+          minWidth: 90,
+        }}
+      >
+        {options.map(o => (
+          <option
+            key={o.value}
+            value={o.value}
+            style={{ background: 'var(--surface2)', color: 'var(--text)' }}
+          >
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {/* Стрелка вниз */}
+      <svg
+        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+        width="10" height="10" viewBox="0 0 10 10" fill="none"
+      >
+        <path d="M2 3.5L5 6.5L8 3.5" stroke="var(--text2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
   )
 }
