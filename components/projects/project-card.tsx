@@ -91,21 +91,36 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setConfirming(true)}
-              className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ color: 'var(--text2)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-              title="Удалить проект"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M1.75 3.5h10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                <path d="M4.667 3.5V2.333A.583.583 0 015.25 1.75h3.5a.583.583 0 01.583.583V3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                <rect x="2.333" y="3.5" width="9.333" height="8.75" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                <path d="M5.25 6.417v3.5M8.75 6.417v3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link
+                href={`/projects/${project.id}/settings`}
+                className="p-1 rounded-md"
+                style={{ color: 'var(--text2)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+                title="Настройки проекта"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M7 1.5v1M7 11.5v1M1.5 7h1M11.5 7h1M3.1 3.1l.7.7M10.2 10.2l.7.7M10.2 3.1l-.7.7M3.1 10.2l.7-.7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              </Link>
+              <button
+                onClick={() => setConfirming(true)}
+                className="p-1 rounded-md"
+                style={{ color: 'var(--text2)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+                title="Удалить проект"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1.75 3.5h10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <path d="M4.667 3.5V2.333A.583.583 0 015.25 1.75h3.5a.583.583 0 01.583.583V3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  <rect x="2.333" y="3.5" width="9.333" height="8.75" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M5.25 6.417v3.5M8.75 6.417v3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </div>
