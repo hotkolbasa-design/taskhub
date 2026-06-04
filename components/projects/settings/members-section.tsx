@@ -110,6 +110,10 @@ export default function MembersSection({
   const [addingRole, setAddingRole] = useState<'member' | 'viewer'>('member')
   const [loadingAdd, setLoadingAdd] = useState(false)
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set())
+  // Оптимистичные роли — меняются мгновенно
+  const [optimisticRoles, setOptimisticRoles] = useState<Record<string, string>>(
+    () => Object.fromEntries(members.map(m => [m.user_id, m.role]))
+  )
 
   const memberIds = new Set(members.map(m => m.user_id))
   const notMembers = availableProfiles.filter(p => !memberIds.has(p.id))
@@ -127,13 +131,9 @@ export default function MembersSection({
   }
 
   async function handleRoleChange(userId: string, role: 'member' | 'viewer') {
-    setLoadingIds(s => new Set(s).add(userId))
-    try {
-      await updateMemberRole(projectId, userId, role)
-      router.refresh()
-    } finally {
-      setLoadingIds(s => { const n = new Set(s); n.delete(userId); return n })
-    }
+    setOptimisticRoles(r => ({ ...r, [userId]: role })) // мгновенно
+    await updateMemberRole(projectId, userId, role)
+    router.refresh()
   }
 
   async function handleRemove(userId: string) {
@@ -192,7 +192,7 @@ export default function MembersSection({
                 </span>
               ) : (
                 <RoleDropdown
-                  value={m.role}
+                  value={optimisticRoles[m.user_id] ?? m.role}
                   onChange={role => handleRoleChange(m.user_id, role)}
                   disabled={loading}
                 />
