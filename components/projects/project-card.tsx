@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { deleteProject } from '@/app/(dashboard)/projects/actions'
 import type { ProjectWithMeta } from '@/types'
 
 const ROLE_LABEL: Record<string, string> = {
@@ -10,9 +13,20 @@ const ROLE_LABEL: Record<string, string> = {
 }
 
 export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
+  const router = useRouter()
+  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    if (!confirming) { setConfirming(true); return }
+    setDeleting(true)
+    await deleteProject(project.id)
+    router.refresh()
+  }
+
   return (
     <div
-      className="rounded-xl p-5 flex flex-col gap-4 transition-colors"
+      className="group rounded-xl p-5 flex flex-col gap-4 transition-colors"
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
@@ -31,12 +45,49 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
             </p>
           )}
         </div>
-        <span
-          className="text-xs px-2 py-0.5 rounded-md shrink-0"
-          style={{ background: 'var(--surface2)', color: 'var(--text2)' }}
-        >
-          {ROLE_LABEL[project.my_role] ?? project.my_role}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className="text-xs px-2 py-0.5 rounded-md"
+            style={{ background: 'var(--surface2)', color: 'var(--text2)' }}
+          >
+            {ROLE_LABEL[project.my_role] ?? project.my_role}
+          </span>
+          {/* Кнопка удаления */}
+          {confirming ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
+                style={{ background: 'rgba(247,92,110,0.15)', color: 'var(--red)' }}
+              >
+                {deleting
+                  ? <span className="w-3 h-3 rounded-full border border-t-transparent animate-spin" style={{ borderColor: 'var(--red)', borderTopColor: 'transparent' }} />
+                  : 'Удалить'}
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="px-2 py-0.5 rounded-md text-xs"
+                style={{ color: 'var(--text2)' }}
+              >
+                Отмена
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirming(true)}
+              className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ color: 'var(--text2)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+              title="Удалить проект"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5 3.5l.5 8M9 3.5l-.5 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Метаданные */}

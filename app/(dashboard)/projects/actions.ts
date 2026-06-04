@@ -43,3 +43,41 @@ export async function createProject(formData: {
   revalidatePath('/projects')
   return project
 }
+
+export async function deleteProject(projectId: string) {
+  const supabase = await createClient()
+  const admin = createAdminClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Не авторизован')
+
+  // Удаляем в правильном порядке (с учётом FK)
+  const { data: tasks } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('project_id', projectId)
+
+  const taskIds = (tasks ?? []).map((t: any) => t.id)
+
+  if (taskIds.length > 0) {
+    await admin.from('task_history').delete().in('task_id', taskIds)
+    await admin.from('comments').delete().in('task_id', taskIds)
+    await admin.from('tasks').delete().eq('project_id', projectId)
+  }
+
+  const { data: sprints } = await admin
+    .from('sprints')
+    .select('id')
+    .eq('project_id', projectId)
+
+  const sprintIds = (sprints ?? []).map((s: any) => s.id)
+  if (sprintIds.length > 0) {
+    await admin.from('sprint_columns').delete().in('sprint_id', sprintIds)
+    await admin.from('sprints').delete().eq('project_id', projectId)
+  }
+
+  await admin.from('project_members').delete().eq('project_id', projectId)
+  await admin.from('projects').delete().eq('id', projectId)
+
+  revalidatePath('/projects')
+}
