@@ -54,8 +54,8 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
   if (!canEdit) {
     return (
       <div className="flex items-center gap-2">
-        <StaticBadge info={roleInfo} />
-        <StaticBadge info={statusInfo} />
+        <StaticBadge info={roleInfo} minWidth={90} />
+        <StaticBadge info={statusInfo} minWidth={100} />
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
           {isSelf ? 'вы' : 'admin'}
         </span>
@@ -72,22 +72,24 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
         value={currentRole}
         saving={savingRole}
         onChange={handleRoleChange}
+        minWidth={90}
       />
       <Dropdown
         options={selectableStatuses}
         value={currentStatus}
         saving={savingStatus}
         onChange={handleStatusChange}
+        minWidth={100}
       />
     </div>
   )
 }
 
-function StaticBadge({ info }: { info: Option }) {
+function StaticBadge({ info, minWidth }: { info: Option; minWidth?: number }) {
   return (
     <span
       className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md select-none"
-      style={{ color: info.color, background: info.bg }}
+      style={{ color: info.color, background: info.bg, minWidth }}
     >
       <span
         className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -98,11 +100,12 @@ function StaticBadge({ info }: { info: Option }) {
   )
 }
 
-function Dropdown({ options, value, saving, onChange }: {
+function Dropdown({ options, value, saving, onChange, minWidth }: {
   options: Option[]
   value: string
   saving: boolean
   onChange: (val: string) => void
+  minWidth?: number
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -126,6 +129,7 @@ function Dropdown({ options, value, saving, onChange }: {
         style={{
           color: current.color,
           background: current.bg,
+          minWidth,
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1.2)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1)' }}
