@@ -88,8 +88,8 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
 function StaticBadge({ info, minWidth }: { info: Option; minWidth?: number }) {
   return (
     <span
-      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md select-none"
-      style={{ color: info.color, background: info.bg, minWidth }}
+      className="flex items-center justify-center gap-1.5 text-xs px-2.5 py-1 rounded-md select-none"
+      style={{ color: info.color, background: info.bg, width: minWidth }}
     >
       <span
         className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -125,11 +125,11 @@ function Dropdown({ options, value, saving, onChange, minWidth }: {
       {/* Кнопка */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
+        className="flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
         style={{
           color: current.color,
           background: current.bg,
-          minWidth,
+          width: minWidth,
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1.2)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1)' }}
