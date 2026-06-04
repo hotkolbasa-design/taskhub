@@ -54,8 +54,12 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
   if (!canEdit) {
     return (
       <div className="flex items-center gap-2">
-        <StaticBadge info={roleInfo} minWidth={90} />
-        <StaticBadge info={statusInfo} minWidth={100} />
+        <div style={{ width: 100 }}>
+          <StaticBadge info={roleInfo} />
+        </div>
+        <div style={{ width: 108 }}>
+          <StaticBadge info={statusInfo} />
+        </div>
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
           {isSelf ? 'вы' : 'admin'}
         </span>
@@ -67,29 +71,31 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
 
   return (
     <div className="flex items-center gap-2">
-      <Dropdown
-        options={ROLES}
-        value={currentRole}
-        saving={savingRole}
-        onChange={handleRoleChange}
-        minWidth={90}
-      />
-      <Dropdown
-        options={selectableStatuses}
-        value={currentStatus}
-        saving={savingStatus}
-        onChange={handleStatusChange}
-        minWidth={100}
-      />
+      <div style={{ width: 100 }}>
+        <Dropdown
+          options={ROLES}
+          value={currentRole}
+          saving={savingRole}
+          onChange={handleRoleChange}
+        />
+      </div>
+      <div style={{ width: 108 }}>
+        <Dropdown
+          options={selectableStatuses}
+          value={currentStatus}
+          saving={savingStatus}
+          onChange={handleStatusChange}
+        />
+      </div>
     </div>
   )
 }
 
-function StaticBadge({ info, minWidth }: { info: Option; minWidth?: number }) {
+function StaticBadge({ info }: { info: Option }) {
   return (
     <span
-      className="flex items-center justify-center gap-1.5 text-xs px-2.5 py-1 rounded-md select-none"
-      style={{ color: info.color, background: info.bg, width: minWidth }}
+      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md select-none"
+      style={{ color: info.color, background: info.bg }}
     >
       <span
         className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -100,12 +106,11 @@ function StaticBadge({ info, minWidth }: { info: Option; minWidth?: number }) {
   )
 }
 
-function Dropdown({ options, value, saving, onChange, minWidth }: {
+function Dropdown({ options, value, saving, onChange }: {
   options: Option[]
   value: string
   saving: boolean
   onChange: (val: string) => void
-  minWidth?: number
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -125,11 +130,10 @@ function Dropdown({ options, value, saving, onChange, minWidth }: {
       {/* Кнопка */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
         style={{
           color: current.color,
           background: current.bg,
-          width: minWidth,
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1.2)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = 'brightness(1)' }}
