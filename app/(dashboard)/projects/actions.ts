@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function createProject(formData: {
@@ -9,13 +10,14 @@ export async function createProject(formData: {
   color: string
 }) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Не авторизован')
 
   const userId = session.user.id
 
-  const { data: project, error } = await supabase
+  const { data: project, error } = await admin
     .from('projects')
     .insert({
       name: formData.name.trim(),
@@ -28,11 +30,15 @@ export async function createProject(formData: {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('project_members').insert({
-    project_id: project.id,
-    user_id: userId,
-    role: 'owner',
-  })
+  const { error: memberError } = await admin
+    .from('project_members')
+    .insert({
+      project_id: project.id,
+      user_id: userId,
+      role: 'owner',
+    })
+
+  if (memberError) throw new Error(memberError.message)
 
   revalidatePath('/projects')
   return project
