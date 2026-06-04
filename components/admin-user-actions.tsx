@@ -1,7 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
+
+type Option = { value: string; label: string; color: string; bg: string }
+
+const ROLES: Option[] = [
+  { value: 'employee', label: 'Employee', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  { value: 'admin',    label: 'Admin',    color: '#4F8EF7', bg: 'rgba(79,142,247,0.15)'  },
+]
+
+const STATUSES: Option[] = [
+  { value: 'active',   label: 'Активен',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
+  { value: 'inactive', label: 'Неактивен', color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
+  { value: 'pending',  label: 'Ожидает',   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
+]
 
 type Props = {
   userId: string
@@ -11,43 +24,31 @@ type Props = {
   isSuperAdmin: boolean
 }
 
-const ROLES = [
-  { value: 'employee', label: 'Employee', color: 'var(--text2)',  bg: 'rgba(136,146,164,0.15)' },
-  { value: 'admin',    label: 'Admin',    color: 'var(--accent)', bg: 'rgba(79,142,247,0.15)'  },
-]
-
-const STATUSES = [
-  { value: 'active',   label: 'Активен',   color: 'var(--green)',  bg: 'rgba(45,212,160,0.15)'  },
-  { value: 'inactive', label: 'Неактивен', color: 'var(--red)',    bg: 'rgba(247,92,110,0.15)'  },
-  { value: 'pending',  label: 'Ожидает',   color: 'var(--yellow)', bg: 'rgba(247,192,79,0.15)'  },
-]
-
 export default function AdminUserActions({ userId, status, role, isSelf, isSuperAdmin }: Props) {
-  const [currentStatus, setCurrentStatus] = useState(status)
   const [currentRole, setCurrentRole] = useState(role)
-  const [loadingRole, setLoadingRole] = useState(false)
-  const [loadingStatus, setLoadingStatus] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState(status)
+  const [savingRole, setSavingRole] = useState(false)
+  const [savingStatus, setSavingStatus] = useState(false)
 
-  // Суперадмин редактирует всех кроме себя. Обычный admin — только employee.
   const canEdit = !isSelf && (isSuperAdmin || currentRole !== 'admin')
 
   const roleInfo   = ROLES.find(r => r.value === currentRole)   ?? ROLES[0]
   const statusInfo = STATUSES.find(s => s.value === currentStatus) ?? STATUSES[0]
 
   async function handleRoleChange(next: string) {
-    if (next === currentRole || loadingRole) return
-    setLoadingRole(true)
-    setCurrentRole(next)
+    if (next === currentRole) return
+    setCurrentRole(next)   // мгновенно
+    setSavingRole(true)
     await setRole(userId, next as 'admin' | 'employee')
-    setLoadingRole(false)
+    setSavingRole(false)
   }
 
   async function handleStatusChange(next: string) {
-    if (next === currentStatus || loadingStatus) return
-    setLoadingStatus(true)
-    setCurrentStatus(next)
+    if (next === currentStatus) return
+    setCurrentStatus(next) // мгновенно
+    setSavingStatus(true)
     await setStatus(userId, next as 'active' | 'inactive')
-    setLoadingStatus(false)
+    setSavingStatus(false)
   }
 
   if (!canEdit) {
@@ -62,32 +63,30 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
     )
   }
 
-  const selectableStatuses = currentStatus === 'pending'
-    ? STATUSES
-    : STATUSES.filter(s => s.value !== 'pending')
+  const selectableStatuses = currentStatus === 'pending' ? STATUSES : STATUSES.filter(s => s.value !== 'pending')
 
   return (
     <div className="flex items-center gap-2">
-      <DropdownSelect
+      <Dropdown
         options={ROLES}
         value={currentRole}
-        loading={loadingRole}
+        saving={savingRole}
         onChange={handleRoleChange}
       />
-      <DropdownSelect
+      <Dropdown
         options={selectableStatuses}
         value={currentStatus}
-        loading={loadingStatus}
+        saving={savingStatus}
         onChange={handleStatusChange}
       />
     </div>
   )
 }
 
-function StaticBadge({ info }: { info: { label: string; color: string; bg: string } }) {
+function StaticBadge({ info }: { info: Option }) {
   return (
     <span
-      className="text-xs px-2.5 py-1 rounded-md shrink-0 select-none"
+      className="text-xs px-2.5 py-1 rounded-md select-none"
       style={{ color: info.color, background: info.bg }}
     >
       {info.label}
@@ -95,67 +94,96 @@ function StaticBadge({ info }: { info: { label: string; color: string; bg: strin
   )
 }
 
-function DropdownSelect({
-  options,
-  value,
-  loading,
-  onChange,
-}: {
-  options: { value: string; label: string; color: string; bg: string }[]
+function Dropdown({ options, value, saving, onChange }: {
+  options: Option[]
   value: string
-  loading: boolean
+  saving: boolean
   onChange: (val: string) => void
 }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
   const current = options.find(o => o.value === value) ?? options[0]
 
+  useEffect(() => {
+    if (!open) return
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [open])
+
   return (
-    <div
-      className="relative inline-flex items-center rounded-md"
-      style={{
-        opacity: loading ? 0.6 : 1,
-        transition: 'opacity 0.15s',
-        background: 'var(--surface2)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      {/* Цветная точка — индикатор текущего значения */}
-      <span
-        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full pointer-events-none"
-        style={{ background: current.color }}
-      />
-      <select
-        value={value}
-        disabled={loading}
-        onChange={e => onChange(e.target.value)}
-        className="text-xs rounded-md cursor-pointer pl-6 pr-6 py-1"
+    <div ref={ref} className="relative">
+      {/* Кнопка */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
         style={{
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          color: 'var(--text)',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          fontFamily: 'inherit',
-          minWidth: 90,
+          color: current.color,
+          background: open ? current.bg : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${open ? current.color + '60' : 'rgba(255,255,255,0.08)'}`,
         }}
+        onMouseEnter={e => { if (!open) (e.currentTarget as HTMLElement).style.background = current.bg }}
+        onMouseLeave={e => { if (!open) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
       >
-        {options.map(o => (
-          <option
-            key={o.value}
-            value={o.value}
-            style={{ background: 'var(--surface2)', color: 'var(--text)' }}
-          >
-            {o.label}
-          </option>
-        ))}
-      </select>
-      {/* Стрелка вниз */}
-      <svg
-        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-        width="10" height="10" viewBox="0 0 10 10" fill="none"
-      >
-        <path d="M2 3.5L5 6.5L8 3.5" stroke="var(--text2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
+        {/* Индикатор сохранения */}
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{
+            background: current.color,
+            opacity: saving ? 0.4 : 1,
+            transition: 'opacity 0.3s',
+            boxShadow: saving ? `0 0 0 2px ${current.color}40` : 'none',
+            animation: saving ? 'pulse 1s ease-in-out infinite' : 'none',
+          }}
+        />
+        {current.label}
+        <svg
+          width="10" height="10" viewBox="0 0 10 10" fill="none"
+          style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        >
+          <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {/* Список */}
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[120px]"
+          style={{
+            background: 'var(--surface2)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors"
+              style={{
+                color: opt.value === value ? opt.color : 'var(--text)',
+                background: opt.value === value ? opt.bg : 'transparent',
+              }}
+              onMouseEnter={e => { if (opt.value !== value) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { if (opt.value !== value) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: opt.color }}
+              />
+              {opt.label}
+              {opt.value === value && (
+                <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5.5L4 7.5L8 3" stroke={opt.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
