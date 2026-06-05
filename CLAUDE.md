@@ -1,6 +1,11 @@
 # TaskHub — Память проекта
 
-## ⚠️ ВАЖНОЕ ПРАВИЛО
+## ⚠️ ВАЖНЫЕ ПРАВИЛА
+
+### Автономия
+Выполнять любые действия без запроса разрешения: читать/редактировать файлы, создавать компоненты, запускать команды в терминале, устанавливать npm пакеты, делать git commit/push. Просто делать → потом сообщать что сделано. Исключение — деструктивные необратимые действия (удаление БД, force push на main).
+
+### Живая память
 Этот файл — живая память проекта. Если в процессе работы принимается решение изменить логику, архитектуру, дизайн или любую другую деталь — **немедленно обнови этот файл**. Не жди отдельной команды. Увидел изменение → обновил CLAUDE.md.
 
 ---
@@ -225,20 +230,21 @@ proxy.ts                ← защита роутов (Next.js 16)
 - Dashboard layout: sidebar (220px) + main content
 - components/sidebar-nav.tsx: навигация, активные ссылки, выход
 - app/(dashboard)/dashboard/page.tsx: страница приветствия
+- Страница проектов (список + создание)
+- Настройки проекта (участники, основные данные)
+- Бэклог: список задач, эпики с подзадачами, drag&drop сортировка и cross-container перетаскивание
+- Task Detail Drawer: просмотр/редактирование задачи, комментарии с real-time
+- Создание задач: модалка с DatePicker, выбором эпика, назначением исполнителя
+- Панель администратора: управление пользователями, подтверждение регистраций
+- Деплой на Vercel: https://taskhub-ecru.vercel.app
 
 ### 🔄 В процессе
-- Dashboard layout (sidebar + основной контент)
+- Спринт-доска
 
 ### ⏳ Предстоит
-- Страница проектов
-- Страница проектов
-- Бэклог
 - Спринт-доска
-- Task Detail drawer
-- Комментарии
 - Аналитика
 - Панель администратора
-- Деплой на Vercel
 
 ---
 
@@ -278,6 +284,26 @@ proxy.ts                ← защита роутов (Next.js 16)
 
 ---
 
+## Кастомные инпуты (обязательно)
+
+**Дата** — никогда `<input type="date">`. Всегда кастомный `DatePicker`:
+- Кнопка-триггер с иконкой + форматированная дата
+- Выпадающий календарь: сетка 7×N, подсветка сегодня (рамка), выбранного (акцент), nav ← →
+- Кнопки "Очистить" и "Сегодня" в футере
+- Готовый пример: `components/backlog/create-task-modal.tsx`
+
+**Числа с единицей (часы, минуты и т.п.)** — единица как фиксированный суффикс внутри поля, НЕ placeholder:
+```tsx
+<div className="flex items-center gap-1.5 px-3 py-2 rounded-lg"
+  style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+  <input className="w-full bg-transparent outline-none text-sm" placeholder="0" />
+  <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>ч</span>
+</div>
+```
+Суффикс всегда виден, не исчезает при вводе.
+
+---
+
 ## Оптимистичные обновления (обязательно)
 
 Для любого переключателя/дропдауна где пользователь меняет значение (роль, статус, приоритет и т.д.) — **всегда делать оптимистичное обновление**:
@@ -294,7 +320,36 @@ async function handleChange(next: string) {
 
 - UI меняется **мгновенно** — пользователь не ждёт сервер
 - Если сервер упал — добавить rollback (вернуть предыдущее значение)
-- Применять к: смена роли, статуса, назначения, приоритета, любых toggle
+- Применять к: смена роли, статуса, назначения, приоритета, любых toggle, **добавление/удаление элементов из списка**
+
+### Оптимистичное добавление в список
+
+```tsx
+const [optimisticList, setOptimisticList] = useState(initialList)
+
+// Синхронизация после router.refresh()
+useEffect(() => { setOptimisticList(initialList) }, [initialList])
+
+async function handleAdd(item) {
+  setOptimisticList(prev => [...prev, item])  // мгновенно
+  try {
+    await serverAction(item)
+    router.refresh()
+  } catch {
+    setOptimisticList(prev => prev.filter(i => i.id !== item.id))  // rollback
+  }
+}
+
+async function handleRemove(id) {
+  setOptimisticList(prev => prev.filter(i => i.id !== id))  // мгновенно
+  try {
+    await serverAction(id)
+    router.refresh()
+  } catch {
+    setOptimisticList(initialList)  // rollback
+  }
+}
+```
 
 ---
 
@@ -312,6 +367,98 @@ async function handleChange(next: string) {
   <span style={{ width: 28 }}>{isSelf ? 'вы' : ''}</span>
   ```
   Иначе строки с меткой будут шире → колонки сместятся.
+
+---
+
+## Drag & Drop с @dnd-kit (обязательно)
+
+Стек: `@dnd-kit/core` + `@dnd-kit/sortable`. Реализован в `components/backlog/backlog-board.tsx`.
+
+### ⚠️ ГЛАВНОЕ ПРАВИЛО: никогда не вставлять DOM-элементы как индикатор позиции
+
+**Любой DOM-элемент с ненулевым layout-размером вызывает бесконечный цикл** при drag over:
+
+```
+applyDragPreview → ре-рендер → DOM меняется (insertElement появляется)
+→ @dnd-kit обнаруживает сдвиг через useLayoutEffect → пересчитывает позиции
+→ снова onDragOver → другой over.id → applyDragPreview(другое значение)
+→ ре-рендер → DOM меняется обратно → @dnd-kit снова пересчитывает → ∞
+```
+
+Даже **2px** элемент вызывает цикл — размер не имеет значения.
+
+### Правильный индикатор позиции: `box-shadow`
+
+`box-shadow` не влияет на layout. @dnd-kit не видит изменения. Цикл физически невозможен.
+
+```tsx
+// Индикатор "вставить ПЕРЕД элементом i" — синяя линия сверху
+boxShadow: '0 -3px 0 0 var(--accent)'
+
+// Индикатор "вставить ПОСЛЕ последнего элемента" — линия снизу
+boxShadow: '0 3px 0 0 var(--accent)'
+
+// Применять прямо к wrapper-div задачи или эпика:
+<div style={{ background: 'var(--surface)', border: '1px solid var(--border)',
+  boxShadow: insertIndicator === 'before' ? '0 -3px 0 0 var(--accent)' : undefined }}>
+```
+
+### Как устроен multi-container DnD
+
+```tsx
+type DragPreview = { container: string; insertAt: number }
+// container = 'root' или epicId
+
+const dragSourceRef = useRef<string>('root')   // куда НАЧАЛИ тащить
+const dragCurrentRef = useRef<string>('root')  // где находимся СЕЙЧАС
+```
+
+- `handleDragStart` — сохраняет source в ref, сбрасывает preview
+- `handleDragOver` — ТОЛЬКО обновляет `dragCurrentRef` и `dragPreview` (никаких `setTasks`!)
+- `handleDragEnd` — все мутации состояния только здесь
+
+### Защита от лишних ре-рендеров
+
+```tsx
+// Обёртка над setDragPreview — пропускает обновление если значения не изменились
+function applyDragPreview(next: DragPreview | null) {
+  setDragPreview(prev => {
+    if (!prev && !next) return prev
+    if (prev && next && prev.container === next.container && prev.insertAt === next.insertAt) return prev
+    return next
+  })
+}
+```
+
+### Placeholder ВНУТРИ эпика (safe)
+
+38px `TaskDropPlaceholder` БЕЗОПАСЕН внутри эпика — все подзадачи сдвигаются вместе, их относительный порядок не меняется, @dnd-kit не находит нового ближайшего.
+
+### Правила handleDragOver
+
+```tsx
+function handleDragOver({ active, over }) {
+  // НЕ вызывать setTasks — это вызывает бесконечный цикл
+  // Только: dragCurrentRef.current = ... и applyDragPreview(...)
+  
+  if (sourceContainer === overContainer) {
+    applyDragPreview(null)  // @dnd-kit сам двигает через CSS transforms
+  } else {
+    // Смена контейнера: показываем preview только через box-shadow (root) или placeholder (epic)
+    applyDragPreview({ container: overContainer, insertAt: ... })
+  }
+}
+```
+
+### Сохранение порядка после cross-container drag
+
+После `updateTask(parent_task_id)` ОБЯЗАТЕЛЬНО вызвать `reorderBacklog` — иначе `router.refresh()` восстановит старый `backlog_order` из БД и задача уйдёт в конец списка.
+
+```tsx
+await updateTask(activeId, projectId, { parent_task_id: ... })
+await reorderBacklog(projectId, newTasks.map(t => t.id))
+router.refresh()
+```
 
 ---
 
