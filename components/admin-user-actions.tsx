@@ -21,16 +21,16 @@ type Props = {
   status: string
   role: string
   isSelf: boolean
-  isSuperAdmin: boolean
+  isProtected: boolean
 }
 
-export default function AdminUserActions({ userId, status, role, isSelf, isSuperAdmin }: Props) {
+export default function AdminUserActions({ userId, status, role, isSelf, isProtected }: Props) {
   const [currentRole, setCurrentRole] = useState(role)
   const [currentStatus, setCurrentStatus] = useState(status)
   const [savingRole, setSavingRole] = useState(false)
   const [savingStatus, setSavingStatus] = useState(false)
 
-  const canEdit = !isSelf && (isSuperAdmin || currentRole !== 'admin')
+  const canEdit = !isSelf && !isProtected
 
   const roleInfo   = ROLES.find(r => r.value === currentRole)   ?? ROLES[0]
   const statusInfo = STATUSES.find(s => s.value === currentStatus) ?? STATUSES[0]
@@ -66,7 +66,7 @@ export default function AdminUserActions({ userId, status, role, isSelf, isSuper
           : <StaticBadge info={statusInfo} />}
       </div>
       <span className="text-xs" style={{ width: 28, color: 'var(--text2)' }}>
-        {!canEdit ? (isSelf ? 'вы' : 'admin') : ''}
+        {isSelf ? 'вы' : ''}
       </span>
     </div>
   )

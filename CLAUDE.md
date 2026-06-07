@@ -62,6 +62,7 @@
 ## Роли пользователей
 - **admin** — видит всё, управляет всеми, подтверждает регистрации, фиксирует недели за любого
 - **owner** проекта — тот кто создал проект, полный контроль над ним
+- **manager** (руководитель проекта) — те же права что у owner: доступ к настройкам проекта; назначается вручную
 - **member** — участник проекта, создаёт и редактирует задачи
 - **viewer** — только просмотр
 
@@ -87,7 +88,7 @@ id · name · description · color · default_assignee_mode (creator|specific|ma
 
 ### project_members
 ```
-id · project_id · user_id · role (owner|member|viewer) · UNIQUE(project_id, user_id)
+id · project_id · user_id · role (owner|manager|member|viewer) · UNIQUE(project_id, user_id)
 ```
 Owner — тот кто создал проект (не admin автоматически).
 

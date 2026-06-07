@@ -29,7 +29,8 @@ export default async function AdminPage() {
   const { data: { users: authUsers } } = await admin.auth.admin.listUsers()
   const emailMap = Object.fromEntries(authUsers.map((u) => [u.id, u.email]))
 
-  const isSuperAdmin = (emailMap[user.id] ?? '') === 'director@goschool.kz'
+  const SUPERADMIN_EMAIL = 'director@goschool.kz'
+  const superAdminId = authUsers.find(u => u.email === SUPERADMIN_EMAIL)?.id ?? null
 
   const pending = profiles?.filter((p) => p.status === 'pending') ?? []
   const rest = profiles?.filter((p) => p.status !== 'pending') ?? []
@@ -55,7 +56,7 @@ export default async function AdminPage() {
                 profile={profile}
                 email={emailMap[profile.id]}
                 currentUserId={user.id}
-                isSuperAdmin={isSuperAdmin}
+                isSuperAdmin={profile.id === superAdminId}
                 isLast={i === pending.length - 1}
               />
             ))}
@@ -80,7 +81,7 @@ export default async function AdminPage() {
               profile={profile}
               email={emailMap[profile.id]}
               currentUserId={user.id}
-              isSuperAdmin={isSuperAdmin}
+              isSuperAdmin={profile.id === superAdminId}
               isLast={i === rest.length - 1}
             />
           ))}
@@ -127,7 +128,7 @@ function Row({
         status={profile.status}
         role={profile.role}
         isSelf={profile.id === currentUserId}
-        isSuperAdmin={isSuperAdmin}
+        isProtected={isSuperAdmin}
       />
     </div>
   )
