@@ -17,6 +17,7 @@ type Profile = {
 }
 
 const ROLE_OPTIONS = [
+  { value: 'manager', label: 'Руководитель', color: '#4F8EF7', bg: 'rgba(79,142,247,0.15)' },
   { value: 'member', label: 'Участник', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
   { value: 'viewer', label: 'Наблюдатель', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
 ]
@@ -120,7 +121,7 @@ function RoleDropdown({
   disabled,
 }: {
   value: string
-  onChange: (v: 'member' | 'viewer') => void
+  onChange: (v: 'manager' | 'member' | 'viewer') => void
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -166,7 +167,7 @@ function RoleDropdown({
           {ROLE_OPTIONS.map(opt => (
             <button
               key={opt.value}
-              onClick={() => { onChange(opt.value as 'member' | 'viewer'); setOpen(false) }}
+              onClick={() => { onChange(opt.value as 'manager' | 'member' | 'viewer'); setOpen(false) }}
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left"
               style={{ color: opt.value === value ? opt.color : 'var(--text)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
@@ -200,40 +201,68 @@ export default function MembersSection({
 }) {
   const router = useRouter()
   const [addingId, setAddingId] = useState('')
-  const [addingRole, setAddingRole] = useState<'member' | 'viewer'>('member')
+  const [addingRole, setAddingRole] = useState<'manager' | 'member' | 'viewer'>('member')
   const [loadingAdd, setLoadingAdd] = useState(false)
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set())
-  // Оптимистичные роли — меняются мгновенно
+  const [optimisticMembers, setOptimisticMembers] = useState<Member[]>(members)
   const [optimisticRoles, setOptimisticRoles] = useState<Record<string, string>>(
     () => Object.fromEntries(members.map(m => [m.user_id, m.role]))
   )
 
-  const memberIds = new Set(members.map(m => m.user_id))
+  // Синхронизируем с сервером после router.refresh()
+  useEffect(() => {
+    setOptimisticMembers(members)
+    setOptimisticRoles(Object.fromEntries(members.map(m => [m.user_id, m.role])))
+  }, [members])
+
+  const memberIds = new Set(optimisticMembers.map(m => m.user_id))
   const notMembers = availableProfiles.filter(p => !memberIds.has(p.id))
 
   async function handleAdd() {
     if (!addingId) return
+    const profile = availableProfiles.find(p => p.id === addingId)
+    if (!profile) return
+
+    // Мгновенно добавляем в UI
+    const newMember: Member = {
+      user_id: addingId,
+      role: addingRole,
+      profile: { full_name: profile.full_name, login: profile.login, avatar_url: null },
+    }
+    setOptimisticMembers(prev => [...prev, newMember])
+    setOptimisticRoles(r => ({ ...r, [addingId]: addingRole }))
+    setAddingId('')
+
+    // Сервер фоном
     setLoadingAdd(true)
     try {
       await addMember(projectId, addingId, addingRole)
-      setAddingId('')
       router.refresh()
+    } catch {
+      // Rollback при ошибке
+      setOptimisticMembers(prev => prev.filter(m => m.user_id !== addingId))
+      setOptimisticRoles(r => { const n = { ...r }; delete n[addingId]; return n })
     } finally {
       setLoadingAdd(false)
     }
   }
 
-  async function handleRoleChange(userId: string, role: 'member' | 'viewer') {
-    setOptimisticRoles(r => ({ ...r, [userId]: role })) // мгновенно
+  async function handleRoleChange(userId: string, role: 'manager' | 'member' | 'viewer') {
+    setOptimisticRoles(r => ({ ...r, [userId]: role }))
     await updateMemberRole(projectId, userId, role)
     router.refresh()
   }
 
   async function handleRemove(userId: string) {
+    // Мгновенно убираем из UI
+    setOptimisticMembers(prev => prev.filter(m => m.user_id !== userId))
     setLoadingIds(s => new Set(s).add(userId))
     try {
       await removeMember(projectId, userId)
       router.refresh()
+    } catch {
+      // Rollback при ошибке
+      setOptimisticMembers(members)
     } finally {
       setLoadingIds(s => { const n = new Set(s); n.delete(userId); return n })
     }
@@ -245,12 +274,12 @@ export default function MembersSection({
       style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     >
       <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>
-        Участники — {members.length}
+        Участники — {optimisticMembers.length}
       </h2>
 
       {/* Список участников */}
       <div className="flex flex-col gap-1.5">
-        {members.map(m => {
+        {optimisticMembers.map(m => {
           const name = m.profile?.full_name || m.profile?.login || 'Неизвестный'
           const isOwner = m.role === 'owner'
           const isSelf = m.user_id === currentUserId

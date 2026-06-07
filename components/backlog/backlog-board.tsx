@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   DndContext,
   DragEndEvent,
+  DragMoveEvent,
   DragOverEvent,
   DragOverlay,
   DragStartEvent,
@@ -19,15 +20,28 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { reorderBacklog, updateTask, getComments } from '@/app/(dashboard)/projects/[id]/backlog/actions'
-import type { WorkflowStatus } from '@/types'
+import { reorderBacklog, reorderSprintTasks, updateTask, getComments, moveToSprint, moveBackToBacklog } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { moveTaskInSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
+import type { WorkflowStatus, SprintTask, Sprint } from '@/types'
 import TaskCard from './task-card'
 import CreateTaskModal from './create-task-modal'
 import TaskDrawer from './task-drawer'
+import SprintPanel, {
+  SPRINT_DROP_ID,
+  SPRINT_EPIC_DROP_PREFIX,
+  SPRINT_EPIC_END_PREFIX,
+  buildSprintTree,
+  toBacklogTask as sprintToBacklog,
+} from './sprint-panel'
 import type { BacklogTask } from '@/types'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 type MemberWithCreator = Member & { creator_name?: string | null }
+
+type SprintPanelData = {
+  sprint: Sprint
+  tasks: SprintTask[]
+}
 
 type Props = {
   projectId: string
@@ -38,6 +52,7 @@ type Props = {
   currentUserId: string
   defaultAssigneeMode: 'manual' | 'creator' | 'specific'
   defaultAssigneeId: string | null
+  sprintPanelData?: SprintPanelData | null
 }
 
 // Используется внутри эпика (полная высота — все подзадачи сдвигаются вместе, осцилляции нет)
@@ -66,6 +81,8 @@ function EpicBlock({
   onMoveToSprint,
   onEdit,
   onWorkflowChange,
+  onDeadlineChange,
+  onTimeChange,
   dragPreview,
   insertIndicator,
 }: {
@@ -76,6 +93,8 @@ function EpicBlock({
   onMoveToSprint: (id: string) => void
   onEdit: (task: BacklogTask) => void
   onWorkflowChange: (id: string, status: string) => void
+  onDeadlineChange: (id: string, deadline: string | null) => void
+  onTimeChange: (id: string, minutes: number | null) => void
   dragPreview: DragPreview | null
   insertIndicator?: 'before' | 'after'
 }) {
@@ -110,26 +129,30 @@ function EpicBlock({
     >
       {/* Эпик-заголовок */}
       <div className="flex items-center" style={{ borderBottom: expanded ? '1px solid var(--border)' : undefined }}>
-        <TaskCard
-          task={epic}
-          projectId={projectId}
-          hasActiveSprint={hasActiveSprint}
-          onOptimisticDelete={onDelete}
-          onOptimisticMoveToSprint={onMoveToSprint}
-          onEdit={onEdit}
-          onWorkflowChange={onWorkflowChange}
-        />
+        <div className="flex-1 min-w-0">
+          <TaskCard
+            task={epic}
+            projectId={projectId}
+            hasActiveSprint={hasActiveSprint}
+            onOptimisticDelete={onDelete}
+            onOptimisticMoveToSprint={onMoveToSprint}
+            onEdit={onEdit}
+            onWorkflowChange={onWorkflowChange}
+            onDeadlineChange={onDeadlineChange}
+            onTimeChange={onTimeChange}
+          />
+        </div>
         {/* Прогресс + раскрыть */}
         <div className="flex items-center gap-2 pr-3 shrink-0">
           {epic.subtask_total > 0 && (
             <div className="flex items-center gap-1.5">
-              <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
+              <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${pct}%`, background: pct === 100 ? 'var(--green)' : 'var(--accent)' }}
                 />
               </div>
-              <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', minWidth: 32 }}>
+              <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
                 {epic.subtask_done}/{epic.subtask_total}
               </span>
             </div>
@@ -162,7 +185,6 @@ function EpicBlock({
                 ? 'rgba(79,142,247,0.06)'
                 : 'var(--surface2)',
               borderRadius: '0 0 12px 12px',
-              minHeight: 40,
               transition: 'background 0.15s',
             }}
           >
@@ -185,6 +207,8 @@ function EpicBlock({
                         onOptimisticMoveToSprint={onMoveToSprint}
                         onEdit={onEdit}
                         onWorkflowChange={onWorkflowChange}
+                        onDeadlineChange={onDeadlineChange}
+                        onTimeChange={onTimeChange}
                       />
                     </div>
                   </Fragment>
@@ -199,12 +223,12 @@ function EpicBlock({
         <div
           ref={bottomDropRef}
           style={{
-            height: showBottomPlaceholder ? 38 : 24,
-            margin: showBottomPlaceholder ? '3px 8px 6px' : '2px 8px 4px',
+            height: 36,
+            margin: '3px 8px 6px',
             borderRadius: 8,
             background: showBottomPlaceholder ? 'rgba(79,142,247,0.06)' : 'transparent',
             border: `1px dashed ${showBottomPlaceholder ? 'rgba(79,142,247,0.35)' : 'transparent'}`,
-            transition: 'all 0.15s',
+            transition: 'background 0.15s, border-color 0.15s',
           }}
         />
       )}
@@ -217,14 +241,14 @@ function RootDropZone() {
   return (
     <div
       ref={setNodeRef}
-      className="flex items-center justify-center rounded-lg transition-all"
+      className="flex items-center justify-center rounded-lg"
       style={{
-        height: isOver ? 44 : 24,
+        height: 36,
         background: isOver ? 'rgba(79,142,247,0.08)' : 'transparent',
         border: `1px dashed ${isOver ? 'rgba(79,142,247,0.5)' : 'rgba(255,255,255,0.06)'}`,
         color: 'var(--accent)',
         fontSize: 11,
-        transition: 'all 0.15s',
+        transition: 'background 0.15s, border-color 0.15s',
       }}
     >
       {isOver ? 'Отдельная задача' : ''}
@@ -252,18 +276,55 @@ function findTaskDeep(taskList: BacklogTask[], id: string): BacklogTask | null {
   return null
 }
 
-export default function BacklogBoard({ projectId, initialTasks, members, membersMap, hasActiveSprint, currentUserId, defaultAssigneeMode, defaultAssigneeId }: Props) {
+export default function BacklogBoard({ projectId, initialTasks, members, membersMap, hasActiveSprint, currentUserId, defaultAssigneeMode, defaultAssigneeId, sprintPanelData = null }: Props) {
   const router = useRouter()
   const [tasks, setTasks] = useState<BacklogTask[]>(initialTasks)
+  const [sprintTasks, setSprintTasks] = useState<SprintTask[]>(sprintPanelData?.tasks ?? [])
   const [showModal, setShowModal] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
+  const [sprintDragOverBacklog, setSprintDragOverBacklog] = useState(false)
   const [editingTask, setEditingTask] = useState<BacklogTask | null>(null)
   const [editingTaskComments, setEditingTaskComments] = useState<unknown[]>([])
   const commentsCache = useRef<Record<string, unknown[]>>({})
   const dragSourceRef = useRef<string>('root')
   const dragCurrentRef = useRef<string>('root')
+
+  // Дебаунс рефреша: при быстром перетаскивании не обновляем страницу на каждый drop
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    refreshTimerRef.current = setTimeout(() => { router.refresh() }, 600)
+  }, [router])
+
+  // Дебаунс сохранения порядка: только финальный порядок идёт в БД
+  const pendingBacklogOrderRef = useRef<string[] | null>(null)
+  const pendingSprintOrderRef = useRef<string[] | null>(null)
+  const orderDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleReorder = useCallback((type: 'backlog' | 'sprint', ids: string[]) => {
+    if (type === 'backlog') pendingBacklogOrderRef.current = ids
+    else pendingSprintOrderRef.current = ids
+    if (orderDebounceRef.current) clearTimeout(orderDebounceRef.current)
+    orderDebounceRef.current = setTimeout(async () => {
+      const backlogIds = pendingBacklogOrderRef.current
+      const sprintIds = pendingSprintOrderRef.current
+      pendingBacklogOrderRef.current = null
+      pendingSprintOrderRef.current = null
+      if (backlogIds) await reorderBacklog(projectId, backlogIds)
+      if (sprintIds) await reorderSprintTasks(projectId, sprintIds)
+      router.refresh()
+    }, 600)
+  }, [projectId, router])
   useEffect(() => { setTasks(initialTasks) }, [initialTasks])
+  useEffect(() => { setSprintTasks(sprintPanelData?.tasks ?? []) }, [sprintPanelData])
+  // Droppable + DOM ref для бэклог-колонки
+  const { setNodeRef: setBacklogDropRef } = useDroppable({ id: 'backlog-drop-zone' })
+  const backlogPanelRef = useRef<HTMLDivElement>(null)
+  const setBacklogRef = useCallback((node: HTMLDivElement | null) => {
+    setBacklogDropRef(node)
+    backlogPanelRef.current = node
+  }, [setBacklogDropRef])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -276,13 +337,48 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     ?? tasks.flatMap(t => t.subtasks).find(s => s.id === activeId)
     ?? null
 
+  function findSprintContainer(id: string): string {
+    const tree = buildSprintTree(sprintTasks)
+    if (tree.find(t => t.id === id)) return 'sprint'
+    for (const t of tree) {
+      if (t.subtasks.some(s => s.id === id)) return `sprint-epic-${t.id}`
+    }
+    return 'sprint'
+  }
+
+  // Geometry-based panel detection: обходит closestCenter, который ошибается при пустом бэклоге
+  // (пустой бэклог короткий → его центр дальше от курсора, чем высокая спринт-панель)
+  function handleDragMove({ active }: DragMoveEvent) {
+    const id = active.id as string
+    if (!sprintTasks.some(t => t.id === id)) return
+    const translated = active.rect.current.translated
+    if (!translated || !backlogPanelRef.current) return
+    const activeCenterX = translated.left + translated.width / 2
+    const { left, right } = backlogPanelRef.current.getBoundingClientRect()
+    const isOverBacklog = activeCenterX >= left && activeCenterX <= right
+    if (isOverBacklog && dragCurrentRef.current.startsWith('sprint')) {
+      dragCurrentRef.current = 'root'
+      setSprintDragOverBacklog(true)
+    } else if (!isOverBacklog && !dragCurrentRef.current.startsWith('sprint')) {
+      dragCurrentRef.current = 'sprint'
+      setSprintDragOverBacklog(false)
+    }
+  }
+
   function handleDragStart({ active }: DragStartEvent) {
     const id = active.id as string
     setActiveId(id)
     setDragPreview(null)
-    const container = findContainer(tasks, id)
-    dragSourceRef.current = container
-    dragCurrentRef.current = container
+    const isSprintTask = sprintTasks.some(t => t.id === id)
+    if (isSprintTask) {
+      const c = findSprintContainer(id)
+      dragSourceRef.current = c
+      dragCurrentRef.current = c
+    } else {
+      const c = findContainer(tasks, id)
+      dragSourceRef.current = c
+      dragCurrentRef.current = c
+    }
   }
 
   // Обёртка над setDragPreview: пропускает обновление если значения не изменились.
@@ -302,13 +398,126 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
 
     const activeId = active.id as string
     const overId = over.id as string
+    const isActiveSprintTask = sprintTasks.some(t => t.id === activeId)
+
+    // ── Sprint task dragging ────────────────────────────────────────────────
+    if (isActiveSprintTask) {
+      // Если тащим эпик — игнорируем over его собственных подзадач
+      // (DragOverlay большой и проходит над ними, но это не смена контейнера)
+      const activeSprintTask = sprintTasks.find(t => t.id === activeId)
+      if (activeSprintTask?.type === 'epic' &&
+          sprintTasks.some(t => t.id === overId && t.parent_task_id === activeId)) {
+        return
+      }
+
+      // Над sprint panel или нижней зоной спринта
+      if (overId === SPRINT_DROP_ID || overId === 'drop-sprint-bottom') {
+        dragCurrentRef.current = 'sprint'
+        applyDragPreview(null)
+        return
+      }
+      // Над зоной бросания в sprint-эпик
+      if (overId.startsWith(SPRINT_EPIC_DROP_PREFIX) || overId.startsWith(SPRINT_EPIC_END_PREFIX)) {
+        const epicId = overId.startsWith(SPRINT_EPIC_END_PREFIX)
+          ? overId.replace(SPRINT_EPIC_END_PREFIX, '')
+          : overId.replace(SPRINT_EPIC_DROP_PREFIX, '')
+        const sprintTree = buildSprintTree(sprintTasks)
+        const targetEpic = sprintTree.find(t => t.id === epicId)
+        dragCurrentRef.current = `sprint-epic-${epicId}`
+        if (targetEpic) applyDragPreview({ container: `sprint-epic-${epicId}`, insertAt: targetEpic.subtasks.length })
+        return
+      }
+      // Над задачей спринта
+      if (sprintTasks.some(t => t.id === overId)) {
+        const sprintTree = buildSprintTree(sprintTasks)
+        const overContainer = (() => {
+          if (sprintTree.find(t => t.id === overId)) return 'sprint'
+          for (const t of sprintTree) {
+            if (t.subtasks.some(s => s.id === overId)) return `sprint-epic-${t.id}`
+          }
+          return 'sprint'
+        })()
+        dragCurrentRef.current = overContainer
+        const srcContainer = dragSourceRef.current
+        if (srcContainer === overContainer) {
+          applyDragPreview(null) // @dnd-kit handles CSS transforms
+        } else if (overContainer.startsWith('sprint-epic-')) {
+          const epicId = overContainer.replace('sprint-epic-', '')
+          const targetEpic = sprintTree.find(t => t.id === epicId)
+          if (targetEpic) {
+            const overIdx = targetEpic.subtasks.findIndex(s => s.id === overId)
+            applyDragPreview({ container: overContainer, insertAt: overIdx >= 0 ? overIdx : targetEpic.subtasks.length })
+          }
+        } else {
+          const overIdx = sprintTree.findIndex(t => t.id === overId)
+          applyDragPreview({ container: 'sprint', insertAt: overIdx >= 0 ? overIdx : sprintTree.length })
+        }
+        return
+      }
+      // Над бэклогом (любой бэклог-элемент или droppable-зона)
+      let backlogContainer: string
+      if (overId === 'backlog-drop-zone' || overId === 'drop-root-bottom') {
+        backlogContainer = 'root'
+      } else if (overId.startsWith('drop-epic-end-')) {
+        backlogContainer = overId.replace('drop-epic-end-', '')
+      } else if (overId.startsWith('drop-epic-')) {
+        backlogContainer = overId.replace('drop-epic-', '')
+      } else {
+        backlogContainer = findContainer(tasks, overId) || 'root'
+      }
+      dragCurrentRef.current = backlogContainer
+      applyDragPreview(null)
+      return
+    }
+
+    // ── Backlog task dragging ───────────────────────────────────────────────
+    // Тащим в sprint-эпик: запоминаем конкретный эпик
+    if (overId.startsWith(SPRINT_EPIC_DROP_PREFIX) || overId.startsWith(SPRINT_EPIC_END_PREFIX)) {
+      const epicId = overId.startsWith(SPRINT_EPIC_END_PREFIX)
+        ? overId.replace(SPRINT_EPIC_END_PREFIX, '')
+        : overId.replace(SPRINT_EPIC_DROP_PREFIX, '')
+      dragCurrentRef.current = `sprint-epic-${epicId}`
+      // Ставим dragPreview чтобы эпик в спринте подсвечивался, а не вся панель
+      const sprintTree = buildSprintTree(sprintTasks)
+      const targetEpic = sprintTree.find(t => t.id === epicId)
+      applyDragPreview(targetEpic
+        ? { container: `sprint-epic-${epicId}`, insertAt: targetEpic.subtasks.length }
+        : null
+      )
+      return
+    }
+    // Тащим в спринт (root) — вычисляем позицию вставки
+    if (overId === SPRINT_DROP_ID) {
+      dragCurrentRef.current = 'sprint'
+      // Не сбрасываем dragPreview — курсор мог на миг попасть на контейнер панели
+      // между задачами. Если уже есть sprint-позиция — оставляем её.
+      if (!dragPreview || dragPreview.container !== 'sprint') {
+        applyDragPreview(null)
+      }
+      return
+    }
+    if (overId === 'drop-sprint-bottom') {
+      const sprintTree = buildSprintTree(sprintTasks)
+      dragCurrentRef.current = 'sprint'
+      applyDragPreview({ container: 'sprint', insertAt: sprintTree.length })
+      return
+    }
+    if (sprintTasks.some(t => t.id === overId)) {
+      const sprintTree = buildSprintTree(sprintTasks)
+      const overIdx = sprintTree.findIndex(t => t.id === overId)
+      dragCurrentRef.current = 'sprint'
+      applyDragPreview(overIdx >= 0
+        ? { container: 'sprint', insertAt: overIdx }
+        : null
+      )
+      return
+    }
 
     const activeTask = findTaskDeep(tasks, activeId)
     if (!activeTask || activeTask.type === 'epic') return
 
-    // Резолвим целевой контейнер
     let overContainer: string
-    if (overId === 'drop-root-bottom') {
+    if (overId === 'backlog-drop-zone' || overId === 'drop-root-bottom') {
       overContainer = 'root'
     } else if (overId.startsWith('drop-epic-end-')) {
       overContainer = overId.replace('drop-epic-end-', '')
@@ -320,19 +529,13 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     dragCurrentRef.current = overContainer
 
     const sourceContainer = dragSourceRef.current
-
     if (sourceContainer === overContainer) {
-      // Тот же контейнер: @dnd-kit сам двигает элементы через CSS transforms
       applyDragPreview(null)
     } else {
-      // Смена контейнера: показываем placeholder только В эпике
-      // (root-placeholder вызывает бесконечный цикл: появление сдвигает задачи →
-      //  @dnd-kit находит нового ближайшего → insertAt меняется → placeholder двигается → loop)
       if (overContainer !== 'root') {
         const targetEpic = tasks.find(t => t.id === overContainer)
         if (targetEpic) {
           if (overId.startsWith('drop-epic-end-') || overId.startsWith('drop-epic-')) {
-            // Пустой эпик или bottom-зона → в конец
             applyDragPreview({ container: overContainer, insertAt: targetEpic.subtasks.length })
           } else {
             const overIdx = targetEpic.subtasks.findIndex(s => s.id === overId)
@@ -340,7 +543,6 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
           }
         }
       } else {
-        // Перетаскиваем В root — показываем placeholder между задачами
         if (overId === 'drop-root-bottom') {
           applyDragPreview({ container: 'root', insertAt: tasks.length })
         } else {
@@ -354,12 +556,257 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
   async function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null)
     setDragPreview(null)
-    if (!over) return
+    setSprintDragOverBacklog(false)
 
     const activeId = active.id as string
-    const overId = over.id as string
     const sourceContainer = dragSourceRef.current
     const currentContainer = dragCurrentRef.current
+    const isActiveSprintTask = sprintTasks.some(t => t.id === activeId)
+
+    // ── Sprint task drag end ──────────────────────────────────────────────
+    if (isActiveSprintTask) {
+      const overIdMaybe = over?.id as string | undefined
+
+      // Определяем sprint→backlog:
+      // - currentContainer не в спринте (dragOver обновил), ИЛИ
+      // - over.id — элемент бэклога (задача, droppable-зона, drop-root-bottom)
+      // - НЕ считаем sprint-элементы или подзадачи самого перетаскиваемого эпика
+      const isDroppedOnBacklog = (() => {
+        // Главный сигнал: handleDragOver обновил dragCurrentRef когда курсор был над бэклогом
+        if (!currentContainer.startsWith('sprint')) return true
+        // Если over явно принадлежит спринту — остаёмся
+        if (overIdMaybe === undefined) return false
+        if (overIdMaybe === SPRINT_DROP_ID ||
+            overIdMaybe === 'drop-sprint-bottom' ||
+            overIdMaybe.startsWith(SPRINT_EPIC_DROP_PREFIX) ||
+            overIdMaybe.startsWith(SPRINT_EPIC_END_PREFIX)) return false
+        if (sprintTasks.some(t => t.id === overIdMaybe)) {
+          const isOwnSubtask = sprintTasks.some(t => t.id === overIdMaybe && t.parent_task_id === activeId)
+          if (!isOwnSubtask) return false
+        }
+        return true
+      })()
+
+      if (isDroppedOnBacklog) {
+        const sprintTask = sprintTasks.find(t => t.id === activeId)
+        if (!sprintTask) return
+        const sprintTree = buildSprintTree(sprintTasks)
+        const epicNode = sprintTree.find(t => t.id === activeId)
+        const subtasksToMove = sprintTask.type === 'epic' && epicNode ? epicNode.subtasks as SprintTask[] : []
+        const allToMove = [sprintTask, ...subtasksToMove]
+        const allIds = new Set(allToMove.map(t => t.id))
+
+        // Проверяем, не бросили ли в бэклог-эпик (currentContainer = epicId, не 'root' и не 'sprint*')
+        const targetBacklogEpicId = (!currentContainer.startsWith('sprint') && currentContainer !== 'root')
+          ? currentContainer : null
+
+        setSprintTasks(prev => prev.filter(t => !allIds.has(t.id)))
+        if (targetBacklogEpicId && sprintTask.type !== 'epic') {
+          // Drop в конкретный бэклог-эпик
+          setTasks(prev => prev.map(t =>
+            t.id === targetBacklogEpicId
+              ? { ...t, subtasks: [...t.subtasks, sprintToBacklog({ ...sprintTask, parent_task_id: targetBacklogEpicId })], subtask_total: t.subtask_total + 1 }
+              : t
+          ))
+        } else if (sprintTask.type === 'epic' && subtasksToMove.length > 0) {
+          // Эпик с подзадачами: вкладываем подзадачи внутрь эпика сразу
+          const subtasksBacklog = subtasksToMove.map(s => sprintToBacklog(s))
+          const epicBacklog: BacklogTask = {
+            ...sprintToBacklog(sprintTask),
+            subtasks: subtasksBacklog,
+            subtask_total: subtasksBacklog.length,
+            subtask_done: subtasksBacklog.filter(s => s.workflow_status === 'done').length,
+          }
+          setTasks(prev => [...prev, epicBacklog])
+        } else {
+          setTasks(prev => [...prev, sprintToBacklog(sprintTask)])
+        }
+        await moveBackToBacklog(activeId, projectId, targetBacklogEpicId)
+        scheduleRefresh()
+        return
+      }
+
+      if (!over) return
+      const overId = over.id as string
+
+      const sprintTree = buildSprintTree(sprintTasks)
+
+      // Sprint same-container sort
+      if (sourceContainer === currentContainer) {
+        if (currentContainer === 'sprint') {
+          const oldIdx = sprintTree.findIndex(t => t.id === activeId)
+          // Нормализуем overId: дроп-зоны эпика → сам эпик (closestCenter иногда возвращает их)
+          const resolvedOverId = overId.startsWith(SPRINT_EPIC_END_PREFIX)
+            ? overId.replace(SPRINT_EPIC_END_PREFIX, '')
+            : overId.startsWith(SPRINT_EPIC_DROP_PREFIX)
+              ? overId.replace(SPRINT_EPIC_DROP_PREFIX, '')
+              : overId
+          const newIdx = resolvedOverId === 'drop-sprint-bottom'
+            ? sprintTree.length - 1
+            : sprintTree.findIndex(t => t.id === resolvedOverId)
+          if (oldIdx === -1 || newIdx === -1) return
+          const reordered = arrayMove(sprintTree, oldIdx, newIdx)
+          const flat: SprintTask[] = []
+          for (const node of reordered) {
+            const orig = sprintTasks.find(t => t.id === node.id)!
+            flat.push(orig)
+            for (const sub of node.subtasks) flat.push(sprintTasks.find(t => t.id === sub.id)!)
+          }
+          setSprintTasks(flat)
+          await moveTaskInSprint(reordered.map((t, i) => ({ id: t.id, column_id: t.column_id ?? '', column_order: i })))
+          scheduleRefresh()
+        } else {
+          // Sort within sprint epic
+          const epicId = currentContainer.replace('sprint-epic-', '')
+          const epic = sprintTree.find(t => t.id === epicId)
+          if (!epic) return
+          const oldIdx = epic.subtasks.findIndex(s => s.id === activeId)
+          const newIdx = epic.subtasks.findIndex(s => s.id === overId)
+          if (oldIdx === -1 || newIdx === -1) return
+          const reorderedSubs = arrayMove(epic.subtasks, oldIdx, newIdx)
+          const flat: SprintTask[] = []
+          for (const node of sprintTree) {
+            flat.push(sprintTasks.find(t => t.id === node.id)!)
+            const subs = node.id === epicId ? reorderedSubs : node.subtasks
+            for (const sub of subs) flat.push(sprintTasks.find(t => t.id === sub.id)!)
+          }
+          setSprintTasks(flat.filter(Boolean))
+          await moveTaskInSprint(reorderedSubs.map((s, i) => ({ id: s.id, column_id: s.column_id ?? '', column_order: i })))
+          scheduleRefresh()
+        }
+        return
+      }
+
+      // Sprint cross-container
+      const sprintTask = sprintTasks.find(t => t.id === activeId)
+      if (!sprintTask) return
+      const withoutActive = sprintTasks.filter(t => t.id !== activeId)
+
+      if (currentContainer === 'sprint') {
+        // Sprint epic subtask → sprint root
+        const updated = { ...sprintTask, parent_task_id: null as string | null }
+        const treeWithout = buildSprintTree(withoutActive)
+        // Нормализуем overId и используем dragPreview как основной источник позиции
+        const resolvedOverId = overId.startsWith(SPRINT_EPIC_END_PREFIX)
+          ? overId.replace(SPRINT_EPIC_END_PREFIX, '')
+          : overId.startsWith(SPRINT_EPIC_DROP_PREFIX)
+            ? overId.replace(SPRINT_EPIC_DROP_PREFIX, '')
+            : overId
+        const overIdx = treeWithout.findIndex(t => t.id === resolvedOverId)
+        const insertAt = dragPreview?.container === 'sprint'
+          ? dragPreview.insertAt
+          : (overIdx >= 0 ? overIdx : treeWithout.length)
+        const flat: SprintTask[] = []
+        for (let i = 0; i < treeWithout.length; i++) {
+          if (i === insertAt) flat.push(updated)
+          const node = treeWithout[i]
+          flat.push(withoutActive.find(t => t.id === node.id)!)
+          for (const sub of node.subtasks) flat.push(withoutActive.find(t => t.id === sub.id)!)
+        }
+        if (insertAt >= treeWithout.length) flat.push(updated)
+        setSprintTasks(flat.filter(Boolean))
+        await updateTask(activeId, projectId, { parent_task_id: null })
+        scheduleRefresh()
+      } else {
+        // Sprint task → sprint epic
+        const epicId = currentContainer.replace('sprint-epic-', '')
+        const updated = { ...sprintTask, parent_task_id: epicId }
+        const treeWithout = buildSprintTree(withoutActive)
+        const targetEpic = treeWithout.find(t => t.id === epicId)
+        if (!targetEpic) return
+        const dragPrev = dragPreview
+        const insertAt = dragPrev?.container === currentContainer ? dragPrev.insertAt : targetEpic.subtasks.length
+        const flat: SprintTask[] = []
+        for (const node of treeWithout) {
+          flat.push(withoutActive.find(t => t.id === node.id)!)
+          const subs = node.id === epicId
+            ? [...node.subtasks.slice(0, insertAt), updated, ...node.subtasks.slice(insertAt)]
+            : node.subtasks
+          for (const sub of subs) {
+            const orig = sub.id === activeId ? updated : withoutActive.find(t => t.id === sub.id)!
+            flat.push(orig)
+          }
+        }
+        setSprintTasks(flat.filter(Boolean))
+        await updateTask(activeId, projectId, { parent_task_id: epicId })
+        scheduleRefresh()
+      }
+      return
+    }
+
+    // После sprint-блока: для бэклог-логики нужен over
+    if (!over) return
+    const overId = over.id as string
+
+    // Перетащили в спринт: currentContainer начинается с 'sprint', или over — sprint-элемент
+    if (currentContainer.startsWith('sprint') ||
+        overId === SPRINT_DROP_ID ||
+        overId === 'drop-sprint-bottom' ||
+        overId.startsWith(SPRINT_EPIC_DROP_PREFIX) ||
+        overId.startsWith(SPRINT_EPIC_END_PREFIX) ||
+        sprintTasks.some(t => t.id === overId)) {
+      const task = findTaskDeep(tasks, activeId)
+      if (!task) return
+
+      // targetSprintEpicId определяем ТОЛЬКО по currentContainer (отражает намерение пользователя).
+      // overId при drop может быть SPRINT_EPIC_END_PREFIX даже когда курсор был над корнем спринта —
+      // использование overId здесь давало неверный результат.
+      const targetSprintEpicId = currentContainer.startsWith('sprint-epic-')
+        ? currentContainer.replace('sprint-epic-', '')
+        : null
+
+      const capturedSprintTree = buildSprintTree(sprintTasks)
+      // dragPreview в замыкании ещё содержит значение до setDragPreview(null) вверху
+      const sprintInsertAt = dragPreview?.container === 'sprint'
+        ? dragPreview.insertAt
+        : capturedSprintTree.length  // дефолт — в конец
+
+      const toMove = task.type === 'epic' ? [task, ...task.subtasks] : [task]
+      const moveIds = new Set(toMove.map(t => t.id))
+      setTasks(prev =>
+        prev.filter(t => !moveIds.has(t.id)).map(t => ({ ...t, subtasks: t.subtasks.filter(s => !moveIds.has(s.id)) }))
+      )
+
+      const newSprintObjects = toMove.map(t => ({
+        ...(t as unknown as SprintTask),
+        parent_task_id: (targetSprintEpicId && task.type !== 'epic') ? targetSprintEpicId : (t as unknown as SprintTask).parent_task_id,
+      }))
+
+      if (!targetSprintEpicId && task.type !== 'epic') {
+        // Вставляем на конкретную позицию в корень спринта
+        setSprintTasks(() => {
+          const flat: SprintTask[] = []
+          for (let i = 0; i <= capturedSprintTree.length; i++) {
+            if (i === sprintInsertAt) flat.push(...newSprintObjects)
+            if (i < capturedSprintTree.length) {
+              const node = capturedSprintTree[i]
+              flat.push(sprintTasks.find(t => t.id === node.id)!)
+              for (const sub of node.subtasks) flat.push(sprintTasks.find(t => t.id === sub.id)!)
+            }
+          }
+          return flat
+        })
+      } else {
+        setSprintTasks(prev => [...prev, ...newSprintObjects])
+      }
+
+      await moveToSprint(activeId, projectId)
+      if (targetSprintEpicId && task.type !== 'epic') {
+        await updateTask(activeId, projectId, { parent_task_id: targetSprintEpicId })
+      }
+      // Сохраняем порядок для задач в корне спринта (дебаунс — только финальный порядок в БД)
+      if (!targetSprintEpicId && task.type !== 'epic') {
+        const reordered = [
+          ...capturedSprintTree.slice(0, sprintInsertAt).map(n => n.id),
+          activeId,
+          ...capturedSprintTree.slice(sprintInsertAt).map(n => n.id),
+        ]
+        scheduleReorder('sprint', reordered)
+      } else {
+        scheduleRefresh()
+      }
+      return
+    }
 
     if (sourceContainer !== currentContainer) {
       // Смена контейнера: вычисляем новый state заранее, чтобы сохранить порядок в БД
@@ -410,19 +857,17 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
 
       setTasks(newTasks)
 
-      try {
-        await updateTask(activeId, projectId, {
-          parent_task_id: currentContainer === 'root' ? null : currentContainer,
-        })
-        // Сохраняем новый порядок — иначе router.refresh() восстановит старый backlog_order
-        if (currentContainer === 'root') {
-          await reorderBacklog(projectId, newTasks.map(t => t.id))
-        } else {
-          const epic = newTasks.find(t => t.id === currentContainer)
-          if (epic) await reorderBacklog(projectId, epic.subtasks.map(s => s.id))
-        }
-      } catch { /* router.refresh восстановит */ }
-      router.refresh()
+      await updateTask(activeId, projectId, {
+        parent_task_id: currentContainer === 'root' ? null : currentContainer,
+      })
+      // Порядок сохраняется дебаунсом — только финальный порядок попадает в БД
+      if (currentContainer === 'root') {
+        scheduleReorder('backlog', newTasks.map(t => t.id))
+      } else {
+        const epic = newTasks.find(t => t.id === currentContainer)
+        if (epic) scheduleReorder('backlog', epic.subtasks.map(s => s.id))
+        else scheduleRefresh()
+      }
       return
     }
 
@@ -433,10 +878,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
       if (oldIdx === -1 || newIdx === -1) return
       const reordered = arrayMove(tasks, oldIdx, newIdx)
       setTasks(reordered)
-      try {
-        await reorderBacklog(projectId, reordered.map(t => t.id))
-        router.refresh()
-      } catch { setTasks(initialTasks) }
+      scheduleReorder('backlog', reordered.map(t => t.id))
     } else {
       const epic = tasks.find(t => t.id === currentContainer)
       if (!epic) return
@@ -445,10 +887,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
       if (oldIdx === -1 || newIdx === -1) return
       const reordered = arrayMove(epic.subtasks, oldIdx, newIdx)
       setTasks(prev => prev.map(t => t.id === currentContainer ? { ...t, subtasks: reordered } : t))
-      try {
-        await reorderBacklog(projectId, reordered.map(s => s.id))
-        router.refresh()
-      } catch { setTasks(initialTasks) }
+      scheduleReorder('backlog', reordered.map(s => s.id))
     }
   }
 
@@ -484,18 +923,34 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
   }, [router])
 
   const handleMoveToSprint = useCallback((id: string) => {
-    setTasks(prev => {
-      return prev
-        .filter(t => t.id !== id)
-        .map(t => ({ ...t, subtasks: t.subtasks.filter(s => s.id !== id) }))
-    })
-    router.refresh()
-  }, [router])
+    const task = findTaskDeep(tasks, id)
+    if (!task) return
+    const toMove = task.type === 'epic' ? [task, ...task.subtasks] : [task]
+    const moveIds = new Set(toMove.map(t => t.id))
+    setTasks(prev =>
+      prev.filter(t => !moveIds.has(t.id)).map(t => ({ ...t, subtasks: t.subtasks.filter(s => !moveIds.has(s.id)) }))
+    )
+    setSprintTasks(prev => [...prev, ...toMove.map(t => t as unknown as SprintTask)])
+  }, [tasks])
+
+  const handleSprintTaskRemoved = useCallback((task: SprintTask, subtasks: SprintTask[]) => {
+    if (task.type === 'epic' && subtasks.length > 0) {
+      const subtasksBacklog = subtasks.map(s => sprintToBacklog(s))
+      const epicBacklog: BacklogTask = {
+        ...sprintToBacklog(task),
+        subtasks: subtasksBacklog,
+        subtask_total: subtasksBacklog.length,
+        subtask_done: subtasksBacklog.filter(s => s.workflow_status === 'done').length,
+      }
+      setTasks(prev => [...prev, epicBacklog])
+    } else {
+      setTasks(prev => [...prev, sprintToBacklog(task)])
+    }
+  }, [])
 
   const handleWorkflowChange = useCallback(async (id: string, status: string) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id) return { ...t, workflow_status: status as WorkflowStatus }
-      // Если это подзадача эпика — пересчитываем subtask_done
       if (t.subtasks.some(s => s.id === id)) {
         const updatedSubtasks = t.subtasks.map(s =>
           s.id === id ? { ...s, workflow_status: status as WorkflowStatus } : s
@@ -506,6 +961,28 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
       return t
     }))
     await updateTask(id, projectId, { workflow_status: status })
+    router.refresh()
+  }, [projectId, router])
+
+  const handleDeadlineChange = useCallback(async (id: string, deadline: string | null) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) return { ...t, deadline }
+      if (t.subtasks.some(s => s.id === id))
+        return { ...t, subtasks: t.subtasks.map(s => s.id === id ? { ...s, deadline } : s) }
+      return t
+    }))
+    await updateTask(id, projectId, { deadline })
+    router.refresh()
+  }, [projectId, router])
+
+  const handleTimeChange = useCallback(async (id: string, minutes: number | null) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) return { ...t, time_estimate: minutes }
+      if (t.subtasks.some(s => s.id === id))
+        return { ...t, subtasks: t.subtasks.map(s => s.id === id ? { ...s, time_estimate: minutes } : s) }
+      return t
+    }))
+    await updateTask(id, projectId, { time_estimate: minutes })
     router.refresh()
   }, [projectId, router])
 
@@ -529,54 +1006,67 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
 
   return (
     <>
-      <div className="flex flex-col gap-4">
-        {/* Тулбар */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>
-              {tasks.length} {plural(tasks.length, 'задача', 'задачи', 'задач')}
-            </span>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
-            style={{ background: 'var(--accent)', color: '#fff' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-            Добавить задачу
-          </button>
-        </div>
-
-        {/* Список */}
-        {tasks.length === 0 ? (
+      <DndContext
+        id="backlog-dnd"
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-6 items-start">
+          {/* ── Левая панель: бэклог ── */}
           <div
-            className="flex flex-col items-center justify-center gap-3 py-16 rounded-xl"
-            style={{ border: '1px dashed var(--border)' }}
+            ref={setBacklogRef}
+            className="flex flex-col flex-1 min-w-0 rounded-xl"
+            style={{
+              background: 'var(--surface)',
+              border: `1px solid ${sprintDragOverBacklog ? 'rgba(79,142,247,0.5)' : 'var(--border)'}`,
+              transition: 'border-color 0.15s',
+            }}
           >
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.3 }}>
-              <rect x="6" y="4" width="28" height="32" rx="3" stroke="var(--text2)" strokeWidth="2"/>
-              <path d="M13 14h14M13 20h14M13 26h8" stroke="var(--text2)" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <p className="text-sm" style={{ color: 'var(--text2)' }}>Бэклог пуст</p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="text-sm px-4 py-2 rounded-lg font-medium"
-              style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--accent)' }}
+            {/* Шапка — как у спринт-панели */}
+            <div
+              className="flex items-center justify-between px-4 py-3.5 shrink-0"
+              style={{ borderBottom: '1px solid var(--border)' }}
             >
-              Создать первую задачу
-            </button>
-          </div>
-        ) : (
-          <DndContext
-            id="backlog-dnd"
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-          >
+              <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>
+                {tasks.length} {plural(tasks.length, 'задача', 'задачи', 'задач')}
+              </span>
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ background: 'var(--accent)', color: '#fff' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+                Добавить задачу
+              </button>
+            </div>
+
+            {/* Контент */}
+            <div className="flex-1 p-3">
+            {tasks.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center gap-3 py-16 rounded-xl"
+                style={{ border: '1px dashed var(--border)' }}
+              >
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.3 }}>
+                  <rect x="6" y="4" width="28" height="32" rx="3" stroke="var(--text2)" strokeWidth="2"/>
+                  <path d="M13 14h14M13 20h14M13 26h8" stroke="var(--text2)" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <p className="text-sm" style={{ color: 'var(--text2)' }}>Бэклог пуст</p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="text-sm px-4 py-2 rounded-lg font-medium"
+                  style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--accent)' }}
+                >
+                  Создать первую задачу
+                </button>
+              </div>
+            ) : (
             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
               <div className="flex flex-col gap-2">
                 {tasks.map((task, i) => {
@@ -595,6 +1085,8 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onMoveToSprint={handleMoveToSprint}
                           onEdit={handleEdit}
                           onWorkflowChange={handleWorkflowChange}
+                          onDeadlineChange={handleDeadlineChange}
+                          onTimeChange={handleTimeChange}
                           dragPreview={dragPreview}
                           insertIndicator={insertIndicator}
                         />
@@ -619,6 +1111,8 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                             onOptimisticMoveToSprint={handleMoveToSprint}
                             onEdit={handleEdit}
                             onWorkflowChange={handleWorkflowChange}
+                            onDeadlineChange={handleDeadlineChange}
+                            onTimeChange={handleTimeChange}
                           />
                         </div>
                       )}
@@ -628,26 +1122,87 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                 {activeId && <RootDropZone />}
               </div>
             </SortableContext>
+            )}
+            </div>{/* /контент */}
+          </div>
 
-            <DragOverlay>
-              {activeTask && (
-                <div
-                  className="rounded-xl shadow-2xl"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--accent)', opacity: 0.95 }}
-                >
+          {/* ── Правая панель: спринт ── */}
+          {sprintPanelData && (
+            <SprintPanel
+              sprint={sprintPanelData.sprint}
+              tasks={sprintTasks}
+              activeId={activeId}
+              dragPreview={dragPreview}
+              onTasksChange={setSprintTasks}
+              onTaskRemoved={handleSprintTaskRemoved}
+              onEditTask={handleEdit}
+            />
+          )}
+        </div>
+
+        <DragOverlay dropAnimation={null}>
+          {activeId && (() => {
+            // Ищем только в top-level задачах (эпики) или подзадачах
+            const btTopLevel = tasks.find(t => t.id === activeId)
+            const btSub = btTopLevel ? null : tasks.flatMap(t => t.subtasks).find(s => s.id === activeId) ?? null
+            const st = sprintTasks.find(t => t.id === activeId)
+            const overlayTask = btTopLevel ?? btSub ?? (st ? sprintToBacklog(st) : null)
+            if (!overlayTask) return null
+
+            // Подзадачи для overlay (только для top-level эпиков)
+            let subtasksForOverlay: BacklogTask[] = []
+            if (overlayTask.type === 'epic') {
+              if (btTopLevel) {
+                subtasksForOverlay = btTopLevel.subtasks
+              } else if (st) {
+                const sprintNode = buildSprintTree(sprintTasks).find(n => n.id === activeId)
+                if (sprintNode) subtasksForOverlay = sprintNode.subtasks.map(s => sprintToBacklog(s as SprintTask))
+              }
+            }
+
+            return (
+              <div
+                className="rounded-xl shadow-2xl"
+                style={{ background: 'var(--surface)', border: '1px solid var(--accent)', opacity: 0.95 }}
+              >
+                <div style={{ borderBottom: subtasksForOverlay.length > 0 ? '1px solid var(--border)' : undefined }}>
                   <TaskCard
-                    task={activeTask}
+                    task={overlayTask}
                     projectId={projectId}
-                    hasActiveSprint={hasActiveSprint}
+                    hasActiveSprint={false}
+                    isOverlay
                     onOptimisticDelete={() => {}}
                     onOptimisticMoveToSprint={() => {}}
                   />
                 </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        )}
-      </div>
+                {subtasksForOverlay.length > 0 && (
+                  <div style={{ background: 'var(--surface2)', borderRadius: '0 0 12px 12px' }}>
+                    {subtasksForOverlay.map((sub, i) => (
+                      <div
+                        key={sub.id}
+                        style={{
+                          borderBottom: i < subtasksForOverlay.length - 1 ? '1px solid var(--border)' : undefined,
+                          opacity: 0.85,
+                        }}
+                      >
+                        <TaskCard
+                          task={sub}
+                          projectId={projectId}
+                          hasActiveSprint={false}
+                          isSubtask
+                          isOverlay
+                          onOptimisticDelete={() => {}}
+                          onOptimisticMoveToSprint={() => {}}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+        </DragOverlay>
+      </DndContext>
 
       {showModal && (
         <CreateTaskModal

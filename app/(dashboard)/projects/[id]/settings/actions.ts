@@ -15,6 +15,8 @@ export async function updateProject(projectId: string, data: {
   name: string
   description: string
   color: string
+  default_assignee_mode?: 'manual' | 'creator' | 'specific'
+  default_assignee_id?: string | null
 }) {
   await getSession()
   const admin = createAdminClient()
@@ -25,6 +27,8 @@ export async function updateProject(projectId: string, data: {
       name: data.name.trim(),
       description: data.description.trim() || null,
       color: data.color,
+      ...(data.default_assignee_mode !== undefined && { default_assignee_mode: data.default_assignee_mode }),
+      ...(data.default_assignee_id !== undefined && { default_assignee_id: data.default_assignee_id }),
     })
     .eq('id', projectId)
 
@@ -33,7 +37,7 @@ export async function updateProject(projectId: string, data: {
   revalidatePath('/projects')
 }
 
-export async function addMember(projectId: string, userId: string, role: 'member' | 'viewer') {
+export async function addMember(projectId: string, userId: string, role: 'manager' | 'member' | 'viewer') {
   await getSession()
   const admin = createAdminClient()
 
@@ -45,7 +49,7 @@ export async function addMember(projectId: string, userId: string, role: 'member
   revalidatePath(`/projects/${projectId}/settings`)
 }
 
-export async function updateMemberRole(projectId: string, userId: string, role: 'member' | 'viewer') {
+export async function updateMemberRole(projectId: string, userId: string, role: 'manager' | 'member' | 'viewer') {
   await getSession()
   const admin = createAdminClient()
 
