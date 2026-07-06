@@ -67,6 +67,9 @@ export type Sprint = {
   date_from: string
   date_to: string
   status: 'active' | 'closed'
+  is_fixed: boolean
+  fixed_at: string | null
+  fixed_task_ids: string[]
   created_by: string
   created_at: string
 }

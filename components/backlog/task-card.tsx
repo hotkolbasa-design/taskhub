@@ -47,21 +47,44 @@ function WorkflowBadge({ status }: { status: string }) {
 
 function WorkflowBadgeDropdown({ status, taskId, onChange }: { status: string; taskId: string; onChange: (id: string, status: string) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
   const cfg = WORKFLOW_CONFIG[status] ?? WORKFLOW_CONFIG.new
+  const DROP_HEIGHT = 200 // примерная высота дропдауна
 
   useEffect(() => {
     if (!open) return
-    const onOut = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onOut)
     return () => document.removeEventListener('mousedown', onOut)
   }, [open])
 
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!open) {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) {
+        const spaceBelow = window.innerHeight - rect.bottom
+        if (spaceBelow < DROP_HEIGHT) {
+          setPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left })
+        } else {
+          setPos({ top: rect.bottom + 4, left: rect.left })
+        }
+      }
+    }
+    setOpen(o => !o)
+  }
+
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div className="shrink-0">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        onClick={handleOpen}
         className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-all"
         style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${open ? cfg.color : 'transparent'}` }}
       >
@@ -71,9 +94,25 @@ function WorkflowBadgeDropdown({ status, taskId, onChange }: { status: string; t
           <path d="M2 3L4 5L6 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[150px]"
-          style={{ background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
+
+      {open && pos && createPortal(
+        <div
+          ref={dropRef}
+          className="py-1 rounded-xl"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+            minWidth: 150,
+          }}
+          onClick={e => e.stopPropagation()}
+        >
           {Object.entries(WORKFLOW_CONFIG).map(([key, c]) => (
             <button key={key} type="button"
               onClick={e => { e.stopPropagation(); onChange(taskId, key); setOpen(false) }}
@@ -91,7 +130,8 @@ function WorkflowBadgeDropdown({ status, taskId, onChange }: { status: string; t
               )}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -124,12 +164,18 @@ function DeadlinePickerInline({ deadline, taskId, onChange }: {
   onChange: (id: string, deadline: string | null) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
   const [viewDate, setViewDate] = useState(() => deadline ? new Date(deadline + 'T00:00:00') : new Date())
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+  const DROP_HEIGHT = 300
 
   useEffect(() => {
     if (!open) return
-    const onOut = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onOut)
     return () => document.removeEventListener('mousedown', onOut)
   }, [open])
@@ -160,6 +206,23 @@ function DeadlinePickerInline({ deadline, taskId, onChange }: {
   const selectedDate = deadline ? (() => { const d = new Date(deadline + 'T00:00:00'); d.setHours(0,0,0,0); return d })() : null
   const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0)
 
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!open) {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) {
+        const right = window.innerWidth - rect.right
+        const spaceBelow = window.innerHeight - rect.bottom
+        if (spaceBelow < DROP_HEIGHT) {
+          setPos({ bottom: window.innerHeight - rect.top + 4, right })
+        } else {
+          setPos({ top: rect.bottom + 4, right })
+        }
+      }
+    }
+    setOpen(o => !o)
+  }
+
   function selectDay(day: number, m: number, y: number) {
     const d = new Date(y, m, day)
     const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -168,10 +231,11 @@ function DeadlinePickerInline({ deadline, taskId, onChange }: {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        onClick={handleOpen}
         className="flex items-center gap-1 text-xs rounded px-1 py-0.5 transition-colors"
         style={{
           color: isPast ? 'var(--red)' : isToday ? 'var(--yellow)' : 'var(--text2)',
@@ -187,10 +251,22 @@ function DeadlinePickerInline({ deadline, taskId, onChange }: {
         <span style={{ opacity: formatted ? 1 : 0.4 }}>{formatted ?? '—'}</span>
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <div
-          className="absolute right-0 top-full mt-1 rounded-2xl z-50 p-3"
-          style={{ background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)', animation: 'dropdownIn 0.12s ease-out', minWidth: 242 }}
+          ref={dropRef}
+          className="rounded-2xl p-3"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            bottom: pos.bottom,
+            right: pos.right,
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+            animation: 'dropdownIn 0.12s ease-out',
+            minWidth: 242,
+          }}
           onClick={e => e.stopPropagation()}
         >
           {/* Навигация */}
@@ -269,9 +345,10 @@ function DeadlinePickerInline({ deadline, taskId, onChange }: {
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
 
@@ -281,25 +358,43 @@ function TimePickerInline({ minutes, taskId, onChange }: {
   onChange: (id: string, minutes: number | null) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
   const [hours, setHours] = useState('')
   const [mins, setMins] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+  const DROP_HEIGHT = 130
 
   useEffect(() => {
     if (!open) return
-    const onOut = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onOut)
     return () => document.removeEventListener('mousedown', onOut)
   }, [open])
 
   function openPicker(e: React.MouseEvent) {
     e.stopPropagation()
-    if (minutes != null) {
-      setHours(String(Math.floor(minutes / 60)))
-      setMins(String(minutes % 60))
-    } else {
-      setHours('')
-      setMins('')
+    if (!open) {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) {
+        const right = window.innerWidth - rect.right
+        const spaceBelow = window.innerHeight - rect.bottom
+        if (spaceBelow < DROP_HEIGHT) {
+          setPos({ bottom: window.innerHeight - rect.top + 4, right })
+        } else {
+          setPos({ top: rect.bottom + 4, right })
+        }
+      }
+      if (minutes != null) {
+        setHours(String(Math.floor(minutes / 60)))
+        setMins(String(minutes % 60))
+      } else {
+        setHours('')
+        setMins('')
+      }
     }
     setOpen(o => !o)
   }
@@ -313,8 +408,9 @@ function TimePickerInline({ minutes, taskId, onChange }: {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={openPicker}
         className="text-xs rounded px-1 py-0.5 transition-colors"
@@ -330,10 +426,22 @@ function TimePickerInline({ minutes, taskId, onChange }: {
         {minutes != null ? minutesToDisplay(minutes) : '—'}
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <div
-          className="absolute right-0 top-full mt-1 rounded-xl z-50 p-3"
-          style={{ background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out', minWidth: 168 }}
+          ref={dropRef}
+          className="rounded-xl p-3"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            bottom: pos.bottom,
+            right: pos.right,
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+            width: 172,
+          }}
           onClick={e => e.stopPropagation()}
         >
           <p className="text-xs mb-2 font-medium" style={{ color: 'var(--text2)' }}>Оценка времени</p>
@@ -386,40 +494,58 @@ function TimePickerInline({ minutes, taskId, onChange }: {
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
+}
+
+type ExternalDragHandle = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  attributes: Record<string, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  listeners: Record<string, any> | undefined
 }
 
 type Props = {
   task: BacklogTask
   projectId: string
   hasActiveSprint: boolean
-  isSubtask?: boolean
   isOverlay?: boolean
+  sortableDisabled?: boolean
+  externalDragHandle?: ExternalDragHandle
   onOptimisticDelete: (id: string) => void
   onOptimisticMoveToSprint: (id: string) => void
   onMoveToBacklog?: (id: string) => void
+  onRemoveFromEpic?: (id: string) => void
   onEdit?: (task: BacklogTask) => void
   onWorkflowChange?: (id: string, status: string) => void
   onDeadlineChange?: (id: string, deadline: string | null) => void
   onTimeChange?: (id: string, minutes: number | null) => void
+  /** Слот в конце строки 1 — для эпиков: счётчик + прогресс-бар + стрелка */
+  row1Suffix?: React.ReactNode
+  /** Когда true — аватар и меню рендерятся в строке 2 (а не как отдельные элементы рядом) */
+  avatarMenuInRow2?: boolean
 }
 
 export default function TaskCard({
   task,
   projectId,
   hasActiveSprint,
-  isSubtask = false,
   isOverlay = false,
+  sortableDisabled = false,
+  externalDragHandle,
   onOptimisticDelete,
   onOptimisticMoveToSprint,
   onMoveToBacklog,
+  onRemoveFromEpic,
   onEdit,
   onWorkflowChange,
   onDeadlineChange,
   onTimeChange,
+  row1Suffix,
+  avatarMenuInRow2 = false,
 }: Props) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
@@ -455,18 +581,21 @@ export default function TaskCard({
   }
 
   const {
-    attributes,
-    listeners,
+    attributes: ownAttributes,
+    listeners: ownListeners,
     setNodeRef,
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: task.id, disabled: isOverlay || sortableDisabled })
+
+  const handleAttributes = externalDragHandle ? externalDragHandle.attributes : ownAttributes
+  const handleListeners = externalDragHandle ? externalDragHandle.listeners : ownListeners
 
   const style = {
-    transform: isOverlay ? undefined : CSS.Transform.toString(transform),
-    transition: isOverlay ? undefined : transition,
-    opacity: isDragging && !isOverlay ? 0 : 1,
+    transform: (isOverlay || sortableDisabled) ? undefined : CSS.Transform.toString(transform),
+    transition: (isOverlay || sortableDisabled) ? undefined : transition,
+    opacity: (isDragging && !isOverlay && !sortableDisabled) ? 0 : 1,
   }
 
   async function handleDelete() {
@@ -486,7 +615,7 @@ export default function TaskCard({
     onOptimisticMoveToSprint(task.id)
     try {
       await moveToSprint(task.id, projectId)
-      router.refresh()  // refresh ПОСЛЕ server action, не до
+      router.refresh()
     } catch {
       // сервер обновится
     } finally {
@@ -496,14 +625,14 @@ export default function TaskCard({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(isOverlay || sortableDisabled) ? undefined : setNodeRef}
       style={style}
       className="group flex items-center gap-2 px-3 py-2.5 rounded-lg"
     >
-      {/* Drag handle */}
+      {/* Drag handle — centered */}
       <button
-        {...attributes}
-        {...listeners}
+        {...handleAttributes}
+        {...handleListeners}
         className="shrink-0 opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-opacity"
         style={{ color: 'var(--text2)', cursor: 'grab', touchAction: 'none' }}
       >
@@ -514,47 +643,53 @@ export default function TaskCard({
         </svg>
       </button>
 
-      {/* Тип */}
-      <span
-        className="shrink-0 w-5 h-5 rounded flex items-center justify-center"
-        style={{
-          background: task.type === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(79,142,247,0.15)',
-          color: task.type === 'epic' ? 'var(--yellow)' : 'var(--accent)',
-        }}
-        title={task.type === 'epic' ? 'Эпик' : 'Задача'}
-      >
-        {task.type === 'epic' ? (
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M1 7L4 2L6.5 6L8 4L9 7H1Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
-          </svg>
-        ) : (
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <rect x="1" y="1" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.1"/>
-            <path d="M3 5l1.5 1.5L7 3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        )}
-      </span>
+      {/* Две строки */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        {/* Строка 1: тип + заголовок + счётчик подзадач */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="shrink-0 w-5 h-5 rounded flex items-center justify-center"
+            style={{
+              background: task.type === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(79,142,247,0.15)',
+              color: task.type === 'epic' ? 'var(--yellow)' : 'var(--accent)',
+            }}
+            title={task.type === 'epic' ? 'Эпик' : 'Задача'}
+          >
+            {task.type === 'epic' ? (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1 7L4 2L6.5 6L8 4L9 7H1Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <rect x="1" y="1" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.1"/>
+                <path d="M3 5l1.5 1.5L7 3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </span>
+          <span
+            className="flex-1 text-sm truncate"
+            style={{ color: 'var(--text)', cursor: onEdit ? 'pointer' : 'default' }}
+            onClick={() => onEdit?.(task)}
+            onMouseEnter={e => { if (onEdit) e.currentTarget.style.color = 'var(--accent)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
+          >
+            {task.title}
+          </span>
+          {/* Дефолтный счётчик подзадач — скрывается когда есть row1Suffix */}
+          {task.type === 'epic' && task.subtask_total > 0 && !row1Suffix && (
+            <span className="text-xs shrink-0" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+              {task.subtask_done}/{task.subtask_total}
+            </span>
+          )}
+          {row1Suffix}
+        </div>
 
-      {/* Заголовок */}
-      <span
-        className="flex-1 text-sm truncate"
-        style={{ color: 'var(--text)', cursor: onEdit ? 'pointer' : 'default' }}
-        onClick={() => onEdit?.(task)}
-        onMouseEnter={e => { if (onEdit) e.currentTarget.style.color = 'var(--accent)' }}
-        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
-      >
-        {task.title}
-      </span>
-
-      {/* Статус + мета — фиксированные колонки */}
-      <div className="flex items-center shrink-0">
-        <div style={{ width: 100 }} className="flex items-center">
+        {/* Строка 2: статус + время + дедлайн [+ аватар+меню если avatarMenuInRow2] */}
+        <div className="flex items-center gap-2">
           {onWorkflowChange
             ? <WorkflowBadgeDropdown status={task.workflow_status ?? 'new'} taskId={task.id} onChange={onWorkflowChange} />
             : <WorkflowBadge status={task.workflow_status ?? 'new'} />
           }
-        </div>
-        <div style={{ width: 80 }} className="flex items-center">
           {onTimeChange
             ? <TimePickerInline minutes={task.time_estimate} taskId={task.id} onChange={onTimeChange} />
             : task.time_estimate != null && (
@@ -563,41 +698,68 @@ export default function TaskCard({
               </span>
             )
           }
-        </div>
-        <div style={{ width: 62 }} className="flex items-center">
           {onDeadlineChange
             ? <DeadlinePickerInline deadline={task.deadline} taskId={task.id} onChange={onDeadlineChange} />
             : task.deadline && <DeadlineLabel deadline={task.deadline} />
           }
-        </div>
-        <div style={{ width: 28 }} className="flex items-center">
-          {task.assignee && <Avatar name={task.assignee.full_name} login={task.assignee.login} />}
+          {avatarMenuInRow2 && task.assignee && (
+            <span className="ml-auto shrink-0">
+              <Avatar name={task.assignee.full_name} login={task.assignee.login} />
+            </span>
+          )}
+          {avatarMenuInRow2 && (
+            <button
+              ref={menuBtnRef}
+              type="button"
+              onClick={openMenu}
+              className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md transition-all"
+              style={{
+                color: 'var(--text2)',
+                background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+                opacity: menuOpen ? 1 : undefined,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
+              title="Действия"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                <circle cx="7" cy="3" r="1.2"/>
+                <circle cx="7" cy="7" r="1.2"/>
+                <circle cx="7" cy="11" r="1.2"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Меню «...» */}
-      <div className="shrink-0" style={{ opacity: menuOpen ? 1 : undefined }}>
-        <button
-          ref={menuBtnRef}
-          type="button"
-          onClick={openMenu}
-          className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md transition-all"
-          style={{
-            color: 'var(--text2)',
-            background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
-            opacity: menuOpen ? 1 : undefined,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
-          onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
-          title="Действия"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-            <circle cx="7" cy="3" r="1.2"/>
-            <circle cx="7" cy="7" r="1.2"/>
-            <circle cx="7" cy="11" r="1.2"/>
-          </svg>
-        </button>
-      </div>
+      {/* Аватар — только когда НЕ avatarMenuInRow2 */}
+      {!avatarMenuInRow2 && task.assignee && (
+        <Avatar name={task.assignee.full_name} login={task.assignee.login} />
+      )}
+
+      {/* Меню «...» — только когда НЕ avatarMenuInRow2 */}
+      {!avatarMenuInRow2 && (
+      <button
+        ref={menuBtnRef}
+        type="button"
+        onClick={openMenu}
+        className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md transition-all"
+        style={{
+          color: 'var(--text2)',
+          background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+          opacity: menuOpen ? 1 : undefined,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
+        onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
+        title="Действия"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+          <circle cx="7" cy="3" r="1.2"/>
+          <circle cx="7" cy="7" r="1.2"/>
+          <circle cx="7" cy="11" r="1.2"/>
+        </svg>
+      </button>
+      )}
 
       {menuOpen && menuPos && createPortal(
         <div
@@ -636,7 +798,7 @@ export default function TaskCard({
             </button>
           )}
 
-          {onMoveToBacklog && !isSubtask && (
+          {!!onMoveToBacklog && (
             <button
               type="button"
               onClick={() => { setMenuOpen(false); onMoveToBacklog(task.id) }}
@@ -653,7 +815,24 @@ export default function TaskCard({
             </button>
           )}
 
-          {((hasActiveSprint && !onMoveToBacklog) || (onMoveToBacklog && !isSubtask)) && (
+          {!!onRemoveFromEpic && !!task.parent_task_id && (
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); onRemoveFromEpic(task.id) }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors"
+              style={{ color: 'var(--text2)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="shrink-0">
+                <rect x="1.5" y="4.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M8.5 7h4M10.5 5l2 2-2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Убрать из эпика
+            </button>
+          )}
+
+          {((hasActiveSprint && !onMoveToBacklog) || !!onMoveToBacklog || (!!onRemoveFromEpic && !!task.parent_task_id)) && (
             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
           )}
 

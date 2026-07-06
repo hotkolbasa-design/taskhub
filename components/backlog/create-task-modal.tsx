@@ -6,6 +6,72 @@ import type { BacklogTask } from '@/types'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
+// ─── NumberStepper ───────────────────────────────────────────────────────────
+
+function NumberStepper({ value, onChange, min = 0, max, suffix }: {
+  value: string
+  onChange: (v: string) => void
+  min?: number
+  max?: number
+  suffix: string
+}) {
+  function step(dir: 1 | -1) {
+    const n = parseInt(value) || 0
+    const next = n + dir
+    if (next < min) return
+    if (max !== undefined && next > max) return
+    onChange(String(next))
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center rounded-lg overflow-hidden flex-1"
+        style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value}
+          onChange={e => {
+            const v = e.target.value.replace(/\D/g, '')
+            if (max !== undefined && v !== '' && parseInt(v) > max) return
+            onChange(v)
+          }}
+          placeholder="0"
+          className="bg-transparent outline-none text-sm px-3 py-2 min-w-0"
+          style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', width: 44 }}
+        />
+        <div className="flex flex-col shrink-0" style={{ borderLeft: '1px solid var(--border)' }}>
+          <button
+            type="button"
+            onClick={() => step(1)}
+            className="flex items-center justify-center px-1.5"
+            style={{ height: 18, color: 'var(--text2)', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+          >
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+              <path d="M1 4.5L4 1.5L7 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => step(-1)}
+            className="flex items-center justify-center px-1.5"
+            style={{ height: 18, color: 'var(--text2)', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+          >
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+              <path d="M1 1.5L4 4.5L7 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>{suffix}</span>
+    </div>
+  )
+}
+
 // ─── UserDropdown ────────────────────────────────────────────────────────────
 
 function UserDropdown({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: Member[] }) {
@@ -298,7 +364,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
         parent_task_id: type === 'task' && parentId ? parentId : null,
         sprint_id: null, column_id: null, column_order: null, backlog_order: 9999,
         workflow_status: 'new' as const,
-        is_recurring: false, tags: null, description: null,
+        is_recurring: false, tags: null, description: description.trim() || null,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         assignee: member ? { full_name: member.full_name, login: member.login, avatar_url: member.avatar_url } : null,
         subtasks: [], subtask_total: 0, subtask_done: 0,
@@ -388,27 +454,9 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Оценка времени</label>
-              <div className="flex gap-2">
-                {/* Часы */}
-                <div className="flex items-center gap-1.5 flex-1 px-3 py-2 rounded-lg"
-                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                  <input type="number" value={hours} onChange={e => setHours(e.target.value)}
-                    placeholder="0" min="0"
-                    className="w-full bg-transparent outline-none text-sm"
-                    style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
-                  />
-                  <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>ч</span>
-                </div>
-                {/* Минуты */}
-                <div className="flex items-center gap-1.5 flex-1 px-3 py-2 rounded-lg"
-                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                  <input type="number" value={minutes} onChange={e => setMinutes(e.target.value)}
-                    placeholder="0" min="0" max="59"
-                    className="w-full bg-transparent outline-none text-sm"
-                    style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
-                  />
-                  <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>мин</span>
-                </div>
+              <div className="flex gap-3">
+                <NumberStepper value={hours} onChange={setHours} min={0} suffix="ч" />
+                <NumberStepper value={minutes} onChange={setMinutes} min={0} max={59} suffix="мин" />
               </div>
             </div>
           </div>

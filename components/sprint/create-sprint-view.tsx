@@ -256,11 +256,19 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
           {/* Предпросмотр колонок */}
           {mode === 'weekdays' && (
             <div className="flex flex-wrap gap-1.5">
-              {['Пн','Вт','Ср','Чт','Пт','Сб'].map((d, i) => (
-                <span key={d} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md"
+              {[
+                { label: 'Новые', color: '#8892A4' },
+                { label: 'Пн',    color: '#4F8EF7' },
+                { label: 'Вт',    color: '#A78BFA' },
+                { label: 'Ср',    color: '#2DD4A0' },
+                { label: 'Чт',    color: '#F7C04F' },
+                { label: 'Пт',    color: '#F75C6E' },
+                { label: 'Сб',    color: '#60C0E8' },
+              ].map(({ label, color }) => (
+                <span key={label} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md"
                   style={{ background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLUMN_COLORS[i] }} />
-                  {d}
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                  {label}
                 </span>
               ))}
             </div>
