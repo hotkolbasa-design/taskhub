@@ -97,12 +97,17 @@ function Dropdown({ options, value, saving, onChange }: {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, right: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const current = options.find(o => o.value === value) ?? options[0]
 
   useEffect(() => {
     if (!open) return
     function onOutside(e: MouseEvent) {
-      if (btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (
+        btnRef.current && !btnRef.current.contains(target) &&
+        menuRef.current && !menuRef.current.contains(target)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', onOutside)
     return () => document.removeEventListener('mousedown', onOutside)
@@ -141,6 +146,7 @@ function Dropdown({ options, value, saving, onChange }: {
 
       {open && typeof document !== 'undefined' && createPortal(
         <div
+          ref={menuRef}
           className="py-1 rounded-xl min-w-[120px]"
           style={{
             position: 'fixed',
