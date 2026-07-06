@@ -1,0 +1,1 @@
+ALTER TABLE sprints ADD COLUMN IF NOT EXISTS is_fixed boolean NOT NULL DEFAULT false;

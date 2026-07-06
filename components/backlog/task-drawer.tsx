@@ -472,6 +472,21 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             <DatePicker value={deadline} onChange={handleDeadlineChange} />
           </div>
 
+          {/* Дата создания */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Дата создания</label>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)' }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--text2)', flexShrink: 0 }}>
+                <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
+                {new Date(task.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+          </div>
+
           {/* Оценка времени */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Оценка времени</label>
@@ -497,9 +512,6 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
                 <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>мин</span>
               </div>
             </div>
-            {currentTimeEstimate != null && currentTimeEstimate > 0 && (
-              <p className="text-xs" style={{ color: 'var(--text2)' }}>{minutesToDisplay(currentTimeEstimate)}</p>
-            )}
           </div>
 
           {/* Родительский эпик (только для задач) */}

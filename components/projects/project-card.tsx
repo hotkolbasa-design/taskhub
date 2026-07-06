@@ -160,6 +160,15 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
         >
           Спринт
         </Link>
+        <Link
+          href={`/projects/${project.id}/sprints`}
+          className="flex-1 text-center px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+          style={{ background: 'rgba(136,146,164,0.1)', color: 'var(--text2)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(136,146,164,0.18)'; e.currentTarget.style.color = 'var(--text)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(136,146,164,0.1)'; e.currentTarget.style.color = 'var(--text2)' }}
+        >
+          История
+        </Link>
       </div>
     </div>
   )

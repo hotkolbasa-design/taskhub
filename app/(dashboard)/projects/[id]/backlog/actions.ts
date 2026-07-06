@@ -71,7 +71,7 @@ export async function moveToSprint(taskId: string, projectId: string) {
 
   const { data: sprint } = await admin
     .from('sprints')
-    .select('id')
+    .select('id, date_to, is_fixed, fixed_task_ids')
     .eq('project_id', projectId)
     .eq('status', 'active')
     .limit(1)
@@ -87,17 +87,37 @@ export async function moveToSprint(taskId: string, projectId: string) {
     .limit(1)
     .maybeSingle()
 
-  const updateData = { status: 'sprint' as const, sprint_id: sprint.id, column_id: col?.id ?? null }
+  const baseUpdate = { status: 'sprint' as const, sprint_id: sprint.id, column_id: col?.id ?? null }
 
-  // Переносим саму задачу
-  const { data: task } = await admin.from('tasks').select('type').eq('id', taskId).maybeSingle()
-  await admin.from('tasks').update(updateData).eq('id', taskId)
+  const { data: task } = await admin.from('tasks').select('type, id, deadline').eq('id', taskId).maybeSingle()
 
-  // Если эпик — переносим все его backlog-подзадачи
+  const taskDeadline = task?.deadline ?? (sprint.date_to ?? null)
+  await admin.from('tasks').update({ ...baseUpdate, deadline: taskDeadline }).eq('id', taskId)
+
+  const movedIds: string[] = [taskId]
+
   if (task?.type === 'epic') {
-    await admin.from('tasks').update(updateData)
+    const { data: subtasks } = await admin.from('tasks')
+      .select('id, deadline')
       .eq('parent_task_id', taskId)
       .eq('status', 'backlog')
+
+    for (const sub of subtasks ?? []) {
+      const subDeadline = sub.deadline ?? (sprint.date_to ?? null)
+      await admin.from('tasks').update({ ...baseUpdate, deadline: subDeadline }).eq('id', sub.id)
+    }
+    movedIds.push(...(subtasks ?? []).map((s: { id: string }) => s.id))
+  }
+
+  // Если спринт зафиксирован — добавляем новые задачи в снапшот
+  if (sprint.is_fixed) {
+    const existing: string[] = sprint.fixed_task_ids ?? []
+    const newIds = movedIds.filter(id => !existing.includes(id))
+    if (newIds.length > 0) {
+      await admin.from('sprints').update({
+        fixed_task_ids: [...existing, ...newIds],
+      }).eq('id', sprint.id)
+    }
   }
 
   revalidatePath(`/projects/${projectId}/backlog`)
@@ -113,7 +133,16 @@ export async function updateTask(taskId: string, projectId: string, data: {
   parent_task_id?: string | null
   workflow_status?: string
 }) {
+  const userId = await getCurrentUserId()
   const admin = createAdminClient()
+
+  // Читаем текущие значения для сравнения
+  const { data: current } = await admin
+    .from('tasks')
+    .select('workflow_status, deadline, time_estimate')
+    .eq('id', taskId)
+    .single()
+
   const { error } = await admin
     .from('tasks')
     .update({
@@ -128,7 +157,37 @@ export async function updateTask(taskId: string, projectId: string, data: {
     })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
+
+  // Записываем историю изменений
+  if (current && userId) {
+    const activities: { task_id: string; actor_id: string; type: string; old_value: string | null; new_value: string | null }[] = []
+
+    if (data.workflow_status !== undefined && data.workflow_status !== current.workflow_status) {
+      activities.push({ task_id: taskId, actor_id: userId, type: 'status_change', old_value: current.workflow_status, new_value: data.workflow_status })
+    }
+    if (data.deadline !== undefined && data.deadline !== current.deadline) {
+      activities.push({ task_id: taskId, actor_id: userId, type: 'deadline_change', old_value: current.deadline ?? null, new_value: data.deadline ?? null })
+    }
+    if (data.time_estimate !== undefined && data.time_estimate !== current.time_estimate) {
+      activities.push({ task_id: taskId, actor_id: userId, type: 'time_change', old_value: current.time_estimate != null ? String(current.time_estimate) : null, new_value: data.time_estimate != null ? String(data.time_estimate) : null })
+    }
+
+    if (activities.length > 0) {
+      await admin.from('task_activities').insert(activities)
+    }
+  }
+
   revalidatePath(`/projects/${projectId}/backlog`)
+}
+
+export async function getActivities(taskId: string) {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('task_activities')
+    .select('*, actor:profiles(id, full_name, login, avatar_url)')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true })
+  return data ?? []
 }
 
 export async function getComments(taskId: string) {
@@ -245,6 +304,93 @@ export async function reorderBacklog(projectId: string, orderedIds: string[]) {
   revalidatePath(`/projects/${projectId}/backlog`)
 }
 
+export async function deleteSprint(sprintId: string, projectId: string) {
+  const admin = createAdminClient()
+
+  // Получаем максимальный backlog_order для вставки в конец
+  const { data: last } = await admin
+    .from('tasks')
+    .select('backlog_order')
+    .eq('project_id', projectId)
+    .eq('status', 'backlog')
+    .order('backlog_order', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+
+  let nextOrder = (last?.backlog_order ?? 0) + 1
+
+  // Переносим все задачи спринта обратно в бэклог
+  const { data: sprintTasks } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('sprint_id', sprintId)
+    .neq('status', 'deleted')
+
+  if (sprintTasks && sprintTasks.length > 0) {
+    for (const t of sprintTasks) {
+      await admin.from('tasks').update({
+        status: 'backlog',
+        sprint_id: null,
+        column_id: null,
+        column_order: null,
+        backlog_order: nextOrder++,
+      }).eq('id', t.id)
+    }
+  }
+
+  // Удаляем колонки спринта и сам спринт
+  await admin.from('sprint_columns').delete().eq('sprint_id', sprintId)
+  await admin.from('sprints').delete().eq('id', sprintId)
+
+  revalidatePath(`/projects/${projectId}/backlog`)
+}
+
+export async function updateSprintPeriod(sprintId: string, projectId: string, dateFrom: string, dateTo: string) {
+  const admin = createAdminClient()
+  const { error } = await admin.from('sprints').update({ date_from: dateFrom, date_to: dateTo }).eq('id', sprintId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/projects/${projectId}/backlog`)
+}
+
+export async function createSprint(projectId: string, dateFrom: string, dateTo: string) {
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Не авторизован')
+
+  const admin = createAdminClient()
+
+  const { count } = await admin.from('sprints').select('id', { count: 'exact', head: true }).eq('project_id', projectId)
+  const name = `Спринт ${(count ?? 0) + 1}`
+
+  const { data: sprint, error } = await admin.from('sprints').insert({
+    project_id: projectId,
+    name,
+    date_from: dateFrom,
+    date_to: dateTo,
+    status: 'active',
+    created_by: userId,
+  }).select().maybeSingle()
+
+  if (error || !sprint) throw new Error(error?.message ?? 'Не удалось создать спринт')
+
+  await admin.from('sprint_columns').insert([
+    { sprint_id: sprint.id, name: 'К выполнению', color: '#4F8EF7', order_index: 0 },
+    { sprint_id: sprint.id, name: 'В работе',     color: '#F7C04F', order_index: 1 },
+    { sprint_id: sprint.id, name: 'Готово',        color: '#2DD4A0', order_index: 2 },
+  ])
+
+  revalidatePath(`/projects/${projectId}/backlog`)
+}
+
+export async function removeFromEpic(taskId: string, projectId: string) {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('tasks')
+    .update({ parent_task_id: null })
+    .eq('id', taskId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/projects/${projectId}/backlog`)
+}
+
 export async function reorderSprintTasks(projectId: string, orderedIds: string[]) {
   const admin = createAdminClient()
   await Promise.all(
@@ -253,4 +399,61 @@ export async function reorderSprintTasks(projectId: string, orderedIds: string[]
     )
   )
   revalidatePath(`/projects/${projectId}/backlog`)
+}
+
+export async function createSprintTask(
+  sprintId: string,
+  projectId: string,
+  data: {
+    title: string
+    type: 'task' | 'epic'
+    description?: string | null
+    assignee_id?: string | null
+    deadline?: string | null
+    time_estimate?: number | null
+    parent_task_id?: string | null
+  }
+): Promise<string> {
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Не авторизован')
+
+  const admin = createAdminClient()
+
+  const [{ data: col }, { data: sprint }] = await Promise.all([
+    admin
+      .from('sprint_columns')
+      .select('id')
+      .eq('sprint_id', sprintId)
+      .order('order_index', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from('sprints')
+      .select('date_to')
+      .eq('id', sprintId)
+      .single(),
+  ])
+
+  const deadline = data.deadline ?? sprint?.date_to ?? null
+
+  const { data: task, error } = await admin.from('tasks').insert({
+    project_id: projectId,
+    title: data.title,
+    type: data.type,
+    status: 'sprint',
+    workflow_status: 'new',
+    sprint_id: sprintId,
+    column_id: col?.id ?? null,
+    assignee_id: data.assignee_id ?? null,
+    creator_id: userId,
+    deadline,
+    time_estimate: data.time_estimate ?? null,
+    parent_task_id: data.parent_task_id ?? null,
+    description: data.description ?? null,
+  }).select('id').single()
+
+  if (error || !task) throw new Error(error?.message ?? 'Ошибка создания задачи')
+
+  revalidatePath(`/projects/${projectId}/backlog`)
+  return task.id
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { createComment, getComments, uploadAttachment } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { createComment, getComments, uploadAttachment, getActivities } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 
 type Attachment = { url: string; name: string; size: number }
 
@@ -23,7 +23,24 @@ type Comment = {
   author: CommentAuthor | null
 }
 
+type Activity = {
+  id: string
+  task_id: string
+  actor_id: string | null
+  type: string
+  old_value: string | null
+  new_value: string | null
+  created_at: string
+  actor: CommentAuthor | null
+}
+
+type FeedItem =
+  | { kind: 'comment'; data: Comment }
+  | { kind: 'activity'; data: Activity }
+
 type PendingFile = { file: File; previewUrl: string }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function Avatar({ name, login, size = 28 }: { name: string | null; login: string; size?: number }) {
   const initial = (name || login)[0].toUpperCase()
@@ -44,7 +61,121 @@ function formatTime(iso: string): string {
   if (diffMin < 60) return `${diffMin} мин назад`
   const diffH = Math.floor(diffMin / 60)
   if (diffH < 24) return `${diffH} ч назад`
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  new:         'Новая',
+  in_progress: 'В работе',
+  review:      'На проверке',
+  done:        'Выполнена',
+  cancelled:   'Отменена',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  new:         '#8892A4',
+  in_progress: '#4F8EF7',
+  review:      '#F7C04F',
+  done:        '#2DD4A0',
+  cancelled:   '#8892A4',
+}
+
+function minutesToText(raw: string | null): string {
+  if (!raw) return 'не задано'
+  const m = parseInt(raw)
+  if (isNaN(m) || m === 0) return 'не задано'
+  const h = Math.floor(m / 60)
+  const min = m % 60
+  if (h > 0 && min > 0) return `${h} ч ${min} мин`
+  if (h > 0) return `${h} ч`
+  return `${min} мин`
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return 'не задано'
+  return new Date(iso + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+}
+
+function ActivityRow({ activity }: { activity: Activity }) {
+  const actor = activity.actor?.full_name || activity.actor?.login || 'Кто-то'
+
+  let icon: React.ReactNode
+  let text: React.ReactNode
+
+  if (activity.type === 'status_change') {
+    const oldLabel = STATUS_LABELS[activity.old_value ?? ''] ?? activity.old_value ?? '?'
+    const newLabel = STATUS_LABELS[activity.new_value ?? ''] ?? activity.new_value ?? '?'
+    const newColor = STATUS_COLORS[activity.new_value ?? ''] ?? 'var(--text2)'
+    icon = (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: newColor, flexShrink: 0 }}>
+        <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/>
+        <path d="M4.5 7l1.8 1.8L9.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+    text = (
+      <span>
+        <b style={{ color: 'var(--text)' }}>{actor}</b>
+        {' изменил статус: '}
+        <span style={{ color: 'var(--text2)' }}>{oldLabel}</span>
+        {' → '}
+        <span style={{ color: newColor, fontWeight: 500 }}>{newLabel}</span>
+      </span>
+    )
+  } else if (activity.type === 'deadline_change') {
+    icon = (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: '#F7C04F', flexShrink: 0 }}>
+        <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+        <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    )
+    const oldDate = formatDate(activity.old_value)
+    const newDate = formatDate(activity.new_value)
+    text = (
+      <span>
+        <b style={{ color: 'var(--text)' }}>{actor}</b>
+        {' изменил дедлайн: '}
+        <span style={{ color: 'var(--text2)' }}>{oldDate}</span>
+        {' → '}
+        <span style={{ color: '#F7C04F', fontWeight: 500 }}>{newDate}</span>
+      </span>
+    )
+  } else if (activity.type === 'time_change') {
+    icon = (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: '#A78BFA', flexShrink: 0 }}>
+        <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/>
+        <path d="M7 4v3l2 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+    const oldTime = minutesToText(activity.old_value)
+    const newTime = minutesToText(activity.new_value)
+    text = (
+      <span>
+        <b style={{ color: 'var(--text)' }}>{actor}</b>
+        {' изменил оценку времени: '}
+        <span style={{ color: 'var(--text2)' }}>{oldTime}</span>
+        {' → '}
+        <span style={{ color: '#A78BFA', fontWeight: 500 }}>{newTime}</span>
+      </span>
+    )
+  } else {
+    return null
+  }
+
+  return (
+    <div className="flex items-start gap-2.5 py-0.5">
+      <div className="flex items-center justify-center shrink-0" style={{ width: 28, height: 28 }}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0 pt-0.5">
+        <p className="text-xs" style={{ color: 'var(--text2)', lineHeight: 1.6 }}>
+          {text}
+        </p>
+        <span className="text-xs" style={{ color: 'var(--text2)', opacity: 0.55 }}>
+          {formatTime(activity.created_at)}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
@@ -75,6 +206,8 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
   )
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
 type Props = {
   taskId: string
   projectId: string
@@ -83,7 +216,8 @@ type Props = {
 
 export default function CommentsSection({ taskId, projectId, initialComments }: Props) {
   const [comments, setComments] = useState<Comment[]>((initialComments ?? []) as Comment[])
-  const [loading, setLoading] = useState((initialComments ?? []).length === 0)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
   const [collapsed, setCollapsed] = useState(true)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -95,6 +229,11 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const feed: FeedItem[] = [
+    ...comments.map(c => ({ kind: 'comment' as const, data: c })),
+    ...activities.map(a => ({ kind: 'activity' as const, data: a })),
+  ].sort((a, b) => new Date(a.data.created_at).getTime() - new Date(b.data.created_at).getTime())
 
   useEffect(() => {
     const supabase = createClient()
@@ -111,13 +250,15 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
         if (profile) setCurrentUser(profile)
       }
 
-      if ((initialComments ?? []).length === 0) {
-        try {
-          const data = await getComments(taskId)
-          setComments(data as Comment[])
-        } catch { /* молча */ }
-        setLoading(false)
-      }
+      try {
+        const [commentsData, activitiesData] = await Promise.all([
+          getComments(taskId),
+          getActivities(taskId),
+        ])
+        setComments(commentsData as Comment[])
+        setActivities(activitiesData as Activity[])
+      } catch { /* молча */ }
+      setLoading(false)
     }
 
     init()
@@ -133,6 +274,15 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
           } catch { /* игнорируем */ }
         }
       )
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'task_activities', filter: `task_id=eq.${taskId}` },
+        async () => {
+          try {
+            const data = await getActivities(taskId)
+            setActivities(data as Activity[])
+          } catch { /* игнорируем */ }
+        }
+      )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
@@ -140,9 +290,8 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
 
   useEffect(() => {
     if (!loading) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [comments.length, loading])
+  }, [feed.length, loading])
 
-  // Paste изображений (Ctrl+V)
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const files = Array.from(e.clipboardData.items)
       .filter(item => item.type.startsWith('image/'))
@@ -195,7 +344,6 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
     setText('')
     setPendingFiles([])
 
-    // Оптимистичный комментарий
     const tempId = `temp-${Date.now()}`
     const optimistic: Comment = {
       id: tempId,
@@ -215,7 +363,6 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
       setUploading(false)
       await createComment(taskId, projectId, messageText, attachments)
 
-      // Заменяем оптимистичный на реальный
       const fresh = await getComments(taskId)
       setComments(fresh as Comment[])
       filesToUpload.forEach(f => URL.revokeObjectURL(f.previewUrl))
@@ -237,6 +384,7 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
   }
 
   const isSendDisabled = (!text.trim() && pendingFiles.length === 0) || sending
+  const totalCount = feed.length
 
   return (
     <>
@@ -254,147 +402,153 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
             style={{ color: 'var(--text2)', transition: 'transform 0.15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
             <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Комментарии</span>
-          {comments.length > 0 && (
+          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Активность</span>
+          {totalCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
               style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--accent)' }}>
-              {comments.length}
+              {totalCount}
             </span>
           )}
         </button>
 
-        {/* Список + инпут (сворачиваемые) */}
-        {!collapsed && <div className="overflow-y-auto px-5 flex flex-col gap-4"
-          style={{ maxHeight: 280, minHeight: comments.length > 0 ? 80 : 0 }}>
-          {loading ? (
-            <div className="flex items-center justify-center py-4">
-              <span className="w-4 h-4 rounded-full border-2 animate-spin"
-                style={{ borderColor: 'rgba(136,146,164,0.3)', borderTopColor: 'var(--text2)' }} />
-            </div>
-          ) : comments.length === 0 ? (
-            <p className="text-xs pb-2" style={{ color: 'var(--text2)' }}>Пока нет комментариев</p>
-          ) : (
-            comments.map(comment => (
-              <div key={comment.id} className="flex gap-2.5"
-                style={{ opacity: comment.id.startsWith('temp-') ? 0.6 : 1 }}>
-                <Avatar name={comment.author?.full_name ?? null}
-                  login={comment.author?.login ?? '?'} size={28} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-                      {comment.author?.full_name || comment.author?.login || 'Пользователь'}
-                    </span>
-                    <span className="text-xs" style={{ color: 'var(--text2)' }}>
-                      {formatTime(comment.created_at)}
-                    </span>
-                  </div>
-                  {comment.text && (
-                    <p className="text-sm whitespace-pre-wrap break-words mb-2"
-                      style={{ color: 'var(--text)', lineHeight: 1.5 }}>
-                      {comment.text}
-                    </p>
-                  )}
-                  {comment.attachments?.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {comment.attachments.map((att, i) => (
-                        <button key={i} onClick={() => setLightboxUrl(att.url)}
-                          className="rounded-lg overflow-hidden shrink-0 transition-opacity hover:opacity-80"
-                          style={{ width: 120, height: 90 }}>
-                          <img src={att.url} alt={att.name}
-                            className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+        {/* Лента */}
+        {!collapsed && (
+          <div className="overflow-y-auto px-5 flex flex-col gap-3"
+            style={{ maxHeight: 320, minHeight: totalCount > 0 ? 80 : 0 }}>
+            {loading ? (
+              <div className="flex items-center justify-center py-4">
+                <span className="w-4 h-4 rounded-full border-2 animate-spin"
+                  style={{ borderColor: 'rgba(136,146,164,0.3)', borderTopColor: 'var(--text2)' }} />
               </div>
-            ))
-          )}
-          <div ref={bottomRef} />
-        </div>}
+            ) : feed.length === 0 ? (
+              <p className="text-xs pb-2" style={{ color: 'var(--text2)' }}>Нет активности</p>
+            ) : (
+              feed.map(item => {
+                if (item.kind === 'activity') {
+                  return <ActivityRow key={item.data.id} activity={item.data} />
+                }
+                const comment = item.data as Comment
+                return (
+                  <div key={comment.id} className="flex gap-2.5"
+                    style={{ opacity: comment.id.startsWith('temp-') ? 0.6 : 1 }}>
+                    <Avatar name={comment.author?.full_name ?? null}
+                      login={comment.author?.login ?? '?'} size={28} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
+                          {comment.author?.full_name || comment.author?.login || 'Пользователь'}
+                        </span>
+                        <span className="text-xs" style={{ color: 'var(--text2)' }}>
+                          {formatTime(comment.created_at)}
+                        </span>
+                      </div>
+                      {comment.text && (
+                        <p className="text-sm whitespace-pre-wrap break-words mb-2"
+                          style={{ color: 'var(--text)', lineHeight: 1.5 }}>
+                          {comment.text}
+                        </p>
+                      )}
+                      {comment.attachments?.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {comment.attachments.map((att, i) => (
+                            <button key={i} onClick={() => setLightboxUrl(att.url)}
+                              className="rounded-lg overflow-hidden shrink-0 transition-opacity hover:opacity-80"
+                              style={{ width: 120, height: 90 }}>
+                              <img src={att.url} alt={att.name}
+                                className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+            <div ref={bottomRef} />
+          </div>
+        )}
 
         {/* Инпут */}
-        {!collapsed && <div className="px-5 py-3 shrink-0"
-          style={{ borderTop: '1px solid var(--border)' }}>
-
-          {/* Превью файлов */}
-          {pendingFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {pendingFiles.map((pf, i) => (
-                <div key={i} className="relative rounded-lg overflow-hidden shrink-0"
-                  style={{ width: 64, height: 64 }}>
-                  <img src={pf.previewUrl} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removePending(i)}
-                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
-                    <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                      <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-2 items-end">
-            {currentUser && <Avatar name={currentUser.full_name} login={currentUser.login} size={28} />}
-            <div className="flex-1 rounded-xl px-3 py-2"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={e => setText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                placeholder="Написать комментарий..."
-                rows={1}
-                className="w-full bg-transparent outline-none resize-none text-sm"
-                style={{ color: 'var(--text)', lineHeight: 1.5, maxHeight: 100 }}
-                onInput={e => {
-                  const el = e.currentTarget
-                  el.style.height = 'auto'
-                  el.style.height = el.scrollHeight + 'px'
-                }}
-              />
-              <div className="flex items-center justify-between mt-1.5">
-                <div className="flex items-center gap-1">
-                  {/* Прикрепить файл */}
-                  <button onClick={() => fileInputRef.current?.click()}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-                    style={{ color: 'var(--text2)' }}
-                    title="Прикрепить изображение"
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M12.5 6.5L6.5 12.5C5.1 13.9 2.9 13.9 1.5 12.5 0.1 11.1 0.1 8.9 1.5 7.5L7.5 1.5C8.5 0.5 10.1 0.5 11.1 1.5 12.1 2.5 12.1 4.1 11.1 5.1L5.1 11.1C4.5 11.7 3.5 11.7 2.9 11.1 2.3 10.5 2.3 9.5 2.9 8.9L8.5 3.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                  <span className="text-xs" style={{ color: 'var(--text2)' }}>
-                    Enter — отправить · Shift+Enter — новая строка
-                  </span>
-                </div>
-                <button onClick={handleSend} disabled={isSendDisabled}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-opacity disabled:opacity-30"
-                  style={{ background: 'var(--accent)', color: '#fff' }}>
-                  {sending || uploading
-                    ? <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    : <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M1 6h10M6 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {!collapsed && (
+          <div className="px-5 py-3 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+            {pendingFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {pendingFiles.map((pf, i) => (
+                  <div key={i} className="relative rounded-lg overflow-hidden shrink-0"
+                    style={{ width: 64, height: 64 }}>
+                    <img src={pf.previewUrl} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => removePending(i)}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
+                      <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
-                  }
-                </button>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 items-end">
+              {currentUser && <Avatar name={currentUser.full_name} login={currentUser.login} size={28} />}
+              <div className="flex-1 rounded-xl px-3 py-2"
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder="Написать комментарий..."
+                  rows={1}
+                  className="w-full bg-transparent outline-none resize-none text-sm"
+                  style={{ color: 'var(--text)', lineHeight: 1.5, maxHeight: 100 }}
+                  onInput={e => {
+                    const el = e.currentTarget
+                    el.style.height = 'auto'
+                    el.style.height = el.scrollHeight + 'px'
+                  }}
+                />
+                <div className="flex items-center justify-between mt-1.5">
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => fileInputRef.current?.click()}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                      style={{ color: 'var(--text2)', cursor: 'pointer' }}
+                      title="Прикрепить изображение"
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M12.5 6.5L6.5 12.5C5.1 13.9 2.9 13.9 1.5 12.5 0.1 11.1 0.1 8.9 1.5 7.5L7.5 1.5C8.5 0.5 10.1 0.5 11.1 1.5 12.1 2.5 12.1 4.1 11.1 5.1L5.1 11.1C4.5 11.7 3.5 11.7 2.9 11.1 2.3 10.5 2.3 9.5 2.9 8.9L8.5 3.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <span className="text-xs" style={{ color: 'var(--text2)' }}>
+                      Enter — отправить · Shift+Enter — новая строка
+                    </span>
+                  </div>
+                  <button onClick={handleSend} disabled={isSendDisabled}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-opacity disabled:opacity-30"
+                    style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
+                    {sending || uploading
+                      ? <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      : <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M1 6h10M6 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    }
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
-            onChange={e => {
-              if (e.target.files) addFiles(Array.from(e.target.files))
-              e.target.value = ''
-            }}
-          />
-        </div>}
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={e => {
+                if (e.target.files) addFiles(Array.from(e.target.files))
+                e.target.value = ''
+              }}
+            />
+          </div>
+        )}
       </div>
     </>
   )

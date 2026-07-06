@@ -22,11 +22,12 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
 
   if (!project) redirect('/projects')
 
-  const [tasks, members, activeSprint, sprintData] = await Promise.all([
+  const [tasks, members, activeSprint, sprintData, myProfile] = await Promise.all([
     getBacklogTasks(id),
     getProjectMembers(id),
     getActiveSprintForProject(id),
     getSprintData(id),
+    admin.from('profiles').select('role').eq('id', session.user.id).maybeSingle().then(r => r.data),
   ])
 
   return (
@@ -55,7 +56,6 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
             href={`/projects/${id}/sprint`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors"
             style={{ color: 'var(--text2)', background: 'var(--surface)' }}
-            onMouseEnter={undefined}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
@@ -64,6 +64,17 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
               <rect x="6.5" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
             </svg>
             Спринт
+          </Link>
+          <Link
+            href={`/projects/${id}/sprints`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors"
+            style={{ color: 'var(--text2)', background: 'var(--surface)' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="6" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+            История
           </Link>
           <Link
             href={`/projects/${id}/settings`}
@@ -90,6 +101,7 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
         defaultAssigneeMode={project.default_assignee_mode ?? 'manual'}
         defaultAssigneeId={project.default_assignee_id ?? null}
         sprintPanelData={sprintData}
+        isAdmin={myProfile?.role === 'admin'}
       />
     </div>
   )

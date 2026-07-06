@@ -74,6 +74,17 @@ export default async function SprintPage({ params }: { params: Promise<{ id: str
             Бэклог
           </Link>
           <Link
+            href={`/projects/${id}/sprints`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm"
+            style={{ color: 'var(--text2)', background: 'var(--surface)', border: '1px solid var(--border)' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="6" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+            История
+          </Link>
+          <Link
             href={`/projects/${id}/settings`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm"
             style={{ color: 'var(--text2)', background: 'var(--surface)', border: '1px solid var(--border)' }}

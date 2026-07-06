@@ -17,6 +17,8 @@ type Props = {
 }
 
 export default function SprintTaskCard({ task, isOverlay = false }: Props) {
+  const isEpic = task.type === 'epic'
+
   const now = new Date(); now.setHours(0, 0, 0, 0)
   const isOverdue = task.deadline
     ? (() => { const d = new Date(task.deadline + 'T00:00:00'); d.setHours(0,0,0,0); return d < now })()
@@ -36,14 +38,40 @@ export default function SprintTaskCard({ task, isOverlay = false }: Props) {
       style={{
         background: 'var(--surface2)',
         border: '1px solid var(--border)',
+        borderLeft: isEpic ? '3px solid var(--yellow)' : '1px solid var(--border)',
         boxShadow: isOverlay ? '0 8px 32px rgba(0,0,0,0.5)' : undefined,
         transition: 'border-color 0.12s',
       }}
     >
-      {/* Заголовок */}
-      <p className="text-sm leading-snug" style={{ color: 'var(--text)' }}>
-        {task.title}
-      </p>
+      {/* Тип + заголовок */}
+      <div className="flex items-start gap-1.5">
+        {/* Иконка типа */}
+        {isEpic ? (
+          <svg
+            width="13" height="13" viewBox="0 0 13 13" fill="none"
+            style={{ color: 'var(--yellow)', flexShrink: 0, marginTop: 1 }}
+          >
+            <path
+              d="M7.5 1.5L2.5 7.5h4l-1 4 5-6H7l.5-4z"
+              stroke="currentColor" strokeWidth="1.2"
+              strokeLinecap="round" strokeLinejoin="round"
+              fill="rgba(247,192,79,0.15)"
+            />
+          </svg>
+        ) : (
+          <svg
+            width="13" height="13" viewBox="0 0 13 13" fill="none"
+            style={{ color: 'var(--text2)', flexShrink: 0, marginTop: 1, opacity: 0.5 }}
+          >
+            <rect x="1.5" y="1.5" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M4 6.5l2 2 3.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+
+        <p className="text-sm leading-snug" style={{ color: 'var(--text)' }}>
+          {task.title}
+        </p>
+      </div>
 
       {/* Мета */}
       <div className="flex items-center gap-2 justify-between">
