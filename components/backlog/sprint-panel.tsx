@@ -999,6 +999,7 @@ export default function SprintPanel({
           projectId={sprint.project_id}
           members={members}
           epics={tasks.filter(t => t.type === 'epic').map(t => ({ ...t, subtasks: [], subtask_total: 0, subtask_done: 0 }))}
+          skipCreate
           onClose={() => setShowAddModal(false)}
           onCreated={optimistic => { handleSprintTaskCreated(optimistic); setShowAddModal(false) }}
         />

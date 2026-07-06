@@ -311,9 +311,10 @@ type Props = {
   defaultAssigneeId?: string
   onClose: () => void
   onCreated: (task: BacklogTask) => void
+  skipCreate?: boolean
 }
 
-export default function CreateTaskModal({ projectId, members, epics, defaultAssigneeId = '', onClose, onCreated }: Props) {
+export default function CreateTaskModal({ projectId, members, epics, defaultAssigneeId = '', onClose, onCreated, skipCreate = false }: Props) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<'task' | 'epic'>('task')
   const [description, setDescription] = useState('')
@@ -342,14 +343,16 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
       const m = parseInt(minutes) || 0
       const time_estimate = h * 60 + m || null
 
-      await createTask(projectId, {
-        title: title.trim(), type,
-        description: description.trim() || null,
-        assignee_id: assigneeId || null,
-        deadline: deadline || null,
-        time_estimate,
-        parent_task_id: type === 'task' && parentId ? parentId : null,
-      })
+      if (!skipCreate) {
+        await createTask(projectId, {
+          title: title.trim(), type,
+          description: description.trim() || null,
+          assignee_id: assigneeId || null,
+          deadline: deadline || null,
+          time_estimate,
+          parent_task_id: type === 'task' && parentId ? parentId : null,
+        })
+      }
 
       const member = members.find(m => m.id === assigneeId)
       const optimistic: BacklogTask = {
