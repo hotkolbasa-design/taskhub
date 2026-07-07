@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import NotificationBell from '@/components/notification-bell'
 
 type Profile = {
   full_name: string | null
@@ -122,9 +123,10 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
           >
             {displayName[0].toUpperCase()}
           </div>
-          <span className="text-sm truncate" style={{ color: 'var(--text)' }}>
+          <span className="text-sm truncate flex-1" style={{ color: 'var(--text)' }}>
             {displayName}
           </span>
+          <NotificationBell />
         </div>
 
         <button
