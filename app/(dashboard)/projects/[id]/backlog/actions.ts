@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotifications, buildRecipients } from '@/lib/notifications'
 
 async function getCurrentUserId() {
   const supabase = await createClient()
@@ -36,7 +37,7 @@ export async function createTask(projectId: string, data: {
 
   const nextOrder = (last?.backlog_order ?? 0) + 1
 
-  const { error } = await admin.from('tasks').insert({
+  const { data: task, error } = await admin.from('tasks').insert({
     project_id: projectId,
     title: data.title,
     type: data.type,
@@ -49,9 +50,21 @@ export async function createTask(projectId: string, data: {
     parent_task_id: data.parent_task_id ?? null,
     description: data.description ?? null,
     backlog_order: nextOrder,
-  })
+  }).select('id').single()
 
-  if (error) throw new Error(error.message)
+  if (error || !task) throw new Error(error?.message ?? 'Ошибка создания задачи')
+
+  // Уведомляем исполнителя, если это не сам создатель
+  if (data.assignee_id && data.assignee_id !== userId) {
+    await createNotifications([{
+      user_id: data.assignee_id,
+      actor_id: userId,
+      task_id: task.id,
+      type: 'task_assigned',
+      data: { task_title: data.title },
+    }])
+  }
+
   revalidatePath(`/projects/${projectId}/backlog`)
 }
 
@@ -139,7 +152,7 @@ export async function updateTask(taskId: string, projectId: string, data: {
   // Читаем текущие значения для сравнения
   const { data: current } = await admin
     .from('tasks')
-    .select('workflow_status, deadline, time_estimate')
+    .select('workflow_status, deadline, time_estimate, assignee_id, creator_id, title')
     .eq('id', taskId)
     .single()
 
@@ -158,12 +171,21 @@ export async function updateTask(taskId: string, projectId: string, data: {
     .eq('id', taskId)
   if (error) throw new Error(error.message)
 
-  // Записываем историю изменений
+  // Записываем историю изменений + уведомления
   if (current && userId) {
     const activities: { task_id: string; actor_id: string; type: string; old_value: string | null; new_value: string | null }[] = []
+    const notifications: Parameters<typeof createNotifications>[0] = []
+
+    const taskTitle = current.title as string | null
+    const creatorId = current.creator_id as string | null
+    const assigneeId = current.assignee_id as string | null
 
     if (data.workflow_status !== undefined && data.workflow_status !== current.workflow_status) {
       activities.push({ task_id: taskId, actor_id: userId, type: 'status_change', old_value: current.workflow_status, new_value: data.workflow_status })
+      const recipients = buildRecipients({ actorId: userId, creatorId, assigneeId })
+      for (const uid of recipients) {
+        notifications.push({ user_id: uid, actor_id: userId, task_id: taskId, type: 'status_changed', data: { task_title: taskTitle, old_status: current.workflow_status, new_status: data.workflow_status } })
+      }
     }
     if (data.deadline !== undefined && data.deadline !== current.deadline) {
       activities.push({ task_id: taskId, actor_id: userId, type: 'deadline_change', old_value: current.deadline ?? null, new_value: data.deadline ?? null })
@@ -171,9 +193,30 @@ export async function updateTask(taskId: string, projectId: string, data: {
     if (data.time_estimate !== undefined && data.time_estimate !== current.time_estimate) {
       activities.push({ task_id: taskId, actor_id: userId, type: 'time_change', old_value: current.time_estimate != null ? String(current.time_estimate) : null, new_value: data.time_estimate != null ? String(data.time_estimate) : null })
     }
+    if (data.assignee_id !== undefined && data.assignee_id !== current.assignee_id) {
+      activities.push({ task_id: taskId, actor_id: userId, type: 'assignee_change', old_value: current.assignee_id ?? null, new_value: data.assignee_id ?? null })
+      // Уведомляем нового исполнителя и создателя (кроме актора)
+      const newAssigneeId = data.assignee_id
+      const recipients = buildRecipients({ actorId: userId, creatorId, assigneeId: newAssigneeId ?? null })
+      for (const uid of recipients) {
+        notifications.push({ user_id: uid, actor_id: userId, task_id: taskId, type: 'assignee_changed', data: { task_title: taskTitle } })
+      }
+    }
+    if (data.creator_id !== undefined && data.creator_id !== current.creator_id) {
+      activities.push({ task_id: taskId, actor_id: userId, type: 'creator_change', old_value: current.creator_id ?? null, new_value: data.creator_id ?? null })
+      // Уведомляем нового постановщика и исполнителя (кроме актора)
+      const newCreatorId = data.creator_id
+      const recipients = buildRecipients({ actorId: userId, creatorId: newCreatorId ?? null, assigneeId })
+      for (const uid of recipients) {
+        notifications.push({ user_id: uid, actor_id: userId, task_id: taskId, type: 'creator_changed', data: { task_title: taskTitle } })
+      }
+    }
 
     if (activities.length > 0) {
       await admin.from('task_activities').insert(activities)
+    }
+    if (notifications.length > 0) {
+      await createNotifications(notifications)
     }
   }
 
@@ -241,6 +284,27 @@ export async function createComment(
     attachments: attachments ?? [],
   })
   if (error) throw new Error(error.message)
+
+  // Уведомляем создателя и исполнителя задачи (кроме автора комментария)
+  const { data: task } = await admin
+    .from('tasks')
+    .select('creator_id, assignee_id, title')
+    .eq('id', taskId)
+    .maybeSingle()
+
+  if (task) {
+    const recipients = buildRecipients({ actorId: userId, creatorId: task.creator_id ?? null, assigneeId: task.assignee_id ?? null })
+    if (recipients.length > 0) {
+      await createNotifications(recipients.map(uid => ({
+        user_id: uid,
+        actor_id: userId,
+        task_id: taskId,
+        type: 'comment_added' as const,
+        data: { task_title: task.title, comment_preview: text.trim().slice(0, 100) },
+      })))
+    }
+  }
+
   revalidatePath(`/projects/${projectId}/backlog`)
 }
 
@@ -453,6 +517,17 @@ export async function createSprintTask(
   }).select('id').single()
 
   if (error || !task) throw new Error(error?.message ?? 'Ошибка создания задачи')
+
+  // Уведомляем исполнителя, если это не сам создатель
+  if (data.assignee_id && data.assignee_id !== userId) {
+    await createNotifications([{
+      user_id: data.assignee_id,
+      actor_id: userId,
+      task_id: task.id,
+      type: 'task_assigned',
+      data: { task_title: data.title },
+    }])
+  }
 
   revalidatePath(`/projects/${projectId}/backlog`)
   return task.id
