@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import NotificationBell from '@/components/notification-bell'
+import { createPortal } from 'react-dom'
+import { getNotifications, markAsRead, markAllAsRead, type AppNotification } from '@/app/(dashboard)/notifications/actions'
 
 type Profile = {
   full_name: string | null
@@ -67,12 +68,95 @@ const navItems = [
   },
 ]
 
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'только что'
+  if (m < 60) return `${m} мин`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} ч`
+  return `${Math.floor(h / 24)} дн`
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  task_assigned:    'Назначили на задачу',
+  assignee_changed: 'Изменён исполнитель',
+  creator_changed:  'Изменён постановщик',
+  status_changed:   'Изменён статус',
+  comment_added:    'Новый комментарий',
+  deadline_soon:    'Дедлайн завтра',
+  deadline_overdue: 'Дедлайн просрочен',
+}
+
 export default function SidebarNav({ profile }: { profile: Profile | null }) {
   const pathname = usePathname()
   const router = useRouter()
 
   const displayName = profile?.full_name || profile?.login || 'Пользователь'
   const [signingOut, setSigningOut] = useState(false)
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifPos, setNotifPos] = useState({ top: 0, left: 0 })
+  const [markingAll, setMarkingAll] = useState(false)
+  const notifBtnRef = useRef<HTMLButtonElement>(null)
+  const notifMenuRef = useRef<HTMLDivElement>(null)
+
+  const unreadCount = notifications.filter(n => !n.is_read).length
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const data = await getNotifications()
+      setNotifications(data)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    loadNotifications()
+    const interval = setInterval(loadNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [loadNotifications])
+
+  useEffect(() => {
+    if (!notifOpen) return
+    function onOutside(e: MouseEvent) {
+      const t = e.target as Node
+      if (
+        notifBtnRef.current && !notifBtnRef.current.contains(t) &&
+        notifMenuRef.current && !notifMenuRef.current.contains(t)
+      ) setNotifOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [notifOpen])
+
+  function handleNotifOpen() {
+    if (notifBtnRef.current) {
+      const rect = notifBtnRef.current.getBoundingClientRect()
+      setNotifPos({ top: rect.top, left: rect.right + 8 })
+    }
+    setNotifOpen(o => !o)
+  }
+
+  async function handleNotifClick(n: AppNotification) {
+    if (!n.is_read) {
+      await markAsRead(n.id)
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
+    }
+    setNotifOpen(false)
+    if (n.task && n.task_id) {
+      const page = n.task.status === 'sprint' ? 'sprint' : 'backlog'
+      router.push(`/projects/${n.task.project_id}/${page}`)
+    }
+  }
+
+  async function handleMarkAll() {
+    setMarkingAll(true)
+    await markAllAsRead()
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+    setMarkingAll(false)
+  }
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -112,6 +196,44 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
             </Link>
           )
         })}
+
+        {/* Уведомления */}
+        <button
+          ref={notifBtnRef}
+          onClick={handleNotifOpen}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left"
+          style={{
+            color: notifOpen ? 'var(--accent)' : 'var(--text2)',
+            background: notifOpen ? 'rgba(79,142,247,0.1)' : 'transparent',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+          onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.background = 'transparent' }}
+        >
+          <span className="relative shrink-0">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1.5A4.5 4.5 0 003.5 6v2.5l-1 2h11l-1-2V6A4.5 4.5 0 008 1.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+              <path d="M6.5 13a1.5 1.5 0 003 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white font-bold"
+                style={{ background: 'var(--red)', fontSize: 8, minWidth: 13, height: 13, padding: '0 2px', lineHeight: '13px' }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </span>
+          Уведомления
+          {unreadCount > 0 && (
+            <span
+              className="ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--red)', color: '#fff', fontSize: 10 }}
+            >
+              {unreadCount}
+            </span>
+          )}
+        </button>
       </nav>
 
       {/* Пользователь + выход */}
@@ -123,17 +245,16 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
           >
             {displayName[0].toUpperCase()}
           </div>
-          <span className="text-sm truncate flex-1" style={{ color: 'var(--text)' }}>
+          <span className="text-sm truncate" style={{ color: 'var(--text)' }}>
             {displayName}
           </span>
-          <NotificationBell />
         </div>
 
         <button
           onClick={handleSignOut}
           disabled={signingOut}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full transition-colors disabled:opacity-60"
-          style={{ color: signingOut ? 'var(--text2)' : 'var(--text2)' }}
+          style={{ color: 'var(--text2)', cursor: 'pointer' }}
           onMouseEnter={(e) => { if (!signingOut) e.currentTarget.style.color = 'var(--red)' }}
           onMouseLeave={(e) => { if (!signingOut) e.currentTarget.style.color = 'var(--text2)' }}
         >
@@ -148,6 +269,85 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
           {signingOut ? 'Выход…' : 'Выйти'}
         </button>
       </div>
+
+      {/* Дропдаун уведомлений */}
+      {notifOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={notifMenuRef}
+          className="rounded-xl"
+          style={{
+            position: 'fixed',
+            top: notifPos.top,
+            left: notifPos.left,
+            width: 320,
+            zIndex: 9999,
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+              Уведомления {unreadCount > 0 && <span style={{ color: 'var(--text2)' }}>· {unreadCount}</span>}
+            </span>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAll}
+                disabled={markingAll}
+                className="text-xs disabled:opacity-50"
+                style={{ color: 'var(--accent)', cursor: 'pointer' }}
+              >
+                {markingAll ? 'Отмечаю…' : 'Прочитать все'}
+              </button>
+            )}
+          </div>
+
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text2)' }}>
+                Нет уведомлений
+              </div>
+            ) : (
+              notifications.map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => handleNotifClick(n)}
+                  className="w-full flex items-start gap-3 px-4 py-3 text-left"
+                  style={{
+                    background: n.is_read ? 'transparent' : 'rgba(79,142,247,0.06)',
+                    borderBottom: '1px solid var(--border)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(79,142,247,0.06)')}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-medium leading-snug" style={{ color: 'var(--text)' }}>
+                        {TYPE_LABEL[n.type] ?? n.type}
+                      </p>
+                      {!n.is_read && (
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1" style={{ background: 'var(--accent)' }} />
+                      )}
+                    </div>
+                    {n.task && (
+                      <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text2)' }}>{n.task.title}</p>
+                    )}
+                    {n.actor && (
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text2)', opacity: 0.7 }}>
+                        {n.actor.full_name || n.actor.login}
+                      </p>
+                    )}
+                    <p className="text-xs mt-1" style={{ color: 'var(--text2)', opacity: 0.5 }}>{timeAgo(n.created_at)}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </aside>
   )
 }
