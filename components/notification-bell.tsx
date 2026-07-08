@@ -71,8 +71,12 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter(n => !n.is_read).length
 
   const load = useCallback(async () => {
-    const data = await getNotifications()
-    setNotifications(data)
+    try {
+      const data = await getNotifications()
+      setNotifications(data)
+    } catch {
+      // ignore — таблица ещё не создана или нет сети
+    }
   }, [])
 
   useEffect(() => {
@@ -126,10 +130,10 @@ export default function NotificationBell() {
       <button
         ref={btnRef}
         onClick={handleOpen}
-        className="relative flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-        style={{ color: 'var(--text2)', cursor: 'pointer' }}
-        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+        className="relative flex items-center justify-center w-7 h-7 rounded-lg transition-all shrink-0"
+        style={{ color: 'var(--text)', cursor: 'pointer', background: 'rgba(255,255,255,0.06)' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
         title="Уведомления"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
