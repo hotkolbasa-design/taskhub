@@ -24,6 +24,7 @@ export type DrawerUser = {
   role: string
   status: string
   position: string | null
+  department: string | null
   birth_date: string | null
 }
 
@@ -56,9 +57,10 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
   const canEditRoleStatus = !isSelf && !isProtected
   const canEditProfile    = !isProtected
 
-  const [name, setName]           = useState(user.full_name ?? '')
-  const [position, setPosition]   = useState(user.position ?? '')
-  const [birthDate, setBirthDate] = useState(user.birth_date ?? '')
+  const [name, setName]             = useState(user.full_name ?? '')
+  const [position, setPosition]     = useState(user.position ?? '')
+  const [department, setDepartment] = useState(user.department ?? '')
+  const [birthDate, setBirthDate]   = useState(user.birth_date ?? '')
   const [currentRole, setCurrentRole]     = useState(user.role)
   const [currentStatus, setCurrentStatus] = useState(user.status)
   const [saving, setSaving] = useState(false)
@@ -80,11 +82,13 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
     await updateUserProfile(user.id, {
       full_name:  name.trim() || undefined,
       position:   position.trim() || null,
+      department: department.trim() || null,
       birth_date: birthDate || null,
     })
     onUpdated(user.id, {
       full_name:  name.trim() || null,
       position:   position.trim() || null,
+      department: department.trim() || null,
       birth_date: birthDate || null,
     })
     setSaving(false)
@@ -182,6 +186,17 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
           <Field label="Должность">
             <input value={position} onChange={e => setPosition(e.target.value)} disabled={!canEditProfile}
               placeholder="Менеджер проектов"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              onFocus={e => { if (canEditProfile) e.currentTarget.style.borderColor = 'var(--accent)' }}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            />
+          </Field>
+
+          {/* Отдел */}
+          <Field label="Отдел">
+            <input value={department} onChange={e => setDepartment(e.target.value)} disabled={!canEditProfile}
+              placeholder="Маркетинг"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => { if (canEditProfile) e.currentTarget.style.borderColor = 'var(--accent)' }}

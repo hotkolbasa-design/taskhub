@@ -10,7 +10,7 @@ export async function getMyProfile() {
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, full_name, login, role, position, birth_date, avatar_url')
+    .select('id, full_name, login, role, position, department, birth_date, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -20,6 +20,7 @@ export async function getMyProfile() {
 export async function updateMyProfile(updates: {
   full_name?: string
   position?: string | null
+  department?: string | null
   birth_date?: string | null
 }) {
   const supabase = await createClient()
