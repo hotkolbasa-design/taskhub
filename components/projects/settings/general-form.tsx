@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { updateProject } from '@/app/(dashboard)/projects/[id]/settings/actions'
 
 const COLORS = [
-  '#4F8EF7', '#2DD4A0', '#F75C6E', '#F7C04F',
+  '#7C5CF6', '#2DD4A0', '#F75C6E', '#F7C04F',
   '#9B8EF7', '#F78E4F', '#4FC4F7', '#F74FA0',
 ]
 
@@ -180,8 +180,8 @@ export default function GeneralForm({
             <button key={mode.value} type="button" onClick={() => setAssigneeMode(mode.value as any)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors"
               style={{
-                background: assigneeMode === mode.value ? 'rgba(79,142,247,0.08)' : 'var(--surface2)',
-                border: `1px solid ${assigneeMode === mode.value ? 'rgba(79,142,247,0.3)' : 'var(--border)'}`,
+                background: assigneeMode === mode.value ? 'rgba(124,92,246,0.08)' : 'var(--surface2)',
+                border: `1px solid ${assigneeMode === mode.value ? 'rgba(124,92,246,0.3)' : 'var(--border)'}`,
               }}
             >
               <div

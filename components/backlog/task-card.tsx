@@ -26,7 +26,7 @@ function Avatar({ name, login, size = 24 }: { name: string | null; login: string
 
 const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   new:         { label: 'Новая',        color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  in_progress: { label: 'В работе',     color: '#4F8EF7', bg: 'rgba(79,142,247,0.12)'  },
+  in_progress: { label: 'В работе',     color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
   review:      { label: 'На проверке',  color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
   done:        { label: 'Выполнена',    color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
   cancelled:   { label: 'Отменена',     color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
@@ -650,7 +650,7 @@ export default function TaskCard({
           <span
             className="shrink-0 w-5 h-5 rounded flex items-center justify-center"
             style={{
-              background: task.type === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(79,142,247,0.15)',
+              background: task.type === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(124,92,246,0.15)',
               color: task.type === 'epic' ? 'var(--yellow)' : 'var(--accent)',
             }}
             title={task.type === 'epic' ? 'Эпик' : 'Задача'}

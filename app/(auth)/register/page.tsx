@@ -43,10 +43,10 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className="w-full max-w-sm text-center">
-        <div className="rounded-xl p-8 bg-[#1C2232] border border-[#2A3347]">
-          <div className="w-12 h-12 rounded-full bg-[#4F8EF7]/15 flex items-center justify-center mx-auto mb-4">
+        <div className="rounded-xl p-8 bg-[#16132A] border border-[#2D2550]">
+          <div className="w-12 h-12 rounded-full bg-[#7C5CF6]/15 flex items-center justify-center mx-auto mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M5 13l4 4L19 7" stroke="#4F8EF7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 13l4 4L19 7" stroke="#7C5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <h2 className="text-lg font-semibold text-white mb-2">Регистрация завершена</h2>
@@ -55,7 +55,7 @@ export default function RegisterPage() {
           </p>
         </div>
         <p className="mt-6 text-sm text-gray-500">
-          <Link href="/login" className="text-[#4F8EF7] hover:underline">
+          <Link href="/login" className="text-[#7C5CF6] hover:underline">
             Вернуться ко входу
           </Link>
         </p>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 rounded-lg py-2.5 bg-[#4F8EF7] text-white text-sm font-medium hover:bg-[#3a7ae4] disabled:opacity-50 transition-colors cursor-pointer"
+          className="mt-2 rounded-lg py-2.5 bg-[#7C5CF6] text-white text-sm font-medium hover:bg-[#6B4EE0] disabled:opacity-50 transition-colors cursor-pointer"
         >
           {loading ? 'Регистрация…' : 'Зарегистрироваться'}
         </button>
@@ -133,7 +133,7 @@ export default function RegisterPage() {
 
       <p className="mt-6 text-center text-sm text-gray-500">
         Уже есть аккаунт?{' '}
-        <Link href="/login" className="text-[#4F8EF7] hover:underline">
+        <Link href="/login" className="text-[#7C5CF6] hover:underline">
           Войти
         </Link>
       </p>
@@ -142,7 +142,7 @@ export default function RegisterPage() {
 }
 
 const inputCls =
-  'w-full rounded-lg px-3 py-2.5 bg-[#1C2232] border border-[#2A3347] text-white text-sm outline-none focus:border-[#4F8EF7] transition-colors placeholder-gray-600'
+  'w-full rounded-lg px-3 py-2.5 bg-[#16132A] border border-[#2D2550] text-white text-sm outline-none focus:border-[#7C5CF6] transition-colors placeholder-gray-600'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

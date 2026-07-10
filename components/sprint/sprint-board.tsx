@@ -46,7 +46,7 @@ type Props = {
 }
 
 const COLUMN_COLORS = [
-  '#4F8EF7', '#2DD4A0', '#F7C04F', '#F75C6E',
+  '#7C5CF6', '#2DD4A0', '#F7C04F', '#F75C6E',
   '#A78BFA', '#FB923C', '#60C0E8', '#8892A4',
 ]
 
@@ -469,7 +469,7 @@ function KanbanColumn({
         className="flex flex-col rounded-xl overflow-hidden"
         style={{
           background: 'var(--surface)',
-          border: `1px solid ${isOver && isColumnTarget ? 'rgba(79,142,247,0.4)' : 'var(--border)'}`,
+          border: `1px solid ${isOver && isColumnTarget ? 'rgba(124,92,246,0.4)' : 'var(--border)'}`,
           transition: 'border-color 0.15s',
           maxHeight: 'calc(100vh - 180px)',
         }}
@@ -531,7 +531,7 @@ function KanbanColumn({
                   cursor: 'pointer',
                   transition: 'background 0.12s, color 0.12s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(79,142,247,0.15)'; e.currentTarget.style.color = 'var(--accent)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,92,246,0.15)'; e.currentTarget.style.color = 'var(--accent)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text2)' }}
               >
                 <svg width="11" height="11" viewBox="0 0 11 11" fill="none">

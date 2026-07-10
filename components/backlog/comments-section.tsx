@@ -44,7 +44,7 @@ type PendingFile = { file: File; previewUrl: string }
 
 function Avatar({ name, login, size = 28 }: { name: string | null; login: string; size?: number }) {
   const initial = (name || login)[0].toUpperCase()
-  const colors = ['#4F8EF7', '#2DD4A0', '#F7C04F', '#F75C6E', '#A78BFA', '#FB923C']
+  const colors = ['#7C5CF6', '#2DD4A0', '#F7C04F', '#F75C6E', '#A78BFA', '#FB923C']
   const color = colors[(name || login).charCodeAt(0) % colors.length]
   return (
     <span className="rounded-full flex items-center justify-center font-medium shrink-0"
@@ -74,7 +74,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   new:         '#8892A4',
-  in_progress: '#4F8EF7',
+  in_progress: '#7C5CF6',
   review:      '#F7C04F',
   done:        '#2DD4A0',
   cancelled:   '#8892A4',
@@ -405,7 +405,7 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
           <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Активность</span>
           {totalCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-              style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--accent)' }}>
+              style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)' }}>
               {totalCount}
             </span>
           )}

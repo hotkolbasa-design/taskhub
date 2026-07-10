@@ -266,14 +266,14 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
                   className="flex items-center justify-center rounded-lg text-xs transition-colors"
                   style={{
                     height: 32,
-                    background: isSelected ? 'var(--accent)' : isToday ? 'rgba(79,142,247,0.15)' : 'transparent',
+                    background: isSelected ? 'var(--accent)' : isToday ? 'rgba(124,92,246,0.15)' : 'transparent',
                     color: isSelected ? '#fff' : !cell.current ? 'var(--text2)' : 'var(--text)',
                     opacity: !cell.current ? 0.35 : 1,
                     fontWeight: isToday || isSelected ? 600 : 400,
-                    border: isToday && !isSelected ? '1px solid rgba(79,142,247,0.4)' : '1px solid transparent',
+                    border: isToday && !isSelected ? '1px solid rgba(124,92,246,0.4)' : '1px solid transparent',
                   }}
                   onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? 'rgba(79,142,247,0.15)' : 'transparent' }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? 'rgba(124,92,246,0.15)' : 'transparent' }}
                 >
                   {cell.day}
                 </button>
@@ -292,7 +292,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
             <button type="button" onClick={setToday}
               className="text-xs px-2 py-1 rounded-md transition-colors"
               style={{ color: 'var(--accent)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(79,142,247,0.1)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >Сегодня</button>
           </div>
@@ -406,7 +406,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
               <button key={t} type="button" onClick={() => setType(t)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{
-                  background: type === t ? (t === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(79,142,247,0.15)') : 'var(--surface2)',
+                  background: type === t ? (t === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(124,92,246,0.15)') : 'var(--surface2)',
                   color: type === t ? (t === 'epic' ? 'var(--yellow)' : 'var(--accent)') : 'var(--text2)',
                   border: `1px solid ${type === t ? 'transparent' : 'var(--border)'}`,
                 }}

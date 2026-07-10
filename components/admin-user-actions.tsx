@@ -8,7 +8,7 @@ type Option = { value: string; label: string; color: string; bg: string }
 
 const ROLES: Option[] = [
   { value: 'employee', label: 'Employee', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
-  { value: 'admin',    label: 'Admin',    color: '#4F8EF7', bg: 'rgba(79,142,247,0.15)'  },
+  { value: 'admin',    label: 'Admin',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)'  },
 ]
 
 const STATUSES: Option[] = [

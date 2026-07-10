@@ -17,7 +17,7 @@ type Profile = {
 }
 
 const ROLE_OPTIONS = [
-  { value: 'manager', label: 'Руководитель', color: '#4F8EF7', bg: 'rgba(79,142,247,0.15)' },
+  { value: 'manager', label: 'Руководитель', color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' },
   { value: 'member', label: 'Участник', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
   { value: 'viewer', label: 'Наблюдатель', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
 ]
@@ -309,7 +309,7 @@ export default function MembersSection({
               </div>
 
               {isOwner ? (
-                <span className="text-xs px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(79,142,247,0.15)', color: 'var(--accent)' }}>
+                <span className="text-xs px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(124,92,246,0.15)', color: 'var(--accent)' }}>
                   Владелец
                 </span>
               ) : (

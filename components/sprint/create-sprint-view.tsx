@@ -7,7 +7,7 @@ import { createSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 
-const COLUMN_COLORS = ['#4F8EF7','#A78BFA','#2DD4A0','#F7C04F','#F75C6E','#60C0E8','#8892A4']
+const COLUMN_COLORS = ['#7C5CF6','#A78BFA','#2DD4A0','#F7C04F','#F75C6E','#60C0E8','#8892A4']
 
 function toIso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -124,7 +124,7 @@ function DatePicker({ value, onChange, label }: { value: string; onChange: (v: s
           <div className="flex justify-end mt-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
             <button type="button" onClick={() => { onChange(toIso(new Date())); setOpen(false) }}
               className="text-xs px-2 py-1 rounded-md" style={{ color: 'var(--accent)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(79,142,247,0.1)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               Сегодня
@@ -150,7 +150,7 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
   const [dateTo, setDateTo] = useState('')
   const [mode, setMode] = useState<'weekdays' | 'custom'>('weekdays')
   const [customCols, setCustomCols] = useState<CustomCol[]>([
-    { name: 'Новые', color: '#4F8EF7' },
+    { name: 'Новые', color: '#7C5CF6' },
     { name: 'В работе', color: '#A78BFA' },
     { name: 'Готово', color: '#2DD4A0' },
   ])
@@ -258,7 +258,7 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
             <div className="flex flex-wrap gap-1.5">
               {[
                 { label: 'Новые', color: '#8892A4' },
-                { label: 'Пн',    color: '#4F8EF7' },
+                { label: 'Пн',    color: '#7C5CF6' },
                 { label: 'Вт',    color: '#A78BFA' },
                 { label: 'Ср',    color: '#2DD4A0' },
                 { label: 'Чт',    color: '#F7C04F' },

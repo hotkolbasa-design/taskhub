@@ -203,12 +203,12 @@ export default function NotificationBell() {
                   onClick={() => handleClick(n)}
                   className="w-full flex items-start gap-3 px-4 py-3 text-left transition-colors"
                   style={{
-                    background: n.is_read ? 'transparent' : 'rgba(79,142,247,0.06)',
+                    background: n.is_read ? 'transparent' : 'rgba(124,92,246,0.06)',
                     borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(79,142,247,0.06)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(124,92,246,0.06)')}
                 >
                   {/* Иконка типа */}
                   <div className="shrink-0 mt-0.5">

@@ -9,7 +9,7 @@ import type { BacklogTask, WorkflowStatus } from '@/types'
 
 const WORKFLOW_OPTIONS: { value: WorkflowStatus; label: string; color: string; bg: string }[] = [
   { value: 'new',         label: 'Новая',       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  { value: 'in_progress', label: 'В работе',    color: '#4F8EF7', bg: 'rgba(79,142,247,0.12)'  },
+  { value: 'in_progress', label: 'В работе',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
   { value: 'review',      label: 'На проверке', color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
   { value: 'done',        label: 'Выполнена',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
   { value: 'cancelled',   label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
@@ -241,9 +241,9 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
               return (
                 <button key={i} type="button" onClick={() => selectDay(cell.day, cell.month, cell.year)}
                   className="flex items-center justify-center rounded-lg text-xs transition-colors"
-                  style={{ height: 32, background: isSelected ? 'var(--accent)' : isToday ? 'rgba(79,142,247,0.15)' : 'transparent', color: isSelected ? '#fff' : !cell.current ? 'var(--text2)' : 'var(--text)', opacity: !cell.current ? 0.35 : 1, fontWeight: isToday || isSelected ? 600 : 400, border: isToday && !isSelected ? '1px solid rgba(79,142,247,0.4)' : '1px solid transparent' }}
+                  style={{ height: 32, background: isSelected ? 'var(--accent)' : isToday ? 'rgba(124,92,246,0.15)' : 'transparent', color: isSelected ? '#fff' : !cell.current ? 'var(--text2)' : 'var(--text)', opacity: !cell.current ? 0.35 : 1, fontWeight: isToday || isSelected ? 600 : 400, border: isToday && !isSelected ? '1px solid rgba(124,92,246,0.4)' : '1px solid transparent' }}
                   onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? 'rgba(79,142,247,0.15)' : 'transparent' }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? 'rgba(124,92,246,0.15)' : 'transparent' }}
                 >{cell.day}</button>
               )
             })}
@@ -254,7 +254,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
             >Очистить</button>
             <button type="button" onClick={setToday} className="text-xs px-2 py-1 rounded-md" style={{ color: 'var(--accent)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(79,142,247,0.1)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >Сегодня</button>
           </div>

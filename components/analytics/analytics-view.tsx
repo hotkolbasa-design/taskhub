@@ -282,8 +282,8 @@ export default function AnalyticsView({
               onClick={() => setSelectedId(user.id)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left w-full"
               style={{
-                background: isSelected ? 'rgba(79,142,247,0.1)' : 'transparent',
-                border: isSelected ? '1px solid rgba(79,142,247,0.2)' : '1px solid transparent',
+                background: isSelected ? 'rgba(124,92,246,0.1)' : 'transparent',
+                border: isSelected ? '1px solid rgba(124,92,246,0.2)' : '1px solid transparent',
               }}
               onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
               onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}

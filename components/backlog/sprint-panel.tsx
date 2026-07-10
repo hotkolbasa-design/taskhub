@@ -382,8 +382,8 @@ function SprintRootBottomDrop({ disabled }: { disabled: boolean }) {
       className="flex items-center justify-center rounded-lg"
       style={{
         height: 36,
-        background: isOver ? 'rgba(79,142,247,0.08)' : 'transparent',
-        border: `1px dashed ${isOver ? 'rgba(79,142,247,0.5)' : 'rgba(255,255,255,0.06)'}`,
+        background: isOver ? 'rgba(124,92,246,0.08)' : 'transparent',
+        border: `1px dashed ${isOver ? 'rgba(124,92,246,0.5)' : 'rgba(255,255,255,0.06)'}`,
         color: 'var(--accent)',
         fontSize: 11,
         transition: 'background 0.15s, border-color 0.15s',
@@ -575,7 +575,7 @@ export default function SprintPanel({
       className="flex flex-col flex-1 rounded-xl min-w-0"
       style={{
         background: 'var(--surface)',
-        border: `1px solid ${isOver && !isEpicTargeted ? 'rgba(79,142,247,0.5)' : 'var(--border)'}`,
+        border: `1px solid ${isOver && !isEpicTargeted ? 'rgba(124,92,246,0.5)' : 'var(--border)'}`,
         transition: 'border-color 0.15s',
       }}
     >
@@ -606,9 +606,9 @@ export default function SprintPanel({
               type="button"
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
-              style={{ background: 'rgba(79,142,247,0.1)', color: 'var(--accent)', border: '1px solid rgba(79,142,247,0.2)', cursor: 'pointer' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(79,142,247,0.18)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(79,142,247,0.1)')}
+              style={{ background: 'rgba(124,92,246,0.1)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.18)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
