@@ -80,7 +80,7 @@ export async function updateUserName(userId: string, fullName: string) {
 
 export async function updateUserProfile(
   userId: string,
-  updates: { full_name?: string; position?: string | null; birth_date?: string | null }
+  updates: { full_name?: string; position?: string | null; department?: string | null; birth_date?: string | null }
 ) {
   await requireAdmin()
   const admin = createAdminClient()
@@ -93,6 +93,7 @@ export async function inviteUser(data: {
   full_name: string
   role: 'admin' | 'employee'
   position: string
+  department: string
 }) {
   const caller = await requireAdmin()
   if (data.role === 'admin' && !(await isSuperAdmin(caller.id))) {
@@ -113,6 +114,7 @@ export async function inviteUser(data: {
       full_name: data.full_name || null,
       role: data.role,
       position: data.position || null,
+      department: data.department || null,
       status: 'pending',
     })
   }

@@ -32,9 +32,10 @@ export default function ProfileModal({ onClose, displayName }: Props) {
   const [saving, setSaving]       = useState(false)
   const [email, setEmail]         = useState<string | null>(null)
   const [role, setRole]           = useState('')
-  const [name, setName]           = useState('')
-  const [position, setPosition]   = useState('')
-  const [birthDate, setBirthDate] = useState('')
+  const [name, setName]             = useState('')
+  const [position, setPosition]     = useState('')
+  const [department, setDepartment] = useState('')
+  const [birthDate, setBirthDate]   = useState('')
   const [calOpen, setCalOpen]     = useState(false)
 
   const initYear  = birthDate ? parseInt(birthDate.slice(0, 4)) : new Date().getFullYear() - 25
@@ -49,6 +50,7 @@ export default function ProfileModal({ onClose, displayName }: Props) {
         setEmail(p.email)
         setRole(p.role ?? '')
         setPosition(p.position ?? '')
+        setDepartment((p as { department?: string | null }).department ?? '')
         setBirthDate(p.birth_date ?? '')
         if (p.birth_date) {
           setCalYear(parseInt(p.birth_date.slice(0, 4)))
@@ -68,8 +70,9 @@ export default function ProfileModal({ onClose, displayName }: Props) {
   async function handleSave() {
     setSaving(true)
     await updateMyProfile({
-      full_name: name.trim() || undefined,
-      position:  position.trim() || null,
+      full_name:  name.trim() || undefined,
+      position:   position.trim() || null,
+      department: department.trim() || null,
       birth_date: birthDate || null,
     })
     setSaving(false)
@@ -162,6 +165,17 @@ export default function ProfileModal({ onClose, displayName }: Props) {
               <Field label="Должность">
                 <input value={position} onChange={e => setPosition(e.target.value)}
                   placeholder="Менеджер проектов"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                />
+              </Field>
+
+              {/* Отдел */}
+              <Field label="Отдел">
+                <input value={department} onChange={e => setDepartment(e.target.value)}
+                  placeholder="Маркетинг"
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                   onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}

@@ -13,6 +13,7 @@ export type Profile = {
   status: UserStatus
   avatar_url: string | null
   position: string | null
+  department: string | null
   birth_date: string | null
   created_at: string
 }

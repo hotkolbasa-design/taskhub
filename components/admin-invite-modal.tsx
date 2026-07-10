@@ -12,10 +12,11 @@ const ROLES = [
 type Props = { onClose: () => void; onDone: () => void }
 
 export default function AdminInviteModal({ onClose, onDone }: Props) {
-  const [email, setEmail]       = useState('')
-  const [fullName, setFullName] = useState('')
-  const [role, setRole]         = useState<'employee' | 'admin'>('employee')
-  const [position, setPosition] = useState('')
+  const [email, setEmail]         = useState('')
+  const [fullName, setFullName]   = useState('')
+  const [role, setRole]           = useState<'employee' | 'admin'>('employee')
+  const [position, setPosition]   = useState('')
+  const [department, setDepartment] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [roleOpen, setRoleOpen] = useState(false)
@@ -48,7 +49,7 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
     setError('')
     setLoading(true)
     try {
-      await inviteUser({ email: email.trim(), full_name: fullName.trim(), role, position: position.trim() })
+      await inviteUser({ email: email.trim(), full_name: fullName.trim(), role, position: position.trim(), department: department.trim() })
       onDone()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ошибка при отправке приглашения')
@@ -114,6 +115,19 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
               value={position}
               onChange={e => setPosition(e.target.value)}
               placeholder="Менеджер проектов"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            />
+          </Field>
+
+          <Field label="Отдел">
+            <input
+              type="text"
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+              placeholder="Маркетинг"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}

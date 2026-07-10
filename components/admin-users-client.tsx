@@ -11,6 +11,7 @@ type UserRow = {
   role: string
   status: string
   position: string | null
+  department: string | null
   birth_date: string | null
 }
 
@@ -38,6 +39,7 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
       role:       u.role,
       status:     u.status,
       position:   u.position,
+      department: u.department,
       birth_date: u.birth_date,
     })
   }
