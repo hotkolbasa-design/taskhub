@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
 import { getNotifications, markAsRead, markAllAsRead, type AppNotification } from '@/app/(dashboard)/notifications/actions'
+import ProfileModal from '@/components/profile-modal'
 
 type Profile = {
   full_name: string | null
@@ -94,6 +95,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
   const displayName = profile?.full_name || profile?.login || 'Пользователь'
   const [signingOut, setSigningOut] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifPos, setNotifPos] = useState({ top: 0, left: 0 })
@@ -243,7 +245,13 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
       {/* Пользователь + выход */}
       <div className="px-3 pb-4 flex flex-col gap-1" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="flex items-center gap-2.5 px-3 py-3">
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="flex items-center gap-2.5 px-3 py-3 rounded-lg w-full text-left transition-colors"
+          style={{ cursor: 'pointer', background: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
             style={{ background: 'var(--accent)', color: '#fff' }}
@@ -253,7 +261,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
           <span className="text-sm truncate" style={{ color: 'var(--text)' }}>
             {displayName}
           </span>
-        </div>
+        </button>
 
         <button
           onClick={handleSignOut}
@@ -352,6 +360,10 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
           </div>
         </div>,
         document.body
+      )}
+
+      {profileOpen && (
+        <ProfileModal displayName={displayName} onClose={() => setProfileOpen(false)} />
       )}
     </aside>
   )

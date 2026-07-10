@@ -12,6 +12,8 @@ export type Profile = {
   role: UserRole
   status: UserStatus
   avatar_url: string | null
+  position: string | null
+  birth_date: string | null
   created_at: string
 }
 
