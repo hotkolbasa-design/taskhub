@@ -53,7 +53,8 @@ type Props = {
 }
 
 export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, onUpdated }: Props) {
-  const canEdit = !isSelf && !isProtected
+  const canEditRoleStatus = !isSelf && !isProtected
+  const canEditProfile    = !isProtected
 
   const [name, setName]           = useState(user.full_name ?? '')
   const [position, setPosition]   = useState(user.position ?? '')
@@ -90,14 +91,14 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
   }
 
   async function handleRoleChange(next: string) {
-    if (next === currentRole || !canEdit) return
+    if (next === currentRole || !canEditRoleStatus) return
     setCurrentRole(next)
     onUpdated(user.id, { role: next })
     await setRole(user.id, next as 'admin' | 'employee')
   }
 
   async function handleStatusChange(next: string) {
-    if (next === currentStatus || !canEdit) return
+    if (next === currentStatus || !canEditRoleStatus) return
     setCurrentStatus(next)
     onUpdated(user.id, { status: next })
     await setStatus(user.id, next as 'active' | 'inactive')
@@ -152,8 +153,8 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex gap-1.5 flex-wrap">
-                <BadgeDropdown options={ROLES} value={currentRole} disabled={!canEdit} onChange={handleRoleChange} />
-                <BadgeDropdown options={selectableStatuses} value={currentStatus} disabled={!canEdit} onChange={handleStatusChange} />
+                <BadgeDropdown options={ROLES} value={currentRole} disabled={!canEditRoleStatus} onChange={handleRoleChange} />
+                <BadgeDropdown options={selectableStatuses} value={currentStatus} disabled={!canEditRoleStatus} onChange={handleStatusChange} />
               </div>
               {isSelf && <span className="text-xs" style={{ color: 'var(--text2)' }}>Это вы</span>}
               {isProtected && !isSelf && <span className="text-xs" style={{ color: 'var(--text2)' }}>Суперадмин</span>}
@@ -169,21 +170,21 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
 
           {/* Имя */}
           <Field label="Полное имя">
-            <input value={name} onChange={e => setName(e.target.value)} disabled={!canEdit}
+            <input value={name} onChange={e => setName(e.target.value)} disabled={!canEditProfile}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              onFocus={e => { if (canEdit) e.currentTarget.style.borderColor = 'var(--accent)' }}
+              onFocus={e => { if (canEditProfile) e.currentTarget.style.borderColor = 'var(--accent)' }}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
           </Field>
 
           {/* Должность */}
           <Field label="Должность">
-            <input value={position} onChange={e => setPosition(e.target.value)} disabled={!canEdit}
+            <input value={position} onChange={e => setPosition(e.target.value)} disabled={!canEditProfile}
               placeholder="Менеджер проектов"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              onFocus={e => { if (canEdit) e.currentTarget.style.borderColor = 'var(--accent)' }}
+              onFocus={e => { if (canEditProfile) e.currentTarget.style.borderColor = 'var(--accent)' }}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
           </Field>
@@ -191,9 +192,9 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
           {/* Дата рождения */}
           <Field label="Дата рождения">
             <div className="relative">
-              <button type="button" onClick={() => canEdit && setCalOpen(o => !o)}
+              <button type="button" onClick={() => canEditProfile && setCalOpen(o => !o)}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: birthDate ? 'var(--text)' : 'var(--text2)', cursor: canEdit ? 'pointer' : 'default', opacity: canEdit ? 1 : 0.5 }}
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: birthDate ? 'var(--text)' : 'var(--text2)', cursor: canEditProfile ? 'pointer' : 'default', opacity: canEditProfile ? 1 : 0.5 }}
               >
                 {birthDate ? formatBirth(birthDate) : 'Не указана'}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -261,7 +262,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
         </div>
 
         {/* Footer */}
-        {canEdit && (
+        {canEditProfile && (
           <div className="px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
             <button onClick={handleSave} disabled={saving}
               className="w-full py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
