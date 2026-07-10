@@ -55,7 +55,7 @@ type Props = {
 
 export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, onUpdated }: Props) {
   const canEditRoleStatus = !isSelf && !isProtected
-  const canEditProfile    = !isProtected
+  const canEditProfile    = !isProtected || isSelf
 
   const [name, setName]             = useState(user.full_name ?? '')
   const [position, setPosition]     = useState(user.position ?? '')
