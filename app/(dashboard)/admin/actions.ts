@@ -77,3 +77,45 @@ export async function updateUserName(userId: string, fullName: string) {
   await admin.from('profiles').update({ full_name: fullName }).eq('id', userId)
   revalidatePath('/admin')
 }
+
+export async function updateUserProfile(
+  userId: string,
+  updates: { full_name?: string; position?: string | null; birth_date?: string | null }
+) {
+  await requireAdmin()
+  const admin = createAdminClient()
+  await admin.from('profiles').update(updates).eq('id', userId)
+  revalidatePath('/admin')
+}
+
+export async function inviteUser(data: {
+  email: string
+  full_name: string
+  role: 'admin' | 'employee'
+  position: string
+}) {
+  const caller = await requireAdmin()
+  if (data.role === 'admin' && !(await isSuperAdmin(caller.id))) {
+    throw new Error('Только суперадмин может приглашать администраторов')
+  }
+
+  const admin = createAdminClient()
+  const { data: authData, error } = await admin.auth.admin.inviteUserByEmail(data.email, {
+    data: { full_name: data.full_name || null },
+    redirectTo: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://taskhub-ecru.vercel.app',
+  })
+  if (error) throw new Error(error.message)
+
+  if (authData.user) {
+    await admin.from('profiles').upsert({
+      id: authData.user.id,
+      login: data.email.split('@')[0],
+      full_name: data.full_name || null,
+      role: data.role,
+      position: data.position || null,
+      status: 'pending',
+    })
+  }
+
+  revalidatePath('/admin')
+}
