@@ -173,9 +173,8 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       {/* Логотип */}
       <div className="px-5 pt-5 pb-5" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-1.5">
-          <div className="w-7 h-7 rounded-lg flex flex-col items-center justify-center shrink-0 gap-px" style={{ background: 'var(--accent)' }}>
-            <span style={{ color: 'white', fontSize: 13, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em' }}>g</span>
-            <div style={{ width: 10, height: 2, borderRadius: 2, background: 'white', opacity: 0.85 }} />
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--accent)' }}>
+            <span style={{ color: 'white', fontSize: 14, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em' }}>g</span>
           </div>
           <span className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
             globalos
