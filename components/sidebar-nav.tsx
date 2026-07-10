@@ -25,6 +25,17 @@ const adminItem = {
   ),
 }
 
+const crmItem = {
+  href: '/crm',
+  label: 'CRM',
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 11.5l3-4 2.5 3 3.5-5.5 2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+    </svg>
+  ),
+}
+
 const navItems = [
   {
     href: '/dashboard',
@@ -186,7 +197,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
       {/* Навигация */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
-        {[...navItems, ...(profile?.role === 'admin' ? [adminItem] : [])].map(({ href, label, icon }) => {
+        {[...navItems, ...(profile?.role === 'admin' ? [crmItem, adminItem] : [])].map(({ href, label, icon }) => {
           const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
           return (
             <Link
