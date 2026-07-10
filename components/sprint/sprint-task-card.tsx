@@ -3,7 +3,7 @@
 import type { SprintTask } from '@/types'
 import { minutesToDisplay } from '@/lib/utils/time'
 
-const AVATAR_COLORS = ['#4F8EF7', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
+const AVATAR_COLORS = ['#7C5CF6', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
 
 function getAvatarColor(str: string) {
   let hash = 0

@@ -171,10 +171,18 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
     >
       {/* Логотип */}
-      <div className="px-5 pt-6 pb-5" style={{ borderBottom: '1px solid var(--border)' }}>
-        <span className="text-base font-semibold" style={{ color: 'var(--text)' }}>
-          Task Hub
-        </span>
+      <div className="px-5 pt-5 pb-5" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-1.5">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--accent)' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="2.5" fill="white" />
+              <circle cx="7" cy="7" r="1" fill="var(--accent)" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+            globalos
+          </span>
+        </div>
       </div>
 
       {/* Навигация */}
@@ -188,7 +196,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
               style={{
                 color: isActive ? 'var(--accent)' : 'var(--text2)',
-                background: isActive ? 'rgba(79,142,247,0.1)' : 'transparent',
+                background: isActive ? 'rgba(124,92,246,0.1)' : 'transparent',
               }}
             >
               {icon}
@@ -204,7 +212,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left"
           style={{
             color: notifOpen ? 'var(--accent)' : 'var(--text2)',
-            background: notifOpen ? 'rgba(79,142,247,0.1)' : 'transparent',
+            background: notifOpen ? 'rgba(124,92,246,0.1)' : 'transparent',
             cursor: 'pointer',
           }}
           onMouseEnter={e => { if (!notifOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
@@ -315,12 +323,12 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
                   onClick={() => handleNotifClick(n)}
                   className="w-full flex items-start gap-3 px-4 py-3 text-left"
                   style={{
-                    background: n.is_read ? 'transparent' : 'rgba(79,142,247,0.06)',
+                    background: n.is_read ? 'transparent' : 'rgba(124,92,246,0.06)',
                     borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(79,142,247,0.06)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(124,92,246,0.06)')}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">

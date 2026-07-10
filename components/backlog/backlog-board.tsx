@@ -239,8 +239,8 @@ function RootDropZone() {
       className="flex items-center justify-center rounded-lg"
       style={{
         height: 36,
-        background: isOver ? 'rgba(79,142,247,0.08)' : 'transparent',
-        border: `1px dashed ${isOver ? 'rgba(79,142,247,0.5)' : 'rgba(255,255,255,0.06)'}`,
+        background: isOver ? 'rgba(124,92,246,0.08)' : 'transparent',
+        border: `1px dashed ${isOver ? 'rgba(124,92,246,0.5)' : 'rgba(255,255,255,0.06)'}`,
         color: 'var(--accent)',
         fontSize: 11,
         transition: 'background 0.15s, border-color 0.15s',
@@ -740,7 +740,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
             className="flex flex-col flex-1 min-w-0 rounded-xl"
             style={{
               background: 'var(--surface)',
-              border: `1px solid ${sprintDragOverBacklog ? 'rgba(79,142,247,0.5)' : 'var(--border)'}`,
+              border: `1px solid ${sprintDragOverBacklog ? 'rgba(124,92,246,0.5)' : 'var(--border)'}`,
               transition: 'border-color 0.15s',
             }}
           >
@@ -790,7 +790,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                 <button
                   onClick={() => setShowModal(true)}
                   className="text-sm px-4 py-2 rounded-lg font-medium"
-                  style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--accent)' }}
+                  style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)' }}
                 >
                   Создать первую задачу
                 </button>
@@ -1117,7 +1117,7 @@ function EmptySprintPanel({ projectId }: { projectId: string }) {
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
-            style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--accent)', cursor: 'pointer' }}
+            style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', cursor: 'pointer' }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>

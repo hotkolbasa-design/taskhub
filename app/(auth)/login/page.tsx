@@ -85,7 +85,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 rounded-lg py-2.5 bg-[#4F8EF7] text-white text-sm font-medium hover:bg-[#3a7ae4] disabled:opacity-70 transition-colors cursor-pointer flex items-center justify-center gap-2"
+          className="mt-2 rounded-lg py-2.5 bg-[#7C5CF6] text-white text-sm font-medium hover:bg-[#6B4EE0] disabled:opacity-70 transition-colors cursor-pointer flex items-center justify-center gap-2"
         >
           {loading && (
             <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
@@ -96,7 +96,7 @@ function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-gray-500">
         Нет аккаунта?{' '}
-        <Link href="/register" className="text-[#4F8EF7] hover:underline">
+        <Link href="/register" className="text-[#7C5CF6] hover:underline">
           Зарегистрироваться
         </Link>
       </p>
@@ -106,7 +106,7 @@ function LoginForm() {
 
 
 const inputCls =
-  'w-full rounded-lg px-3 py-2.5 bg-[#1C2232] border border-[#2A3347] text-white text-sm outline-none focus:border-[#4F8EF7] transition-colors placeholder-gray-600'
+  'w-full rounded-lg px-3 py-2.5 bg-[#16132A] border border-[#2D2550] text-white text-sm outline-none focus:border-[#7C5CF6] transition-colors placeholder-gray-600'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

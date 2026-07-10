@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 
 const WEEKDAY_COLUMNS = [
   { name: 'Новые',       color: '#8892A4' },
-  { name: 'Понедельник', color: '#4F8EF7' },
+  { name: 'Понедельник', color: '#7C5CF6' },
   { name: 'Вторник',     color: '#A78BFA' },
   { name: 'Среда',       color: '#2DD4A0' },
   { name: 'Четверг',     color: '#F7C04F' },

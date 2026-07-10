@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createProject } from '@/app/(dashboard)/projects/actions'
 
 const COLORS = [
-  '#4F8EF7', '#2DD4A0', '#F75C6E', '#F7C04F',
+  '#7C5CF6', '#2DD4A0', '#F75C6E', '#F7C04F',
   '#9B8EF7', '#F78E4F', '#4FC4F7', '#F74FA0',
 ]
 
