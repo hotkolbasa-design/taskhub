@@ -1,35 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const SCRIPT_URL = process.env.APPS_SCRIPT_CRM_URL
+import { computeDashboardData, getAvailableMonths } from '@/lib/crm/compute'
+import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
+import { saveSpendValue } from '@/lib/crm/spend'
+import { getExcludedSources, saveExcludedSources } from '@/lib/crm/settings'
 
 export async function GET(req: NextRequest) {
-  if (!SCRIPT_URL) return NextResponse.json({ error: 'APPS_SCRIPT_CRM_URL not configured' }, { status: 503 })
-  const url = new URL(SCRIPT_URL)
   const { searchParams } = new URL(req.url)
-  url.searchParams.set('format', 'json')
-  searchParams.forEach((v, k) => url.searchParams.set(k, v))
+  const action = searchParams.get('action')
+
   try {
-    const res = await fetch(url.toString(), { cache: 'no-store', redirect: 'follow' })
-    const data = await res.json()
-    return NextResponse.json(data)
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 })
+    if (action === 'months') {
+      return NextResponse.json(getAvailableMonths())
+    }
+
+    if (action === 'data') {
+      const month = searchParams.get('month')
+      if (!month) return NextResponse.json({ error: 'month required' }, { status: 400 })
+
+      const snapshot = await readSnapshot(month)
+      const data = snapshot
+        ? { ...snapshot, frozen: true }
+        : { ...(await computeDashboardData(month)), frozen: false }
+
+      const excludedSources = await getExcludedSources()
+      return NextResponse.json({ ...data, excludedSources })
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
-  if (!SCRIPT_URL) return NextResponse.json({ error: 'APPS_SCRIPT_CRM_URL not configured' }, { status: 503 })
-  const body = await req.json()
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      redirect: 'follow',
-    })
-    const data = await res.json()
-    return NextResponse.json(data)
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 })
+    const body = await req.json()
+    const { action } = body
+
+    if (action === 'freeze') {
+      const data = await computeDashboardData(body.monthKey)
+      await writeSnapshot(body.monthKey, data)
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'unfreeze') {
+      await deleteSnapshot(body.monthKey)
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'saveSpend') {
+      await saveSpendValue(body.dateIso, body.source, body.field, Number(body.value) || 0)
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'saveExcluded') {
+      await saveExcludedSources(body.excluded ?? [])
+      return NextResponse.json({ ok: true })
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
