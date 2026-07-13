@@ -631,7 +631,7 @@ export default function CrmDashboard() {
         </svg>
         <p className="text-sm" style={{ color: 'var(--text2)' }}>{error}</p>
         <p className="text-xs max-w-sm text-center" style={{ color: 'var(--text2)', opacity: 0.7 }}>
-          Убедитесь, что переменная APPS_SCRIPT_CRM_URL задана в .env.local и Apps Script поддерживает JSON-режим.
+          Убедитесь, что переменные GOOGLE_SERVICE_ACCOUNT_KEY и GOOGLE_SPREADSHEET_ID добавлены в настройки Vercel.
         </p>
       </div>
     )
