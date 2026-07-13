@@ -31,12 +31,13 @@ type DashData = {
 
 const CRM_STYLES = `
 .crm-wrap{overflow-x:auto}
-.crm-row{display:flex;min-width:max-content}
-.crm-lbl{position:relative;z-index:1;background:var(--surface);flex-shrink:0;will-change:transform}
+.crm-table{display:table;border-collapse:collapse;min-width:max-content}
+.crm-row{display:table-row}
+.crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface)}
 .crm-head.crm-lbl{z-index:2}
-.crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;flex-shrink:0}
+.crm-cell{padding:9px 8px;font-size:13px;display:table-cell;vertical-align:middle;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden}
 .crm-head{background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
-.crm-col-label{width:240px;text-align:left;justify-content:flex-start;white-space:normal;border-right:1px solid var(--border);color:var(--text2);font-weight:500}
+.crm-col-label{width:240px;text-align:left;white-space:normal;border-right:1px solid var(--border);color:var(--text2);font-weight:500}
 .crm-col-day{width:90px}
 .crm-col-week{width:110px;border-left:2px solid var(--border)}
 .crm-col-total{width:110px;border-left:2px solid var(--border);font-weight:600;background:rgba(255,255,255,0.018)}
@@ -48,8 +49,8 @@ const CRM_STYLES = `
 .crm-chip{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,0.06);color:var(--text2)}
 .crm-zero{color:var(--text2);font-weight:400}
 .crm-value{color:var(--text);font-weight:600}
-.crm-spend-head{padding:10px 6px 6px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;border-top:2px solid var(--border);justify-content:flex-start}
-.crm-spend-filler{border-top:2px solid var(--border);flex:1 0 auto}
+.crm-spend-head{padding:10px 6px 6px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;border-top:2px solid var(--border);text-align:left}
+.crm-spend-filler{border-top:2px solid var(--border);border-bottom:none}
 .crm-week-sub{display:block;font-size:9px;color:var(--text2);font-weight:400;margin-top:2px;text-transform:uppercase;letter-spacing:0.02em}
 .crm-input{width:100%;font-size:12px;padding:4px;border:1px dashed var(--border);border-radius:6px;background:var(--surface2);text-align:center;color:var(--text);outline:none;-moz-appearance:textfield}
 .crm-input:focus{border-color:var(--accent);background:var(--surface)}
@@ -192,7 +193,7 @@ function HeadRow({ data }: { data: DashData }) {
       <div className="crm-cell crm-col-label crm-head crm-lbl" />
       {data.days.map(d => <div key={d} className="crm-cell crm-head crm-col-day">{d}</div>)}
       {data.weeks.map(w => (
-        <div key={w} className="crm-cell crm-head crm-col-week" style={{ flexDirection: 'column' }}>
+        <div key={w} className="crm-cell crm-head crm-col-week">
           <span>{w}</span>
           <span className="crm-week-sub">неделя</span>
         </div>
@@ -277,8 +278,8 @@ function SpendInput({ initialValue, onSave }: { initialValue: number; onSave: (v
 
 // ─── SpendSection ─────────────────────────────────────────────────────────────
 
-function SpendSection({ src, spend, daysIso, editable, onSave }: {
-  src: string; spend: Spend; daysIso: string[]; editable: boolean
+function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
+  src: string; spend: Spend; daysIso: string[]; data: DashData; editable: boolean
   onSave: (dateIso: string, source: string, field: string, value: number) => void
 }) {
   function editRow(label: string, field: string, v: ValuesSet) {
@@ -305,7 +306,9 @@ function SpendSection({ src, spend, daysIso, editable, onSave }: {
     <>
       <div className="crm-row">
         <div className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</div>
-        <div className="crm-spend-filler" />
+        {data.days.map((_, i) => <div key={i} className="crm-cell crm-col-day crm-spend-filler" />)}
+        {data.weeks.map((_, i) => <div key={i} className="crm-cell crm-col-week crm-spend-filler" />)}
+        <div className="crm-cell crm-col-total crm-spend-filler" />
       </div>
       {editRow('Потрачено, $', 'spent', spend.spent)}
       {editRow('Показы', 'impressions', spend.impressions)}
@@ -334,8 +337,10 @@ function Card({ header, data, children }: {
         {header}
       </div>
       <div className="crm-wrap" data-crm-scroll="1">
-        <HeadRow data={data} />
-        {children}
+        <div className="crm-table">
+          <HeadRow data={data} />
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -386,7 +391,7 @@ function SourceCard({ src, data, editable, onSave, overall }: {
         <MoneyRow label="Сумма продаж" v={src.revenue} />
       )}
       {src.spend && (
-        <SpendSection src={src.source} spend={src.spend} daysIso={data.daysIso} editable={editable} onSave={onSave} />
+        <SpendSection src={src.source} spend={src.spend} daysIso={data.daysIso} data={data} editable={editable} onSave={onSave} />
       )}
     </Card>
   )
@@ -512,24 +517,14 @@ export default function CrmDashboard() {
     return () => style.remove()
   }, [])
 
-  // Sync horizontal scroll + simulate sticky label column via JS transform
+  // Sync horizontal scroll across all crm-wrap containers
   useEffect(() => {
-    const moveLbls = (wrap: HTMLElement, sl: number) => {
-      wrap.querySelectorAll<HTMLElement>('.crm-lbl').forEach(el => {
-        el.style.transform = `translateX(${sl}px)`
-      })
-    }
     const onScroll = (e: Event) => {
       const src = e.target as HTMLElement
       if (src?.dataset?.crmScroll !== '1') return
       const sl = src.scrollLeft
-      moveLbls(src, sl)
       document.querySelectorAll<HTMLElement>('[data-crm-scroll="1"]').forEach(el => {
-        if (el === src) return
-        if (el.scrollLeft !== sl) {
-          el.scrollLeft = sl
-          moveLbls(el, sl)
-        }
+        if (el !== src && el.scrollLeft !== sl) el.scrollLeft = sl
       })
     }
     document.addEventListener('scroll', onScroll, { capture: true, passive: true })
