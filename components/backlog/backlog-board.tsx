@@ -23,7 +23,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { reorderBacklog, reorderSprintTasks, updateTask, getComments, moveToSprint, moveBackToBacklog, createSprint, removeFromEpic } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { reorderBacklog, reorderSprintTasks, updateTask, getComments, moveToSprint, moveBackToBacklog, createSprint, removeFromEpic, duplicateTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { minutesToDisplay } from '@/lib/utils/time'
 import { moveTaskInSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import type { WorkflowStatus, SprintTask, Sprint } from '@/types'
@@ -71,6 +71,7 @@ function EpicBlock({
   onDeadlineChange,
   onTimeChange,
   onRemoveFromEpic,
+  onDuplicate,
   insertIndicator,
 }: {
   epic: BacklogTask
@@ -83,6 +84,7 @@ function EpicBlock({
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
   onRemoveFromEpic: (id: string) => void
+  onDuplicate: (task: BacklogTask) => void
   insertIndicator?: 'before' | 'after'
 }) {
   const [expanded, setExpanded] = useState(true)
@@ -168,6 +170,7 @@ function EpicBlock({
                 onOptimisticDelete={onDelete}
                 onOptimisticMoveToSprint={onMoveToSprint}
                 onRemoveFromEpic={onRemoveFromEpic}
+                onDuplicate={onDuplicate}
                 onEdit={onEdit}
                 onWorkflowChange={onWorkflowChange}
                 onDeadlineChange={onDeadlineChange}
@@ -183,7 +186,7 @@ function EpicBlock({
 
 function SortableTaskRow({
   task, projectId, hasActiveSprint, insertIndicator,
-  onDelete, onMoveToSprint, onEdit, onWorkflowChange, onDeadlineChange, onTimeChange,
+  onDelete, onMoveToSprint, onEdit, onWorkflowChange, onDeadlineChange, onTimeChange, onDuplicate,
 }: {
   task: BacklogTask
   projectId: string
@@ -195,6 +198,7 @@ function SortableTaskRow({
   onWorkflowChange: (id: string, status: string) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
+  onDuplicate: (task: BacklogTask) => void
 }) {
   const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({ id: task.id })
   return (
@@ -222,6 +226,7 @@ function SortableTaskRow({
         externalDragHandle={{ attributes, listeners }}
         onOptimisticDelete={onDelete}
         onOptimisticMoveToSprint={onMoveToSprint}
+        onDuplicate={onDuplicate}
         onEdit={onEdit}
         onWorkflowChange={onWorkflowChange}
         onDeadlineChange={onDeadlineChange}
@@ -702,6 +707,52 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     router.refresh()
   }, [projectId, router])
 
+  const handleDuplicate = useCallback(async (task: BacklogTask) => {
+    const copy: BacklogTask = {
+      ...task,
+      id: crypto.randomUUID(),
+      title: `Копия — ${task.title}`,
+      workflow_status: 'new',
+      status: 'backlog',
+      sprint_id: null,
+      column_id: null,
+      column_order: null,
+      backlog_order: 9999,
+      subtasks: [],
+      subtask_total: 0,
+      subtask_done: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    setTasks(prev => {
+      const topIdx = prev.findIndex(t => t.id === task.id)
+      if (topIdx !== -1) {
+        const next = [...prev]
+        next.splice(topIdx + 1, 0, copy)
+        return next
+      }
+      return prev.map(t => {
+        const subIdx = t.subtasks.findIndex(s => s.id === task.id)
+        if (subIdx === -1) return t
+        const newSubs = [...t.subtasks]
+        newSubs.splice(subIdx + 1, 0, copy)
+        return { ...t, subtasks: newSubs, subtask_total: t.subtask_total + 1 }
+      })
+    })
+    try {
+      await duplicateTask(task.id, projectId)
+      router.refresh()
+    } catch {
+      setTasks(prev =>
+        prev.filter(t => t.id !== copy.id).map(t => ({
+          ...t,
+          subtasks: t.subtasks.filter(s => s.id !== copy.id),
+          subtask_total: t.subtasks.some(s => s.id === copy.id) ? t.subtask_total - 1 : t.subtask_total,
+        }))
+      )
+    }
+  }, [projectId, router])
+
   function handleCreated(task: BacklogTask) {
     if (task.parent_task_id) {
       // Добавляем как подзадачу к эпику
@@ -821,6 +872,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onDeadlineChange={handleDeadlineChange}
                           onTimeChange={handleTimeChange}
                           onRemoveFromEpic={handleRemoveFromEpic}
+                          onDuplicate={handleDuplicate}
                           insertIndicator={insertIndicator}
                         />
                       ) : (
@@ -835,6 +887,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onWorkflowChange={handleWorkflowChange}
                           onDeadlineChange={handleDeadlineChange}
                           onTimeChange={handleTimeChange}
+                          onDuplicate={handleDuplicate}
                         />
                       )}
                     </Fragment>
