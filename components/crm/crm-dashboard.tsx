@@ -30,8 +30,8 @@ type DashData = {
 // ─── CSS classes injected once on mount ──────────────────────────────────────
 
 const CRM_STYLES = `
-.crm-si{width:max-content;transform:translateX(calc(-1 * var(--crm-sx,0px)))}
-.crm-lbl{transform:translateX(var(--crm-sx,0px));background:var(--surface);position:relative;z-index:1}
+.crm-si{width:max-content;transform:translateX(calc(-1 * var(--crm-sx,0px)));will-change:transform}
+.crm-lbl{transform:translateX(var(--crm-sx,0px));background:var(--surface);position:relative;z-index:1;will-change:transform}
 .crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .crm-head{position:sticky;top:0;z-index:2;background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
 .crm-head.crm-lbl{z-index:3}
@@ -49,8 +49,9 @@ const CRM_STYLES = `
 .crm-spend-head{padding:10px 6px 6px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;border-top:2px solid var(--border);justify-content:flex-start}
 .crm-spend-filler{border-top:2px solid var(--border)}
 .crm-week-sub{display:block;font-size:9px;color:var(--text2);font-weight:400;margin-top:2px;text-transform:uppercase;letter-spacing:0.02em}
-.crm-input{width:100%;font-size:12px;padding:4px;border:1px dashed var(--border);border-radius:6px;background:var(--surface2);text-align:center;color:var(--text);outline:none}
+.crm-input{width:100%;font-size:12px;padding:4px;border:1px dashed var(--border);border-radius:6px;background:var(--surface2);text-align:center;color:var(--text);outline:none;-moz-appearance:textfield}
 .crm-input:focus{border-color:var(--accent);background:var(--surface)}
+.crm-input::-webkit-outer-spin-button,.crm-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 `
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
