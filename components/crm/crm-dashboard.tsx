@@ -31,11 +31,10 @@ type DashData = {
 
 const CRM_STYLES = `
 .crm-wrap{overflow-x:auto}
-.crm-table{display:table;border-collapse:collapse;min-width:max-content}
-.crm-row{display:table-row}
+.crm-table{border-collapse:collapse;width:max-content}
 .crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface)}
 .crm-head.crm-lbl{z-index:2}
-.crm-cell{padding:9px 8px;font-size:13px;display:table-cell;vertical-align:middle;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden}
+.crm-cell{padding:9px 8px;font-size:13px;vertical-align:middle;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;font-weight:normal}
 .crm-head{background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
 .crm-col-label{width:240px;text-align:left;white-space:normal;border-right:1px solid var(--border);color:var(--text2);font-weight:500}
 .crm-col-day{width:90px}
@@ -49,7 +48,7 @@ const CRM_STYLES = `
 .crm-chip{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,0.06);color:var(--text2)}
 .crm-zero{color:var(--text2);font-weight:400}
 .crm-value{color:var(--text);font-weight:600}
-.crm-spend-head{padding:10px 6px 6px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;border-top:2px solid var(--border);text-align:left}
+.crm-spend-head{padding:10px 6px 6px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;border-top:2px solid var(--border);text-align:left;vertical-align:middle}
 .crm-spend-filler{border-top:2px solid var(--border);border-bottom:none}
 .crm-week-sub{display:block;font-size:9px;color:var(--text2);font-weight:400;margin-top:2px;text-transform:uppercase;letter-spacing:0.02em}
 .crm-input{width:100%;font-size:12px;padding:4px;border:1px dashed var(--border);border-radius:6px;background:var(--surface2);text-align:center;color:var(--text);outline:none;-moz-appearance:textfield}
@@ -185,21 +184,21 @@ function SourceModal({ sources, excluded, onChange, onClose }: {
   )
 }
 
-// ─── Grid row helpers ─────────────────────────────────────────────────────────
+// ─── Table row helpers (native HTML table elements) ───────────────────────────
 
 function HeadRow({ data }: { data: DashData }) {
   return (
-    <div className="crm-row">
-      <div className="crm-cell crm-col-label crm-head crm-lbl" />
-      {data.days.map(d => <div key={d} className="crm-cell crm-head crm-col-day">{d}</div>)}
+    <tr>
+      <th className="crm-cell crm-col-label crm-head crm-lbl" />
+      {data.days.map(d => <th key={d} className="crm-cell crm-head crm-col-day">{d}</th>)}
       {data.weeks.map(w => (
-        <div key={w} className="crm-cell crm-head crm-col-week">
+        <th key={w} className="crm-cell crm-head crm-col-week">
           <span>{w}</span>
           <span className="crm-week-sub">неделя</span>
-        </div>
+        </th>
       ))}
-      <div className="crm-cell crm-head crm-col-total">Итог</div>
-    </div>
+      <th className="crm-cell crm-head crm-col-total">Итог</th>
+    </tr>
   )
 }
 
@@ -208,57 +207,57 @@ function DataRow({ name, dayValues, weekValues, total, extra }: {
 }) {
   const cls = (v: number, add = '') => `crm-cell ${add} ${v === 0 ? 'crm-zero' : 'crm-value'}`
   return (
-    <div className="crm-row">
-      <div className={`crm-cell crm-col-label crm-lbl ${extra || ''}`}>{name}</div>
-      {dayValues.map((v, i) => <div key={i} className={cls(v, `crm-col-day ${extra}`)}>{v}</div>)}
-      {weekValues.map((v, i) => <div key={i} className={cls(v, `crm-col-week ${extra}`)}>{v}</div>)}
-      <div className={`crm-cell crm-col-total ${total === 0 ? 'crm-zero' : ''} ${extra || ''}`}>{total}</div>
-    </div>
+    <tr>
+      <td className={`crm-cell crm-col-label crm-lbl ${extra || ''}`}>{name}</td>
+      {dayValues.map((v, i) => <td key={i} className={cls(v, `crm-col-day ${extra}`)}>{v}</td>)}
+      {weekValues.map((v, i) => <td key={i} className={cls(v, `crm-col-week ${extra}`)}>{v}</td>)}
+      <td className={`crm-cell crm-col-total ${total === 0 ? 'crm-zero' : ''} ${extra || ''}`}>{total}</td>
+    </tr>
   )
 }
 
 function CvRow({ a, b }: { a: Milestone; b: Milestone }) {
   return (
-    <div className="crm-row">
-      <div className="crm-cell crm-col-label crm-cv-row crm-cv-label crm-lbl">CV</div>
+    <tr>
+      <td className="crm-cell crm-col-label crm-cv-row crm-cv-label crm-lbl">CV</td>
       {a.dayValues.map((v, i) => (
-        <div key={i} className="crm-cell crm-cv-row crm-col-day">{cvChip(cv(b.dayValues[i], v))}</div>
+        <td key={i} className="crm-cell crm-cv-row crm-col-day">{cvChip(cv(b.dayValues[i], v))}</td>
       ))}
       {a.weekValues.map((v, i) => (
-        <div key={i} className="crm-cell crm-cv-row crm-col-week">{cvChip(cv(b.weekValues[i], v))}</div>
+        <td key={i} className="crm-cell crm-cv-row crm-col-week">{cvChip(cv(b.weekValues[i], v))}</td>
       ))}
-      <div className="crm-cell crm-cv-row crm-col-total">{cvChip(cv(b.total, a.total))}</div>
-    </div>
+      <td className="crm-cell crm-cv-row crm-col-total">{cvChip(cv(b.total, a.total))}</td>
+    </tr>
   )
 }
 
 function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
   return (
-    <div className="crm-row">
-      <div className="crm-cell crm-col-label crm-lbl">{label}</div>
+    <tr>
+      <td className="crm-cell crm-col-label crm-lbl">{label}</td>
       {v.dayValues.map((x, i) => (
-        <div key={i} className={`crm-cell crm-col-day ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
+        <td key={i} className={`crm-cell crm-col-day ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
           {x ? x.toLocaleString('ru-RU') : 0}
-        </div>
+        </td>
       ))}
       {v.weekValues.map((x, i) => (
-        <div key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
+        <td key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
           {x ? x.toLocaleString('ru-RU') : 0}
-        </div>
+        </td>
       ))}
-      <div className="crm-cell crm-col-total">{v.total.toLocaleString('ru-RU')} ₸</div>
-    </div>
+      <td className="crm-cell crm-col-total">{v.total.toLocaleString('ru-RU')} ₸</td>
+    </tr>
   )
 }
 
 function ComputedRow({ label, v, fmt }: { label: string; v: ValuesSet; fmt: (n: number) => string }) {
   return (
-    <div className="crm-row">
-      <div className="crm-cell crm-col-label crm-cv-row crm-lbl">{label}</div>
-      {v.dayValues.map((x, i) => <div key={i} className="crm-cell crm-cv-row crm-col-day">{fmt(x)}</div>)}
-      {v.weekValues.map((x, i) => <div key={i} className="crm-cell crm-cv-row crm-col-week">{fmt(x)}</div>)}
-      <div className="crm-cell crm-cv-row crm-col-total">{fmt(v.total)}</div>
-    </div>
+    <tr>
+      <td className="crm-cell crm-col-label crm-cv-row crm-lbl">{label}</td>
+      {v.dayValues.map((x, i) => <td key={i} className="crm-cell crm-cv-row crm-col-day">{fmt(x)}</td>)}
+      {v.weekValues.map((x, i) => <td key={i} className="crm-cell crm-cv-row crm-col-week">{fmt(x)}</td>)}
+      <td className="crm-cell crm-cv-row crm-col-total">{fmt(v.total)}</td>
+    </tr>
   )
 }
 
@@ -287,29 +286,29 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
       return <DataRow name={label} dayValues={v.dayValues} weekValues={v.weekValues} total={v.total} />
     }
     return (
-      <div className="crm-row">
-        <div className="crm-cell crm-col-label crm-lbl">{label}</div>
+      <tr>
+        <td className="crm-cell crm-col-label crm-lbl">{label}</td>
         {v.dayValues.map((x, i) => (
-          <div key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
+          <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
             <SpendInput initialValue={x} onSave={val => onSave(daysIso[i], src, field, val)} />
-          </div>
+          </td>
         ))}
         {v.weekValues.map((x, i) => (
-          <div key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{x}</div>
+          <td key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{x}</td>
         ))}
-        <div className={`crm-cell crm-col-total ${v.total === 0 ? 'crm-zero' : ''}`}>{v.total}</div>
-      </div>
+        <td className={`crm-cell crm-col-total ${v.total === 0 ? 'crm-zero' : ''}`}>{v.total}</td>
+      </tr>
     )
   }
 
+  const fillerColSpan = data.days.length + data.weeks.length + 1
+
   return (
     <>
-      <div className="crm-row">
-        <div className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</div>
-        {data.days.map((_, i) => <div key={i} className="crm-cell crm-col-day crm-spend-filler" />)}
-        {data.weeks.map((_, i) => <div key={i} className="crm-cell crm-col-week crm-spend-filler" />)}
-        <div className="crm-cell crm-col-total crm-spend-filler" />
-      </div>
+      <tr>
+        <td className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</td>
+        <td className="crm-spend-filler" colSpan={fillerColSpan} />
+      </tr>
       {editRow('Потрачено, $', 'spent', spend.spent)}
       {editRow('Показы', 'impressions', spend.impressions)}
       {editRow('Клики', 'clicks', spend.clicks)}
@@ -337,10 +336,14 @@ function Card({ header, data, children }: {
         {header}
       </div>
       <div className="crm-wrap" data-crm-scroll="1">
-        <div className="crm-table">
-          <HeadRow data={data} />
-          {children}
-        </div>
+        <table className="crm-table">
+          <thead>
+            <HeadRow data={data} />
+          </thead>
+          <tbody>
+            {children}
+          </tbody>
+        </table>
       </div>
     </div>
   )
