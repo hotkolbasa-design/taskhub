@@ -30,11 +30,11 @@ type DashData = {
 // ─── CSS classes injected once on mount ──────────────────────────────────────
 
 const CRM_STYLES = `
-.crm-si{width:max-content;transform:translateX(calc(-1 * var(--crm-sx,0px)));will-change:transform}
-.crm-lbl{transform:translateX(var(--crm-sx,0px));background:var(--surface);position:relative;z-index:1;will-change:transform}
-.crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crm-head{position:sticky;top:0;z-index:2;background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
-.crm-head.crm-lbl{z-index:3}
+.crm-wrap{overflow-x:auto}
+.crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface)}
+.crm-head.crm-lbl{z-index:2}
+.crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);min-width:0;overflow:hidden;white-space:nowrap}
+.crm-head{background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
 .crm-col-label{text-align:left;justify-content:flex-start;white-space:normal;border-right:1px solid var(--border);color:var(--text2);font-weight:500}
 .crm-col-week{border-left:2px solid var(--border)}
 .crm-col-total{border-left:2px solid var(--border);font-weight:600;background:rgba(255,255,255,0.018)}
@@ -71,9 +71,6 @@ function fmtPct(v: number) {
 }
 function cols(data: DashData) {
   return `240px ${data.days.map(() => '90px').join(' ')} ${data.weeks.map(() => '110px').join(' ')} 110px`
-}
-function totalWidth(data: DashData) {
-  return 240 + data.days.length * 90 + data.weeks.length * 110 + 110
 }
 
 // ─── MonthDropdown ───────────────────────────────────────────────────────────
@@ -336,16 +333,14 @@ function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl overflow-hidden mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
+    <div className="rounded-xl mb-5" style={{ overflow: 'clip', border: '1px solid var(--border)', background: 'var(--surface)' }}>
       <div className="px-5 py-3.5 text-sm font-semibold" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
         {header}
       </div>
-      <div className="crm-table-wrap overflow-hidden">
-        <div className="crm-si">
-          <div style={{ display: 'grid', gridTemplateColumns: cols(data) }}>
-            <HeadRow data={data} />
-            {children}
-          </div>
+      <div className="crm-wrap" data-crm-scroll="1">
+        <div style={{ display: 'grid', gridTemplateColumns: cols(data) }}>
+          <HeadRow data={data} />
+          {children}
         </div>
       </div>
     </div>
@@ -515,9 +510,6 @@ export default function CrmDashboard() {
   const [tab, setTab] = useState<'voronki' | 'marketing'>('voronki')
   const [freezing, setFreezing] = useState(false)
 
-  const masterRef = useRef<HTMLDivElement>(null)
-  const innerRef = useRef<HTMLDivElement>(null)
-
   // Inject CSS once
   useEffect(() => {
     const style = document.createElement('style')
@@ -526,43 +518,19 @@ export default function CrmDashboard() {
     return () => style.remove()
   }, [])
 
-  // Setup shared scroll
+  // Sync horizontal scroll across all crm-wrap containers (passive — never blocks scroll)
   useEffect(() => {
-    const el = masterRef.current
-    if (!el) return
-    let raf = false
-    const onScroll = () => {
-      if (raf) return
-      raf = true
-      requestAnimationFrame(() => {
-        raf = false
-        document.documentElement.style.setProperty('--crm-sx', el.scrollLeft + 'px')
+    const onScroll = (e: Event) => {
+      const src = e.target as HTMLElement
+      if ((src as HTMLElement).dataset?.crmScroll !== '1') return
+      const sl = src.scrollLeft
+      document.querySelectorAll<HTMLElement>('[data-crm-scroll="1"]').forEach(el => {
+        if (el !== src && el.scrollLeft !== sl) el.scrollLeft = sl
       })
     }
-    const onWheel = (e: WheelEvent) => {
-      const wrap = (e.target as Element)?.closest?.('.crm-table-wrap')
-      if (!wrap) return
-      const dx = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : 0
-      if (!dx) return
-      e.preventDefault()
-      el.scrollLeft += dx
-    }
-    el.addEventListener('scroll', onScroll)
-    document.addEventListener('wheel', onWheel as EventListener, { passive: false })
-    return () => {
-      el.removeEventListener('scroll', onScroll)
-      document.removeEventListener('wheel', onWheel as EventListener)
-    }
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
+    return () => document.removeEventListener('scroll', onScroll, true)
   }, [])
-
-  // Update scrollbar width when data changes
-  useEffect(() => {
-    if (!data || !innerRef.current) return
-    innerRef.current.style.width = totalWidth(data) + 'px'
-    // Reset scroll position on month change
-    if (masterRef.current) masterRef.current.scrollLeft = 0
-    document.documentElement.style.setProperty('--crm-sx', '0px')
-  }, [data])
 
   // Load months on mount
   useEffect(() => {
@@ -640,7 +608,7 @@ export default function CrmDashboard() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ paddingBottom: 16 }}>
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-5 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ color: 'var(--accent)', flexShrink: 0 }}>
@@ -716,10 +684,6 @@ export default function CrmDashboard() {
         ) : null}
       </div>
 
-      {/* Master scrollbar (fixed at bottom) */}
-      <div ref={masterRef} className="shrink-0" style={{ overflowX: 'auto', overflowY: 'hidden', height: 16, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div ref={innerRef} style={{ height: 1, width: 1 }} />
-      </div>
     </div>
   )
 }
