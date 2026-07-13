@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getSprintData } from '@/lib/queries/sprints'
+import { getProjectMembers } from '@/lib/queries/tasks'
 import SprintBoard from '@/components/sprint/sprint-board'
 import CreateSprintView from '@/components/sprint/create-sprint-view'
 
@@ -22,8 +23,9 @@ export default async function SprintPage({ params }: { params: Promise<{ id: str
 
   if (!project) redirect('/projects')
 
-  const [sprintData, myMembership, myProfile] = await Promise.all([
+  const [sprintData, members, myMembership, myProfile] = await Promise.all([
     getSprintData(id),
+    getProjectMembers(id),
     admin
       .from('project_members')
       .select('role')
@@ -105,6 +107,7 @@ export default async function SprintPage({ params }: { params: Promise<{ id: str
           columns={sprintData.columns}
           initialTasks={sprintData.tasks}
           canManage={canManage}
+          members={members}
         />
       ) : (
         <CreateSprintView projectId={id} canManage={canManage} />
