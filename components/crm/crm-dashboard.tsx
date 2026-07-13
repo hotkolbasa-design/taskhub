@@ -32,7 +32,7 @@ type DashData = {
 const CRM_STYLES = `
 .crm-wrap{overflow-x:auto}
 .crm-row{display:flex;min-width:max-content}
-.crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface);flex-shrink:0}
+.crm-lbl{position:relative;z-index:1;background:var(--surface);flex-shrink:0;will-change:transform}
 .crm-head.crm-lbl{z-index:2}
 .crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;flex-shrink:0}
 .crm-head{background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
@@ -512,14 +512,24 @@ export default function CrmDashboard() {
     return () => style.remove()
   }, [])
 
-  // Sync horizontal scroll across all crm-wrap containers (passive — never blocks scroll)
+  // Sync horizontal scroll + simulate sticky label column via JS transform
   useEffect(() => {
+    const moveLbls = (wrap: HTMLElement, sl: number) => {
+      wrap.querySelectorAll<HTMLElement>('.crm-lbl').forEach(el => {
+        el.style.transform = `translateX(${sl}px)`
+      })
+    }
     const onScroll = (e: Event) => {
       const src = e.target as HTMLElement
-      if ((src as HTMLElement).dataset?.crmScroll !== '1') return
+      if (src?.dataset?.crmScroll !== '1') return
       const sl = src.scrollLeft
+      moveLbls(src, sl)
       document.querySelectorAll<HTMLElement>('[data-crm-scroll="1"]').forEach(el => {
-        if (el !== src && el.scrollLeft !== sl) el.scrollLeft = sl
+        if (el === src) return
+        if (el.scrollLeft !== sl) {
+          el.scrollLeft = sl
+          moveLbls(el, sl)
+        }
       })
     }
     document.addEventListener('scroll', onScroll, { capture: true, passive: true })
