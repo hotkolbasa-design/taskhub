@@ -31,13 +31,15 @@ type DashData = {
 
 const CRM_STYLES = `
 .crm-wrap{overflow-x:auto}
-.crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface)}
+.crm-row{display:flex}
+.crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface);flex-shrink:0}
 .crm-head.crm-lbl{z-index:2}
-.crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);min-width:0;overflow:hidden;white-space:nowrap}
+.crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;flex-shrink:0}
 .crm-head{background:var(--surface);color:var(--text2);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)}
-.crm-col-label{text-align:left;justify-content:flex-start;white-space:normal;border-right:1px solid var(--border);color:var(--text2);font-weight:500}
-.crm-col-week{border-left:2px solid var(--border)}
-.crm-col-total{border-left:2px solid var(--border);font-weight:600;background:rgba(255,255,255,0.018)}
+.crm-col-label{width:240px;text-align:left;justify-content:flex-start;white-space:normal;border-right:1px solid var(--border);color:var(--text2);font-weight:500}
+.crm-col-day{width:90px}
+.crm-col-week{width:110px;border-left:2px solid var(--border)}
+.crm-col-total{width:110px;border-left:2px solid var(--border);font-weight:600;background:rgba(255,255,255,0.018)}
 .crm-head.crm-col-total{background:var(--surface)}
 .crm-cv-row{font-size:11px;color:var(--text2);padding:4px 8px;background:rgba(255,255,255,0.01)}
 .crm-lbl.crm-cv-row{background:var(--surface)}
@@ -47,7 +49,7 @@ const CRM_STYLES = `
 .crm-zero{color:var(--text2);font-weight:400}
 .crm-value{color:var(--text);font-weight:600}
 .crm-spend-head{padding:10px 6px 6px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;border-top:2px solid var(--border);justify-content:flex-start}
-.crm-spend-filler{border-top:2px solid var(--border)}
+.crm-spend-filler{border-top:2px solid var(--border);flex:1 0 auto}
 .crm-week-sub{display:block;font-size:9px;color:var(--text2);font-weight:400;margin-top:2px;text-transform:uppercase;letter-spacing:0.02em}
 .crm-input{width:100%;font-size:12px;padding:4px;border:1px dashed var(--border);border-radius:6px;background:var(--surface2);text-align:center;color:var(--text);outline:none;-moz-appearance:textfield}
 .crm-input:focus{border-color:var(--accent);background:var(--surface)}
@@ -68,9 +70,6 @@ function fmtMoney(v: number, unit: string) {
 }
 function fmtPct(v: number) {
   return (Math.round(v * 10) / 10) + '%'
-}
-function cols(data: DashData) {
-  return `240px ${data.days.map(() => '90px').join(' ')} ${data.weeks.map(() => '110px').join(' ')} 110px`
 }
 
 // ─── MonthDropdown ───────────────────────────────────────────────────────────
@@ -189,9 +188,9 @@ function SourceModal({ sources, excluded, onChange, onClose }: {
 
 function HeadRow({ data }: { data: DashData }) {
   return (
-    <>
+    <div className="crm-row">
       <div className="crm-cell crm-col-label crm-head crm-lbl" />
-      {data.days.map(d => <div key={d} className="crm-cell crm-head">{d}</div>)}
+      {data.days.map(d => <div key={d} className="crm-cell crm-head crm-col-day">{d}</div>)}
       {data.weeks.map(w => (
         <div key={w} className="crm-cell crm-head crm-col-week" style={{ flexDirection: 'column' }}>
           <span>{w}</span>
@@ -199,7 +198,7 @@ function HeadRow({ data }: { data: DashData }) {
         </div>
       ))}
       <div className="crm-cell crm-head crm-col-total">Итог</div>
-    </>
+    </div>
   )
 }
 
@@ -208,36 +207,36 @@ function DataRow({ name, dayValues, weekValues, total, extra }: {
 }) {
   const cls = (v: number, add = '') => `crm-cell ${add} ${v === 0 ? 'crm-zero' : 'crm-value'}`
   return (
-    <>
+    <div className="crm-row">
       <div className={`crm-cell crm-col-label crm-lbl ${extra || ''}`}>{name}</div>
-      {dayValues.map((v, i) => <div key={i} className={cls(v, extra)}>{v}</div>)}
+      {dayValues.map((v, i) => <div key={i} className={cls(v, `crm-col-day ${extra}`)}>{v}</div>)}
       {weekValues.map((v, i) => <div key={i} className={cls(v, `crm-col-week ${extra}`)}>{v}</div>)}
       <div className={`crm-cell crm-col-total ${total === 0 ? 'crm-zero' : ''} ${extra || ''}`}>{total}</div>
-    </>
+    </div>
   )
 }
 
 function CvRow({ a, b }: { a: Milestone; b: Milestone }) {
   return (
-    <>
+    <div className="crm-row">
       <div className="crm-cell crm-col-label crm-cv-row crm-cv-label crm-lbl">CV</div>
       {a.dayValues.map((v, i) => (
-        <div key={i} className="crm-cell crm-cv-row">{cvChip(cv(b.dayValues[i], v))}</div>
+        <div key={i} className="crm-cell crm-cv-row crm-col-day">{cvChip(cv(b.dayValues[i], v))}</div>
       ))}
       {a.weekValues.map((v, i) => (
         <div key={i} className="crm-cell crm-cv-row crm-col-week">{cvChip(cv(b.weekValues[i], v))}</div>
       ))}
       <div className="crm-cell crm-cv-row crm-col-total">{cvChip(cv(b.total, a.total))}</div>
-    </>
+    </div>
   )
 }
 
 function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
   return (
-    <>
+    <div className="crm-row">
       <div className="crm-cell crm-col-label crm-lbl">{label}</div>
       {v.dayValues.map((x, i) => (
-        <div key={i} className={`crm-cell ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
+        <div key={i} className={`crm-cell crm-col-day ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
           {x ? x.toLocaleString('ru-RU') : 0}
         </div>
       ))}
@@ -247,18 +246,18 @@ function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
         </div>
       ))}
       <div className="crm-cell crm-col-total">{v.total.toLocaleString('ru-RU')} ₸</div>
-    </>
+    </div>
   )
 }
 
 function ComputedRow({ label, v, fmt }: { label: string; v: ValuesSet; fmt: (n: number) => string }) {
   return (
-    <>
+    <div className="crm-row">
       <div className="crm-cell crm-col-label crm-cv-row crm-lbl">{label}</div>
-      {v.dayValues.map((x, i) => <div key={i} className="crm-cell crm-cv-row">{fmt(x)}</div>)}
+      {v.dayValues.map((x, i) => <div key={i} className="crm-cell crm-cv-row crm-col-day">{fmt(x)}</div>)}
       {v.weekValues.map((x, i) => <div key={i} className="crm-cell crm-cv-row crm-col-week">{fmt(x)}</div>)}
       <div className="crm-cell crm-cv-row crm-col-total">{fmt(v.total)}</div>
-    </>
+    </div>
   )
 }
 
@@ -282,20 +281,15 @@ function SpendSection({ src, spend, daysIso, editable, onSave }: {
   src: string; spend: Spend; daysIso: string[]; editable: boolean
   onSave: (dateIso: string, source: string, field: string, value: number) => void
 }) {
-  const totalCols = spend.spent.dayValues.length + spend.spent.weekValues.length + 1
-  const blankCells = Array.from({ length: totalCols }, (_, i) => (
-    <div key={i} className="crm-cell crm-spend-filler" />
-  ))
-
   function editRow(label: string, field: string, v: ValuesSet) {
     if (!editable) {
       return <DataRow name={label} dayValues={v.dayValues} weekValues={v.weekValues} total={v.total} />
     }
     return (
-      <>
+      <div className="crm-row">
         <div className="crm-cell crm-col-label crm-lbl">{label}</div>
         {v.dayValues.map((x, i) => (
-          <div key={i} className="crm-cell" style={{ padding: '4px 6px' }}>
+          <div key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
             <SpendInput initialValue={x} onSave={val => onSave(daysIso[i], src, field, val)} />
           </div>
         ))}
@@ -303,14 +297,16 @@ function SpendSection({ src, spend, daysIso, editable, onSave }: {
           <div key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{x}</div>
         ))}
         <div className={`crm-cell crm-col-total ${v.total === 0 ? 'crm-zero' : ''}`}>{v.total}</div>
-      </>
+      </div>
     )
   }
 
   return (
     <>
-      <div className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</div>
-      {blankCells}
+      <div className="crm-row">
+        <div className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</div>
+        <div className="crm-spend-filler" />
+      </div>
       {editRow('Потрачено, $', 'spent', spend.spent)}
       {editRow('Показы', 'impressions', spend.impressions)}
       {editRow('Клики', 'clicks', spend.clicks)}
@@ -338,10 +334,8 @@ function Card({ header, data, children }: {
         {header}
       </div>
       <div className="crm-wrap" data-crm-scroll="1">
-        <div style={{ display: 'grid', gridTemplateColumns: cols(data) }}>
-          <HeadRow data={data} />
-          {children}
-        </div>
+        <HeadRow data={data} />
+        {children}
       </div>
     </div>
   )
