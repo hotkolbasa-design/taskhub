@@ -74,6 +74,56 @@ function NumberStepper({ value, onChange, min = 0, max, suffix }: {
 
 // ─── UserDropdown ────────────────────────────────────────────────────────────
 
+function EpicDropdown({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: BacklogTask[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = options.find(o => o.id === value)
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left"
+        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: selected ? 'var(--text)' : 'var(--text2)', cursor: 'pointer' }}
+      >
+        {selected ? (
+          <span className="flex-1 truncate">{selected.title}</span>
+        ) : <span className="flex-1">Без эпика</span>}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 w-full max-h-48 overflow-y-auto"
+          style={{ background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
+          <button type="button" onClick={() => { onChange(''); setOpen(false) }}
+            className="w-full flex items-center px-3 py-2 text-sm text-left"
+            style={{ color: !value ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+          >Без эпика</button>
+          {options.map(opt => (
+            <button key={opt.id} type="button" onClick={() => { onChange(opt.id); setOpen(false) }}
+              className="w-full flex items-center px-3 py-2 text-sm text-left"
+              style={{ color: opt.id === value ? 'var(--accent)' : 'var(--text)', cursor: 'pointer' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <span className="truncate">{opt.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function UserDropdown({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: Member[] }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -383,7 +433,6 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.6)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-lg rounded-2xl p-6 flex flex-col gap-5"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
@@ -468,12 +517,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
           {type === 'task' && epics.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Эпик (необязательно)</label>
-              <select value={parentId} onChange={e => setParentId(e.target.value)}
-                className="px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: parentId ? 'var(--text)' : 'var(--text2)', colorScheme: 'dark' }}>
-                <option value="">Без эпика</option>
-                {epics.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-              </select>
+              <EpicDropdown value={parentId} onChange={setParentId} options={epics} />
             </div>
           )}
 
