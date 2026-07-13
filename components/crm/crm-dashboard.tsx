@@ -31,7 +31,7 @@ type DashData = {
 
 const CRM_STYLES = `
 .crm-wrap{overflow-x:auto}
-.crm-row{display:flex}
+.crm-row{display:flex;min-width:max-content}
 .crm-lbl{position:sticky;left:0;z-index:1;background:var(--surface);flex-shrink:0}
 .crm-head.crm-lbl{z-index:2}
 .crm-cell{padding:9px 8px;font-size:13px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;flex-shrink:0}
