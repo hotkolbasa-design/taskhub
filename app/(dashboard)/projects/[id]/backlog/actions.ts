@@ -333,24 +333,33 @@ export async function moveBackToBacklog(taskId: string, projectId: string, paren
     backlog_order: nextOrder,
   }).eq('id', taskId)
 
-  // Если эпик — переносим его спринт-подзадачи обратно в бэклог (сохраняя parent_task_id)
+  // Если эпик — переносим незавершённые подзадачи в бэклог, выполненные/отменённые — в done
   if (task?.type === 'epic') {
     const { data: subtasks } = await admin
       .from('tasks')
-      .select('id')
+      .select('id, workflow_status')
       .eq('parent_task_id', taskId)
       .eq('status', 'sprint')
 
     if (subtasks) {
       for (const sub of subtasks) {
-        nextOrder++
-        await admin.from('tasks').update({
-          status: 'backlog',
-          sprint_id: null,
-          column_id: null,
-          column_order: null,
-          backlog_order: nextOrder,
-        }).eq('id', sub.id)
+        if (sub.workflow_status === 'done' || sub.workflow_status === 'cancelled') {
+          await admin.from('tasks').update({
+            status: 'done',
+            sprint_id: null,
+            column_id: null,
+            column_order: null,
+          }).eq('id', sub.id)
+        } else {
+          nextOrder++
+          await admin.from('tasks').update({
+            status: 'backlog',
+            sprint_id: null,
+            column_id: null,
+            column_order: null,
+            backlog_order: nextOrder,
+          }).eq('id', sub.id)
+        }
       }
     }
   }

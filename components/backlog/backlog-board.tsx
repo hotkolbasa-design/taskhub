@@ -455,12 +455,14 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
         const allIds = new Set(allToMove.map(t => t.id))
         setSprintTasks(prev => prev.filter(t => !allIds.has(t.id)))
         if (sprintTask.type === 'epic' && subtasksToMove.length > 0) {
-          const subtasksBacklog = subtasksToMove.map(s => sprintToBacklog(s))
+          const subtasksBacklog = subtasksToMove
+            .filter(s => s.workflow_status !== 'done' && s.workflow_status !== 'cancelled')
+            .map(s => sprintToBacklog(s))
           const epicBacklog: BacklogTask = {
             ...sprintToBacklog(sprintTask),
             subtasks: subtasksBacklog,
             subtask_total: subtasksBacklog.length,
-            subtask_done: subtasksBacklog.filter(s => s.workflow_status === 'done').length,
+            subtask_done: 0,
           }
           setTasks(prev => [...prev, epicBacklog])
         } else {
@@ -629,12 +631,14 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
 
   const handleSprintTaskRemoved = useCallback((task: SprintTask, subtasks: SprintTask[]) => {
     if (task.type === 'epic' && subtasks.length > 0) {
-      const subtasksBacklog = subtasks.map(s => sprintToBacklog(s))
+      const subtasksBacklog = subtasks
+        .filter(s => s.workflow_status !== 'done' && s.workflow_status !== 'cancelled')
+        .map(s => sprintToBacklog(s))
       const epicBacklog: BacklogTask = {
         ...sprintToBacklog(task),
         subtasks: subtasksBacklog,
         subtask_total: subtasksBacklog.length,
-        subtask_done: subtasksBacklog.filter(s => s.workflow_status === 'done').length,
+        subtask_done: 0,
       }
       setTasks(prev => [...prev, epicBacklog])
     } else {
