@@ -2,6 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import TaskDrawer from '@/components/backlog/task-drawer'
+import type { BacklogTask } from '@/types'
 import {
   DndContext,
   DragOverlay,
@@ -37,12 +39,15 @@ type DragPreview = {
   insertBeforeId: string | null
 } | null
 
+type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
+
 type Props = {
   projectId: string
   sprint: Sprint
   columns: SprintColumn[]
   initialTasks: SprintTask[]
   canManage: boolean
+  members: Member[]
 }
 
 const COLUMN_COLORS = [
@@ -50,7 +55,7 @@ const COLUMN_COLORS = [
   '#A78BFA', '#FB923C', '#60C0E8', '#8892A4',
 ]
 
-export default function SprintBoard({ projectId, sprint, columns: initialColumns, initialTasks, canManage }: Props) {
+export default function SprintBoard({ projectId, sprint, columns: initialColumns, initialTasks, canManage, members }: Props) {
   const router = useRouter()
 
   const [cols, setCols] = useState<SprintColumn[]>(() =>
@@ -77,6 +82,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
   const [dragPreview, setDragPreview] = useState<DragPreview>(null)
   const [closing, setClosing] = useState(false)
   const [isFixed] = useState(sprint.is_fixed)
+  const [selectedTask, setSelectedTask] = useState<SprintTask | null>(null)
 
   // Add column state
   const [addingAfterColId, setAddingAfterColId] = useState<string | 'end' | null>(null)
@@ -84,6 +90,25 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
+
+  const handleTaskClick = useCallback((task: SprintTask) => {
+    setSelectedTask(task)
+  }, [])
+
+  const handleTaskUpdated = useCallback((updated: Partial<BacklogTask> & { id: string }) => {
+    setTaskMap(prev => {
+      const next = { ...prev }
+      for (const colId in next) {
+        next[colId] = next[colId].map(t =>
+          t.id === updated.id ? { ...t, ...updated } : t
+        )
+      }
+      return next
+    })
+    if (selectedTask?.id === updated.id) {
+      setSelectedTask(prev => prev ? { ...prev, ...updated } : prev)
+    }
+  }, [selectedTask])
 
   const findTask = useCallback((id: string): SprintTask | undefined => {
     for (const tasks of Object.values(taskMap)) {
@@ -361,6 +386,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
                     onAddAfter={() => setAddingAfterColId(col.id)}
                     onDelete={() => handleDeleteColumn(col.id)}
                     canDelete={cols.length > 1}
+                    onTaskClick={handleTaskClick}
                   />
                   {draggingType === null && addingAfterColId === col.id && (
                     <AddColumnForm
@@ -400,6 +426,17 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
           </DragOverlay>
         </DndContext>
       </div>
+
+      {selectedTask && (
+        <TaskDrawer
+          task={{ ...selectedTask, subtasks: [], subtask_total: 0, subtask_done: 0 }}
+          projectId={projectId}
+          members={members}
+          epics={[]}
+          onClose={() => setSelectedTask(null)}
+          onUpdated={handleTaskUpdated}
+        />
+      )}
     </div>
   )
 }
@@ -416,6 +453,7 @@ function KanbanColumn({
   onAddAfter,
   onDelete,
   canDelete,
+  onTaskClick,
 }: {
   column: SprintColumn
   tasks: SprintTask[]
@@ -426,6 +464,7 @@ function KanbanColumn({
   onAddAfter: () => void
   onDelete: () => void
   canDelete: boolean
+  onTaskClick: (task: SprintTask) => void
 }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -596,6 +635,7 @@ function KanbanColumn({
           dragPreview={dragPreview}
           activeTaskId={activeTaskId}
           isEmptyTarget={isEmptyTarget}
+          onTaskClick={onTaskClick}
         />
       </div>
     </div>
@@ -610,12 +650,14 @@ function TaskDropZone({
   dragPreview,
   activeTaskId,
   isEmptyTarget,
+  onTaskClick,
 }: {
   columnId: string
   tasks: SprintTask[]
   dragPreview: DragPreview
   activeTaskId: string | null
   isEmptyTarget: boolean
+  onTaskClick: (task: SprintTask) => void
 }) {
   const { setNodeRef } = useDroppable({ id: `drop-${columnId}` })
 
@@ -639,6 +681,7 @@ function TaskDropZone({
             isDragging={task.id === activeTaskId}
             insertBefore={insertBefore}
             insertAfter={isLastAndAppend}
+            onTaskClick={onTaskClick}
           />
         )
       })}
@@ -660,11 +703,13 @@ function DraggableCard({
   isDragging,
   insertBefore,
   insertAfter,
+  onTaskClick,
 }: {
   task: SprintTask
   isDragging: boolean
   insertBefore: boolean
   insertAfter: boolean
+  onTaskClick: (task: SprintTask) => void
 }) {
   const {
     attributes,
@@ -690,11 +735,12 @@ function DraggableCard({
       ref={setRef}
       {...attributes}
       {...listeners}
+      onClick={() => { if (!isDragging) onTaskClick(task) }}
       style={{
         opacity: isDragging ? 0.3 : 1,
         boxShadow,
         borderRadius: 8,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : 'pointer',
         touchAction: 'none',
       }}
     >
