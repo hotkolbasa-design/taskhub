@@ -1,7 +1,7 @@
 // Asia/Almaty = UTC+5, no DST
 const ALMATY_OFFSET_MS = 5 * 60 * 60 * 1000
 
-export const TEST_REGEX = /тест/i
+export const TEST_REGEX = /тест|test/i
 
 // Google Sheets serial number → "YYYY-MM-DD" in Asia/Almaty timezone
 export function serialToDateKey(serial: number): string {
