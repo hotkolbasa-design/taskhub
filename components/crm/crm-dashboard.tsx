@@ -40,6 +40,7 @@ const CRM_STYLES = `
 .crm-col-total{border-left:2px solid var(--border);font-weight:600;background:rgba(255,255,255,0.018)}
 .crm-head.crm-col-total{background:var(--surface)}
 .crm-cv-row{font-size:11px;color:var(--text2);padding:4px 8px;background:rgba(255,255,255,0.01)}
+.crm-lbl.crm-cv-row{background:var(--surface)}
 .crm-cv-label{font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
 .crm-cv-label::before{content:"↳  "}
 .crm-chip{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,0.06);color:var(--text2)}
