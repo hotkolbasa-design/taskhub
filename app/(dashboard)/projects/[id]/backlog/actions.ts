@@ -454,6 +454,50 @@ export async function createSprint(projectId: string, dateFrom: string, dateTo: 
   revalidatePath(`/projects/${projectId}/backlog`)
 }
 
+export async function duplicateTask(taskId: string, projectId: string) {
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Не авторизован')
+
+  const admin = createAdminClient()
+
+  const { data: original } = await admin
+    .from('tasks')
+    .select('title, type, description, assignee_id, deadline, time_estimate, parent_task_id')
+    .eq('id', taskId)
+    .maybeSingle()
+
+  if (!original) throw new Error('Задача не найдена')
+
+  const { data: last } = await admin
+    .from('tasks')
+    .select('backlog_order')
+    .eq('project_id', projectId)
+    .eq('status', 'backlog')
+    .order('backlog_order', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+
+  const nextOrder = (last?.backlog_order ?? 0) + 1
+
+  const { error } = await admin.from('tasks').insert({
+    project_id: projectId,
+    title: `Копия — ${original.title}`,
+    type: original.type,
+    status: 'backlog',
+    workflow_status: 'new',
+    assignee_id: original.assignee_id ?? null,
+    creator_id: userId,
+    deadline: original.deadline ?? null,
+    time_estimate: original.time_estimate ?? null,
+    parent_task_id: original.parent_task_id ?? null,
+    description: original.description ?? null,
+    backlog_order: nextOrder,
+  })
+
+  if (error) throw new Error(error.message)
+  revalidatePath(`/projects/${projectId}/backlog`)
+}
+
 export async function removeFromEpic(taskId: string, projectId: string) {
   const admin = createAdminClient()
   const { error } = await admin
