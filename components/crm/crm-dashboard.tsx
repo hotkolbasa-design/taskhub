@@ -405,18 +405,68 @@ function SourceCard({ src, data, editable, onSave, overall, hideSpend }: {
 
 // ─── MergedSourceCard ─────────────────────────────────────────────────────────
 
-function MergedSourceCard({ group, data, onSave, onDelete, allSources }: {
+function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungroupedSources, onUpdateGroup }: {
   group: GroupSourceData
   data: DashData
   onSave: (dateIso: string, source: string, field: string, value: number) => void
   onDelete: () => void
   allSources: SourceData[]
+  ungroupedSources: string[]
+  onUpdateGroup: (groupName: string, newSources: string[]) => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const individualSources = allSources.filter(s => group.sources.includes(s.source))
+  const [editing, setEditing] = useState(false)
+  const [localSources, setLocalSources] = useState(group.sources)
+  const [addOpen, setAddOpen] = useState(false)
+  const addBtnRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
+
+  useEffect(() => { setLocalSources(group.sources) }, [group.sources])
+
+  useEffect(() => {
+    if (editing) setExpanded(true)
+    else setAddOpen(false)
+  }, [editing])
+
+  useEffect(() => {
+    if (!addOpen) return
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+          addBtnRef.current && !addBtnRef.current.contains(e.target as Node)) {
+        setAddOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [addOpen])
+
+  function openAddDropdown() {
+    if (addBtnRef.current) {
+      const r = addBtnRef.current.getBoundingClientRect()
+      setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 200) })
+    }
+    setAddOpen(o => !o)
+  }
+
+  function handleRemove(src: string) {
+    const next = localSources.filter(s => s !== src)
+    setLocalSources(next)
+    onUpdateGroup(group.source, next)
+  }
+
+  function handleAdd(src: string) {
+    const next = [...localSources, src]
+    setLocalSources(next)
+    setAddOpen(false)
+    onUpdateGroup(group.source, next)
+  }
+
+  const individualSources = allSources.filter(s => localSources.includes(s.source))
+  const availableToAdd = ungroupedSources.filter(s => !localSources.includes(s))
 
   return (
-    <div className="mb-5" data-group-source={group.source}>
+    <div className="mb-5">
       <Card data={data} header={
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
@@ -429,13 +479,25 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources }: {
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
                 <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              {expanded ? 'Свернуть' : `Показать ${group.sources.length} источника`}
+              {expanded ? 'Свернуть' : `Показать ${localSources.length} источника`}
             </button>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)' }}>
               Объединено
             </span>
+            <button
+              type="button"
+              onClick={() => setEditing(e => !e)}
+              title={editing ? 'Готово' : 'Редактировать состав группы'}
+              style={{ color: editing ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer', background: editing ? 'rgba(124,92,246,0.1)' : 'none', border: 'none', padding: 3, borderRadius: 5, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+              onMouseEnter={e => { if (!editing) e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={e => { if (!editing) e.currentTarget.style.color = 'var(--text2)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M9 2.5l1.5 1.5-6 6-2 .5.5-2 6-6z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
             <button
               type="button"
               onClick={onDelete}
@@ -471,8 +533,60 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources }: {
       {expanded && (
         <div style={{ marginLeft: 24, marginTop: 8, borderLeft: '2px solid var(--border)', paddingLeft: 16 }}>
           {individualSources.map(src => (
-            <SourceCard key={src.source} src={src} data={data} editable={false} onSave={onSave} hideSpend />
+            <div key={src.source} style={{ position: 'relative' }}>
+              <SourceCard src={src} data={data} editable={false} onSave={onSave} hideSpend />
+              {editing && (
+                <button
+                  type="button"
+                  title="Убрать из группы"
+                  onClick={() => handleRemove(src.source)}
+                  style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'var(--red)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 2 }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              )}
+            </div>
           ))}
+
+          {editing && (
+            <div style={{ marginTop: 8, marginBottom: 8 }}>
+              <button
+                ref={addBtnRef}
+                type="button"
+                onClick={openAddDropdown}
+                disabled={availableToAdd.length === 0}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: availableToAdd.length === 0 ? 'var(--text2)' : 'var(--accent)', background: 'none', border: '1px dashed', borderColor: availableToAdd.length === 0 ? 'var(--border)' : 'rgba(124,92,246,0.4)', borderRadius: 6, padding: '6px 12px', cursor: availableToAdd.length === 0 ? 'default' : 'pointer' }}
+              >
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                  <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+                {availableToAdd.length === 0 ? 'Нет доступных источников' : 'Добавить источник'}
+              </button>
+
+              {addOpen && availableToAdd.length > 0 && createPortal(
+                <div
+                  ref={dropdownRef}
+                  style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, minWidth: dropPos.width, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 9999, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}
+                >
+                  {availableToAdd.map(src => (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => handleAdd(src)}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--text)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      {src}
+                    </button>
+                  ))}
+                </div>,
+                document.body
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -665,10 +779,20 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onReload }: {
     onReload()
   }
 
+  async function handleUpdateGroup(groupName: string, newSources: string[]) {
+    const next = groups.map(g => g.source === groupName
+      ? { name: g.source, sources: newSources }
+      : { name: g.source, sources: g.sources }
+    )
+    await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveGroups', groups: next }) })
+    onReload()
+  }
+
   const { summary } = data.marketing
   // Individual sources: hide those that are inside a group
   const visible = data.marketing.sources.filter(s => !excluded.has(s.source) && !groupedSourceNames.has(s.source))
   const archived = data.marketing.sources.filter(s => excluded.has(s.source) && !groupedSourceNames.has(s.source))
+  const ungroupedSourceNames = data.marketing.sources.filter(s => !groupedSourceNames.has(s.source)).map(s => s.source)
 
   return (
     <div>
@@ -726,6 +850,8 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onReload }: {
           onSave={onSave}
           onDelete={() => handleDeleteGroup(group.source)}
           allSources={data.marketing.sources}
+          ungroupedSources={ungroupedSourceNames}
+          onUpdateGroup={handleUpdateGroup}
         />
       ))}
 
