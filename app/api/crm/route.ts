@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { computeDashboardData, getAvailableMonths } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
 import { saveSpendValue } from '@/lib/crm/spend'
-import { getExcludedSources, saveExcludedSources } from '@/lib/crm/settings'
+import { getExcludedSources, saveExcludedSources, saveMergedGroups } from '@/lib/crm/settings'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -53,6 +53,10 @@ export async function POST(req: NextRequest) {
     }
     if (action === 'saveExcluded') {
       await saveExcludedSources(body.excluded ?? [])
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'saveGroups') {
+      await saveMergedGroups(body.groups ?? [])
       return NextResponse.json({ ok: true })
     }
 

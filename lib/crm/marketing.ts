@@ -1,4 +1,4 @@
-import type { SheetRow, MilestoneDef, MilestoneStat, ValuesSet, SpendMetrics, SourceData, SpendMap, RateMap } from './types'
+import type { SheetRow, MilestoneDef, MilestoneStat, ValuesSet, SpendMetrics, SourceData, GroupSourceData, MergedGroup, SpendMap, RateMap } from './types'
 import { TEST_REGEX, safeDiv } from './utils'
 
 const MARKETING_MILESTONES: MilestoneDef[] = [
@@ -170,7 +170,8 @@ export function buildMarketingStats(
   days: string[],
   weeks: string[][],
   spendMap: SpendMap,
-  rateMap: RateMap
+  rateMap: RateMap,
+  groups: MergedGroup[] = []
 ) {
   const sources = collectSources(leadsRows, dealsRows)
 
@@ -193,9 +194,51 @@ export function buildMarketingStats(
     return { source: src, milestones, revenue, spend }
   })
 
+  const zero = (): ValuesSet => ({
+    dayValues: days.map(() => 0),
+    weekValues: weeks.map(() => 0),
+    total: 0,
+  })
+
+  const groupStats: GroupSourceData[] = groups.map(group => {
+    const groupSources = sourceStats.filter(s => group.sources.includes(s.source))
+
+    const templateMilestones = groupSources[0]?.milestones ?? MARKETING_MILESTONES.map(m => ({
+      name: typeof m.name === 'string' ? m.name : (m.label ?? (m.name as string[])[0]),
+      dayValues: days.map(() => 0),
+      weekValues: weeks.map(() => 0),
+      total: 0,
+    }))
+
+    const mergedMilestones: MilestoneStat[] = templateMilestones.map((m, idx) => ({
+      name: m.name,
+      dayValues: days.map((_, di) => groupSources.reduce((s, src) => s + (src.milestones[idx]?.dayValues[di] ?? 0), 0)),
+      weekValues: weeks.map((_, wi) => groupSources.reduce((s, src) => s + (src.milestones[idx]?.weekValues[wi] ?? 0), 0)),
+      total: groupSources.reduce((s, src) => s + (src.milestones[idx]?.total ?? 0), 0),
+    }))
+
+    const mergedRevenue: ValuesSet = groupSources.length > 0 ? {
+      dayValues: days.map((_, di) => groupSources.reduce((s, src) => s + (src.revenue?.dayValues[di] ?? 0), 0)),
+      weekValues: weeks.map((_, wi) => groupSources.reduce((s, src) => s + (src.revenue?.weekValues[wi] ?? 0), 0)),
+      total: groupSources.reduce((s, src) => s + (src.revenue?.total ?? 0), 0),
+    } : zero()
+
+    const leadsMilestone = mergedMilestones[0] ?? { name: '', dayValues: days.map(() => 0), weekValues: weeks.map(() => 0), total: 0 }
+    const salesMilestone = mergedMilestones[mergedMilestones.length - 1] ?? leadsMilestone
+
+    return {
+      source: group.name,
+      sources: group.sources,
+      milestones: mergedMilestones,
+      revenue: mergedRevenue,
+      spend: buildSpend(group.name, days, weeks, spendMap, rateMap, leadsMilestone, salesMilestone, mergedRevenue),
+    }
+  })
+
   return {
     summary: { totalLeads, totalSales: totalSalesRows.length, totalRevenue },
     overall: { milestones: overallMilestones, revenue: overallRevenue, spend: overallSpend },
     sources: sourceStats,
+    groups: groupStats,
   }
 }

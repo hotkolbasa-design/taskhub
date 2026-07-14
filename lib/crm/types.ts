@@ -65,6 +65,7 @@ export type DashData = {
     summary: { totalLeads: number; totalSales: number; totalRevenue: number }
     sources: SourceData[]
     overall: { milestones: MilestoneStat[]; revenue: ValuesSet; spend: SpendMetrics }
+    groups: GroupSourceData[]
   }
 }
 
@@ -80,6 +81,9 @@ export type PipelineDefinitions = {
   leadStages: string[]
   dealPipelines: { name: string; stages: string[] }[]
 }
+
+export type MergedGroup = { name: string; sources: string[] }
+export type GroupSourceData = SourceData & { sources: string[] }
 
 export type SpendMap = Record<string, SpendRecord>
 export type RateMap = Record<string, number>
