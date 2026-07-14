@@ -16,6 +16,8 @@ type Spend = {
   costPerClientKzt: ValuesSet; romi: ValuesSet
 }
 type SourceData = { source: string; milestones: Milestone[]; revenue?: ValuesSet; spend?: Spend }
+type GroupSourceData = SourceData & { sources: string[] }
+type MergedGroup = { name: string; sources: string[] }
 type Pipeline = { name: string; stages: Milestone[] }
 type DashData = {
   monthKey: string; days: string[]; daysIso: string[]; weeks: string[]
@@ -24,6 +26,7 @@ type DashData = {
   marketing: {
     summary: { totalLeads: number; totalSales: number; totalRevenue: number }
     sources: SourceData[]; overall: SourceData
+    groups: GroupSourceData[]
   }
 }
 
@@ -371,8 +374,8 @@ function PipelineCard({ p, data, idx }: { p: Pipeline; data: DashData; idx: numb
 
 // ─── SourceCard ───────────────────────────────────────────────────────────────
 
-function SourceCard({ src, data, editable, onSave, overall }: {
-  src: SourceData; data: DashData; editable: boolean; overall?: boolean
+function SourceCard({ src, data, editable, onSave, overall, hideSpend }: {
+  src: SourceData; data: DashData; editable: boolean; overall?: boolean; hideSpend?: boolean
   onSave: (dateIso: string, source: string, field: string, value: number) => void
 }) {
   return (
@@ -393,10 +396,220 @@ function SourceCard({ src, data, editable, onSave, overall }: {
       {src.revenue && (
         <MoneyRow label="Сумма продаж" v={src.revenue} />
       )}
-      {src.spend && (
+      {src.spend && !hideSpend && (
         <SpendSection src={src.source} spend={src.spend} daysIso={data.daysIso} data={data} editable={editable} onSave={onSave} />
       )}
     </Card>
+  )
+}
+
+// ─── MergedSourceCard ─────────────────────────────────────────────────────────
+
+function MergedSourceCard({ group, data, onSave, onDelete, allSources }: {
+  group: GroupSourceData
+  data: DashData
+  onSave: (dateIso: string, source: string, field: string, value: number) => void
+  onDelete: () => void
+  allSources: SourceData[]
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const individualSources = allSources.filter(s => group.sources.includes(s.source))
+
+  return (
+    <div className="mb-5">
+      <Card data={data} header={
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            {/* Expand/collapse */}
+            <button
+              type="button"
+              onClick={() => setExpanded(e => !e)}
+              style={{ color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500, background: 'none', border: 'none', padding: 0 }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {expanded ? 'Свернуть' : `Показать ${group.sources.length} источника`}
+            </button>
+            <span style={{ color: 'var(--text2)', fontSize: 11 }}>({group.sources.join(', ')})</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)' }}>
+              Объединено
+            </span>
+            <button
+              type="button"
+              onClick={onDelete}
+              title="Удалить группу"
+              style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', alignItems: 'center' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <path d="M2 3.5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <path d="M4.5 3.5V2.75A.75.75 0 015.25 2h2.5a.75.75 0 01.75.75V3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <rect x="2.5" y="3.5" width="8" height="7" rx=".75" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      }>
+        {group.milestones.map((m, i) => (
+          <>
+            <DataRow key={m.name} name={m.name} dayValues={m.dayValues} weekValues={m.weekValues} total={m.total} />
+            {i < group.milestones.length - 1 && (
+              <CvRow key={`cv-${i}`} a={m} b={group.milestones[i + 1]} />
+            )}
+          </>
+        ))}
+        {group.revenue && <MoneyRow label="Сумма продаж" v={group.revenue} />}
+        {group.spend && (
+          <SpendSection src={group.source} spend={group.spend} daysIso={data.daysIso} data={data} editable onSave={onSave} />
+        )}
+      </Card>
+
+      {/* Expanded individual sources */}
+      {expanded && (
+        <div style={{ marginLeft: 24, marginTop: 8, borderLeft: '2px solid var(--border)', paddingLeft: 16 }}>
+          {individualSources.map(src => (
+            <SourceCard key={src.source} src={src} data={data} editable={false} onSave={onSave} hideSpend />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── GroupModal ───────────────────────────────────────────────────────────────
+
+function GroupModal({ sources, existingGroups, onSave, onClose }: {
+  sources: string[]
+  existingGroups: MergedGroup[]
+  onSave: (groups: MergedGroup[]) => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [saving, setSaving] = useState(false)
+
+  const usedSources = new Set(existingGroups.flatMap(g => g.sources))
+
+  function toggleSource(src: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(src)) next.delete(src); else next.add(src)
+      return next
+    })
+  }
+
+  async function handleCreate() {
+    const trimmed = name.trim()
+    if (!trimmed || selected.size < 2) return
+    setSaving(true)
+    const next = [...existingGroups, { name: trimmed, sources: Array.from(selected) }]
+    onSave(next)
+  }
+
+  async function handleDelete(idx: number) {
+    const next = existingGroups.filter((_, i) => i !== idx)
+    onSave(next)
+  }
+
+  const canCreate = name.trim().length > 0 && selected.size >= 2
+
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9999, background: 'rgba(0,0,0,0.6)' }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-lg rounded-2xl flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)', maxHeight: '80vh', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Группы воронок</h3>
+          <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+          {/* Existing groups */}
+          {existingGroups.length > 0 && (
+            <div className="px-5 pt-4 pb-3 flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text2)' }}>Существующие группы</p>
+              {existingGroups.map((g, idx) => (
+                <div key={idx} className="flex items-center justify-between px-3 py-2.5 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                  <div>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{g.name}</span>
+                    <span className="text-xs ml-2" style={{ color: 'var(--text2)' }}>{g.sources.join(', ')}</span>
+                  </div>
+                  <button type="button" onClick={() => handleDelete(idx)}
+                    style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 4 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M2 3.5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <path d="M4.5 3.5V2.75A.75.75 0 015.25 2h2.5a.75.75 0 01.75.75V3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <rect x="2.5" y="3.5" width="8" height="7" rx=".75" stroke="currentColor" strokeWidth="1.2"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Create new group */}
+          <div className="px-5 pt-3 pb-5" style={{ borderTop: existingGroups.length > 0 ? '1px solid var(--border)' : undefined }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text2)' }}>Создать группу</p>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Название группы"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none mb-3"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            />
+            <p className="text-xs mb-2" style={{ color: 'var(--text2)' }}>Выберите источники для объединения (минимум 2):</p>
+            <div className="flex flex-col gap-0.5">
+              {sources.map(src => {
+                const inOther = usedSources.has(src)
+                const checked = selected.has(src)
+                return (
+                  <label key={src} className="flex items-center gap-3 py-2.5 cursor-pointer text-sm" style={{ borderBottom: '1px solid var(--border)', color: inOther ? 'var(--text2)' : 'var(--text)', opacity: inOther ? 0.4 : 1 }}>
+                    <input type="checkbox" checked={checked} disabled={inOther} onChange={() => toggleSource(src)}
+                      style={{ accentColor: 'var(--accent)', width: 15, height: 15, cursor: inOther ? 'default' : 'pointer', flexShrink: 0 }} />
+                    {src}
+                    {inOther && <span className="text-xs ml-auto" style={{ color: 'var(--text2)' }}>уже в группе</span>}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm"
+            style={{ background: 'var(--surface2)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
+          >Отмена</button>
+          <button
+            onClick={handleCreate}
+            disabled={!canCreate || saving}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40"
+            style={{ background: canCreate ? 'var(--accent)' : 'var(--surface2)', color: canCreate ? '#fff' : 'var(--text2)', border: 'none', cursor: canCreate ? 'pointer' : 'default' }}
+          >
+            {saving && <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+            Создать группу
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   )
 }
 
@@ -423,13 +636,18 @@ function MetricCard({ label, value }: { label: string; value: string | number })
   )
 }
 
-function MarketingView({ data, onSave }: {
+function MarketingView({ data, onSave, onReload }: {
   data: DashData
   onSave: (dateIso: string, source: string, field: string, value: number) => void
+  onReload: () => void
 }) {
   const [excluded, setExcluded] = useState<Set<string>>(new Set(data.excludedSources ?? []))
-  const [modalOpen, setModalOpen] = useState(false)
+  const [sourceModalOpen, setSourceModalOpen] = useState(false)
+  const [groupModalOpen, setGroupModalOpen] = useState(false)
+
   const allSources = data.marketing.sources.map(s => s.source)
+  const groups = data.marketing.groups ?? []
+  const groupedSourceNames = new Set(groups.flatMap(g => g.sources))
 
   function toggle(src: string, checked: boolean) {
     const next = new Set(excluded)
@@ -438,9 +656,22 @@ function MarketingView({ data, onSave }: {
     fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveExcluded', excluded: Array.from(next) }) })
   }
 
+  async function handleSaveGroups(next: MergedGroup[]) {
+    await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveGroups', groups: next }) })
+    setGroupModalOpen(false)
+    onReload()
+  }
+
+  async function handleDeleteGroup(groupName: string) {
+    const next = groups.filter(g => g.source !== groupName).map(g => ({ name: g.source, sources: g.sources }))
+    await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveGroups', groups: next }) })
+    onReload()
+  }
+
   const { summary } = data.marketing
-  const visible = data.marketing.sources.filter(s => !excluded.has(s.source))
-  const archived = data.marketing.sources.filter(s => excluded.has(s.source))
+  // Individual sources: hide those that are inside a group
+  const visible = data.marketing.sources.filter(s => !excluded.has(s.source) && !groupedSourceNames.has(s.source))
+  const archived = data.marketing.sources.filter(s => excluded.has(s.source) && !groupedSourceNames.has(s.source))
 
   return (
     <div>
@@ -455,9 +686,9 @@ function MarketingView({ data, onSave }: {
       {/* Overall card */}
       <SourceCard src={data.marketing.overall} data={data} editable={false} onSave={onSave} overall />
 
-      {/* Source filter button */}
-      <div className="mb-5">
-        <button onClick={() => setModalOpen(true)}
+      {/* Toolbar: source filter + group management */}
+      <div className="flex items-center gap-3 mb-5">
+        <button onClick={() => setSourceModalOpen(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}
           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
@@ -469,10 +700,40 @@ function MarketingView({ data, onSave }: {
           </svg>
           Источники ({allSources.filter(s => !excluded.has(s)).length} из {allSources.length})
         </button>
+
+        <button onClick={() => setGroupModalOpen(true)}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="4" cy="7" r="2" stroke="currentColor" strokeWidth="1.3"/>
+            <circle cx="10" cy="4" r="2" stroke="currentColor" strokeWidth="1.3"/>
+            <circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M6 7h1.5M8.1 4.7L6 6.4M8.1 9.3L6 7.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          Объединить
+          {groups.length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.15)', color: 'var(--accent)' }}>{groups.length}</span>
+          )}
+        </button>
       </div>
 
-      {/* Visible source cards */}
-      {visible.length === 0 && (
+      {/* Merged group cards */}
+      {groups.map(group => (
+        <MergedSourceCard
+          key={group.source}
+          group={group}
+          data={data}
+          onSave={onSave}
+          onDelete={() => handleDeleteGroup(group.source)}
+          allSources={data.marketing.sources}
+        />
+      ))}
+
+      {/* Visible individual source cards */}
+      {visible.length === 0 && groups.length === 0 && (
         <p className="text-sm py-4 px-1" style={{ color: 'var(--text2)' }}>Ни один источник не выбран.</p>
       )}
       {visible.map(src => (
@@ -494,8 +755,16 @@ function MarketingView({ data, onSave }: {
         </>
       )}
 
-      {modalOpen && (
-        <SourceModal sources={allSources} excluded={excluded} onChange={toggle} onClose={() => setModalOpen(false)} />
+      {sourceModalOpen && (
+        <SourceModal sources={allSources} excluded={excluded} onChange={toggle} onClose={() => setSourceModalOpen(false)} />
+      )}
+      {groupModalOpen && (
+        <GroupModal
+          sources={allSources}
+          existingGroups={groups.map(g => ({ name: g.source, sources: g.sources }))}
+          onSave={handleSaveGroups}
+          onClose={() => setGroupModalOpen(false)}
+        />
       )}
     </div>
   )
@@ -581,13 +850,20 @@ export default function CrmDashboard() {
     setLoading(false)
   }, [data, selectedMonth])
 
+  const handleReload = useCallback(async () => {
+    if (!selectedMonth) return
+    setLoading(true)
+    const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
+    setData(d)
+    setLoading(false)
+  }, [selectedMonth])
+
   const handleSaveSpend = useCallback(async (dateIso: string, source: string, field: string, value: number) => {
     await fetch('/api/crm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'saveSpend', dateIso, source, field, value }),
     })
-    // reload data after spend save
     const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
     setData(d)
   }, [selectedMonth])
@@ -681,7 +957,7 @@ export default function CrmDashboard() {
         ) : data ? (
           <>
             {tab === 'voronki' && <VoronkiView data={data} />}
-            {tab === 'marketing' && <MarketingView data={data} onSave={handleSaveSpend} />}
+            {tab === 'marketing' && <MarketingView data={data} onSave={handleSaveSpend} onReload={handleReload} />}
           </>
         ) : null}
       </div>

@@ -2,6 +2,7 @@ import { readSheetRows } from './read-sheet'
 import { loadPipelineDefinitions, buildPipelineStats } from './pipelines'
 import { buildMarketingStats } from './marketing'
 import { readSpendMap, readRateMap } from './spend'
+import { getMergedGroups } from './settings'
 import { getMonthDays, getWeekGroups, formatDay, formatWeek } from './utils'
 import type { DashData } from './types'
 
@@ -14,12 +15,13 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
   const weeks = getWeekGroups(days)
 
   // Fetch all data in parallel
-  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap] = await Promise.all([
+  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap, groups] = await Promise.all([
     loadPipelineDefinitions(),
     readSheetRows('Лиды'),
     readSheetRows('Сделки'),
     readSpendMap(),
     readRateMap(),
+    getMergedGroups(),
   ])
 
   const pipelines = [
@@ -29,7 +31,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     ),
   ]
 
-  const marketing = buildMarketingStats(leadsRows, dealsRows, days, weeks, spendMap, rateMap)
+  const marketing = buildMarketingStats(leadsRows, dealsRows, days, weeks, spendMap, rateMap, groups)
 
   return {
     monthKey,
