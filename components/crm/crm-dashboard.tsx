@@ -416,11 +416,11 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources }: {
   const individualSources = allSources.filter(s => group.sources.includes(s.source))
 
   return (
-    <div className="mb-5">
+    <div className="mb-5" data-group-source={group.source}>
       <Card data={data} header={
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            {/* Expand/collapse */}
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{group.source}</span>
             <button
               type="button"
               onClick={() => setExpanded(e => !e)}
@@ -431,7 +431,6 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources }: {
               </svg>
               {expanded ? 'Свернуть' : `Показать ${group.sources.length} источника`}
             </button>
-            <span style={{ color: 'var(--text2)', fontSize: 11 }}>({group.sources.join(', ')})</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)' }}>
