@@ -12,6 +12,7 @@ type Profile = {
   full_name: string | null
   login: string | null
   role: string | null
+  position: string | null
 }
 
 const adminItem = {
@@ -197,7 +198,12 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
       {/* Навигация */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
-        {[...navItems, ...(profile?.role === 'admin' ? [crmItem, adminItem] : [])].map(({ href, label, icon }) => {
+        {(() => {
+          const isAdmin = profile?.role === 'admin'
+          const isMarketer = profile?.position?.toLowerCase() === 'маркетолог'
+          const extra = isAdmin ? [crmItem, adminItem] : isMarketer ? [crmItem] : []
+          return [...navItems, ...extra]
+        })().map(({ href, label, icon }) => {
           const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
           return (
             <Link
