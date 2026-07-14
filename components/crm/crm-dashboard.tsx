@@ -636,12 +636,13 @@ function MetricCard({ label, value }: { label: string; value: string | number })
   )
 }
 
-function MarketingView({ data, onSave, onReload }: {
+function MarketingView({ data, excluded, onToggleExcluded, onSave, onReload }: {
   data: DashData
+  excluded: Set<string>
+  onToggleExcluded: (src: string, checked: boolean) => void
   onSave: (dateIso: string, source: string, field: string, value: number) => void
   onReload: () => void
 }) {
-  const [excluded, setExcluded] = useState<Set<string>>(new Set(data.excludedSources ?? []))
   const [sourceModalOpen, setSourceModalOpen] = useState(false)
   const [groupModalOpen, setGroupModalOpen] = useState(false)
 
@@ -650,10 +651,7 @@ function MarketingView({ data, onSave, onReload }: {
   const groupedSourceNames = new Set(groups.flatMap(g => g.sources))
 
   function toggle(src: string, checked: boolean) {
-    const next = new Set(excluded)
-    if (checked) next.delete(src); else next.add(src)
-    setExcluded(next)
-    fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveExcluded', excluded: Array.from(next) }) })
+    onToggleExcluded(src, checked)
   }
 
   async function handleSaveGroups(next: MergedGroup[]) {
@@ -756,7 +754,7 @@ function MarketingView({ data, onSave, onReload }: {
       )}
 
       {sourceModalOpen && (
-        <SourceModal sources={allSources} excluded={excluded} onChange={toggle} onClose={() => setSourceModalOpen(false)} />
+        <SourceModal sources={allSources} excluded={excluded} onChange={onToggleExcluded} onClose={() => setSourceModalOpen(false)} />
       )}
       {groupModalOpen && (
         <GroupModal
@@ -776,6 +774,7 @@ export default function CrmDashboard() {
   const [months, setMonths] = useState<MonthOption[]>([])
   const [selectedMonth, setSelectedMonth] = useState('')
   const [data, setData] = useState<DashData | null>(null)
+  const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'voronki' | 'marketing'>('voronki')
@@ -824,6 +823,8 @@ export default function CrmDashboard() {
       .then((d: DashData) => {
         if ((d as any)?.error) { setError((d as any).error); setLoading(false); return }
         setData(d)
+        // Sync excluded sources when month changes (fresh load)
+        setExcluded(new Set((d as any).excludedSources ?? []))
         setLoading(false)
       })
       .catch(e => { setError(String(e)); setLoading(false) })
@@ -849,6 +850,19 @@ export default function CrmDashboard() {
     setData(d)
     setLoading(false)
   }, [data, selectedMonth])
+
+  const handleToggleExcluded = useCallback((src: string, checked: boolean) => {
+    setExcluded(prev => {
+      const next = new Set(prev)
+      if (checked) next.delete(src); else next.add(src)
+      fetch('/api/crm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'saveExcluded', excluded: Array.from(next) }),
+      })
+      return next
+    })
+  }, [])
 
   const handleReload = useCallback(async () => {
     if (!selectedMonth) return
@@ -957,7 +971,7 @@ export default function CrmDashboard() {
         ) : data ? (
           <>
             {tab === 'voronki' && <VoronkiView data={data} />}
-            {tab === 'marketing' && <MarketingView data={data} onSave={handleSaveSpend} onReload={handleReload} />}
+            {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onReload={handleReload} />}
           </>
         ) : null}
       </div>
