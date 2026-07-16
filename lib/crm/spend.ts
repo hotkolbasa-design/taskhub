@@ -45,6 +45,11 @@ export async function readRateMap(): Promise<RateMap> {
   return map
 }
 
+function dateIsoToSerial(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  return Math.round(Date.UTC(y, m - 1, d) / 86400000 + 25569)
+}
+
 const FIELD_COL: Record<string, number> = { spent: 3, impressions: 4, clicks: 5, fbLeads: 6 }
 const COL_LETTER = ['', 'A', 'B', 'C', 'D', 'E', 'F']
 
@@ -64,8 +69,8 @@ export async function saveSpendValue(dateIso: string, source: string, field: str
     }
   }
 
-  // New row — write date as ISO string (USER_ENTERED may or may not convert to date serial)
-  const rowData: (string | number | null)[] = [dateIso, source, 0, 0, 0, 0]
+  // Write RAW with date serial so source names starting with "+" aren't interpreted as formulas
+  const rowData: (string | number | null)[] = [dateIsoToSerial(dateIso), source, 0, 0, 0, 0]
   rowData[col - 1] = value
-  await appendRow(SHEET, rowData)
+  await appendRow(SHEET, rowData, 'RAW')
 }
