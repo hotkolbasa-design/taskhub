@@ -42,7 +42,12 @@ export async function createSprint(projectId: string, data: {
 
   if (error || !sprint) throw new Error(error?.message ?? 'Ошибка создания спринта')
 
-  const cols = data.mode === 'weekdays' ? WEEKDAY_COLUMNS : (data.customColumns ?? [])
+  const middleCols = data.mode === 'weekdays' ? WEEKDAY_COLUMNS : (data.customColumns ?? [])
+  const cols = [
+    { name: 'К выполнению', color: '#2DD4A0', role: 'todo' as const },
+    ...middleCols.map(c => ({ ...c, role: null as null })),
+    { name: 'Готово', color: '#2DD4A0', role: 'done' as const },
+  ]
 
   await admin
     .from('sprint_columns')
@@ -51,6 +56,7 @@ export async function createSprint(projectId: string, data: {
       name: c.name,
       color: c.color,
       order_index: i,
+      role: c.role,
     })))
 
   revalidatePath(`/projects/${projectId}/sprint`)
@@ -166,17 +172,16 @@ export async function fixSprint(sprintId: string, projectId: string) {
 }
 
 export async function moveTaskInSprint(
-  updates: { id: string; column_id: string; column_order: number }[]
+  updates: { id: string; column_id: string; column_order: number; workflow_status?: string }[]
 ) {
   const admin = createAdminClient()
 
   await Promise.all(
-    updates.map(u =>
-      admin
-        .from('tasks')
-        .update({ column_id: u.column_id, column_order: u.column_order })
-        .eq('id', u.id)
-    )
+    updates.map(u => {
+      const patch: Record<string, unknown> = { column_id: u.column_id, column_order: u.column_order }
+      if (u.workflow_status !== undefined) patch.workflow_status = u.workflow_status
+      return admin.from('tasks').update(patch).eq('id', u.id)
+    })
   )
 }
 

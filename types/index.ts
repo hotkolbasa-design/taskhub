@@ -84,6 +84,7 @@ export type SprintColumn = {
   name: string
   color: string
   order_index: number
+  role: 'todo' | 'done' | null
 }
 
 export type SprintTask = Task & {
