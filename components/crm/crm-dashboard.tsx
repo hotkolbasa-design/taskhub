@@ -269,17 +269,18 @@ function ComputedRow({ label, v, fmt }: { label: string; v: ValuesSet; fmt: (n: 
 
 function SpendInput({ initialValue, onSave }: { initialValue: number; onSave: (v: number) => void }) {
   const [val, setVal] = useState(String(initialValue || ''))
-  const [focused, setFocused] = useState(false)
+  const focusedRef = useRef(false)
 
+  // Sync from server only when not focused — using ref avoids triggering on blur before save completes
   useEffect(() => {
-    if (!focused) setVal(initialValue > 0 ? String(initialValue) : '')
-  }, [initialValue, focused])
+    if (!focusedRef.current) setVal(initialValue > 0 ? String(initialValue) : '')
+  }, [initialValue])
 
   return (
     <input type="number" value={val} placeholder="0"
       onChange={e => setVal(e.target.value)}
-      onFocus={() => setFocused(true)}
-      onBlur={() => { setFocused(false); onSave(Number(val) || 0) }}
+      onFocus={() => { focusedRef.current = true }}
+      onBlur={() => { focusedRef.current = false; onSave(Number(val) || 0) }}
       className="crm-input"
       style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' } as React.CSSProperties}
     />
