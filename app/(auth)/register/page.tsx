@@ -4,10 +4,10 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-type Form = { fullName: string; login: string; email: string; password: string }
+type Form = { fullName: string; email: string; password: string }
 
 export default function RegisterPage() {
-  const [form, setForm] = useState<Form>({ fullName: '', login: '', email: '', password: '' })
+  const [form, setForm] = useState<Form>({ fullName: '', email: '', password: '' })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -26,7 +26,7 @@ export default function RegisterPage() {
       email: form.email,
       password: form.password,
       options: {
-        data: { full_name: form.fullName, login: form.login },
+        data: { full_name: form.fullName, login: form.email.split('@')[0].toLowerCase() },
       },
     })
 
@@ -76,19 +76,6 @@ export default function RegisterPage() {
             required
             autoComplete="name"
             value={form.fullName}
-            onChange={handleChange}
-            className={inputCls}
-          />
-        </Field>
-
-        <Field label="Логин">
-          <input
-            id="login"
-            name="login"
-            type="text"
-            required
-            autoComplete="username"
-            value={form.login}
             onChange={handleChange}
             className={inputCls}
           />

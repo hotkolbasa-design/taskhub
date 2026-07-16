@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import AdminUserDrawer, { type DrawerUser } from './admin-user-drawer'
 import AdminInviteModal from './admin-invite-modal'
+import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
 
 type UserRow = {
   id: string
@@ -22,8 +24,18 @@ type Props = {
   superAdminId: string | null
 }
 
+const ROLES = [
+  { value: 'employee', label: 'Employee', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  { value: 'admin',    label: 'Admin',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)'  },
+]
+const STATUSES = [
+  { value: 'active',   label: 'Активен',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
+  { value: 'inactive', label: 'Неактивен', color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
+  { value: 'pending',  label: 'Ожидает',   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
+]
+
 export default function AdminUsersClient({ users: initial, emailMap, currentUserId, superAdminId }: Props) {
-  const [users, setUsers]         = useState(initial)
+  const [users, setUsers]           = useState(initial)
   const [drawerUser, setDrawerUser] = useState<DrawerUser | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
 
@@ -82,7 +94,8 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
             {pending.map((u, i) => (
               <Row key={u.id} user={u} email={emailMap[u.id]} currentUserId={currentUserId}
                 superAdminId={superAdminId} isLast={i === pending.length - 1}
-                onClick={() => openDrawer(u)} />
+                onClick={() => openDrawer(u)}
+                onUpdated={patch => handleUpdated(u.id, patch)} />
             ))}
           </div>
         </section>
@@ -97,7 +110,8 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
           {rest.map((u, i) => (
             <Row key={u.id} user={u} email={emailMap[u.id]} currentUserId={currentUserId}
               superAdminId={superAdminId} isLast={i === rest.length - 1}
-              onClick={() => openDrawer(u)} />
+              onClick={() => openDrawer(u)}
+              onUpdated={patch => handleUpdated(u.id, patch)} />
           ))}
         </div>
       </section>
@@ -119,37 +133,43 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
   )
 }
 
-function Row({ user, email, currentUserId, superAdminId, isLast, onClick }: {
+function Row({ user, email, currentUserId, superAdminId, isLast, onClick, onUpdated }: {
   user: UserRow
   email: string | undefined
   currentUserId: string
   superAdminId: string | null
   isLast: boolean
   onClick: () => void
+  onUpdated: (patch: Partial<UserRow>) => void
 }) {
   const displayName = user.full_name || user.login
-  const isSelf = user.id === currentUserId
+  const isSelf      = user.id === currentUserId
+  const isProtected = user.id === superAdminId
+  const canEdit     = !isSelf && !isProtected
 
-  const ROLE_COLORS: Record<string, { color: string; bg: string }> = {
-    admin:    { color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' },
-    employee: { color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
-  }
-  const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
-    active:   { color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)' },
-    inactive: { color: '#F75C6E', bg: 'rgba(247,92,110,0.15)' },
-    pending:  { color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
-  }
+  const roleOpt   = ROLES.find(r => r.value === user.role)   ?? ROLES[0]
+  const statusOpt = STATUSES.find(s => s.value === user.status) ?? STATUSES[0]
   const STATUS_LABEL: Record<string, string> = { active: 'Активен', inactive: 'Неактивен', pending: 'Ожидает' }
-  const ROLE_LABEL: Record<string, string>   = { admin: 'Admin', employee: 'Employee' }
 
-  const roleC   = ROLE_COLORS[user.role]   ?? ROLE_COLORS.employee
-  const statusC = STATUS_COLORS[user.status] ?? STATUS_COLORS.inactive
+  async function handleRoleChange(next: string) {
+    onUpdated({ role: next })
+    await setRole(user.id, next as 'admin' | 'employee')
+  }
+
+  async function handleStatusChange(next: string) {
+    onUpdated({ status: next })
+    await setStatus(user.id, next as 'active' | 'inactive')
+  }
+
+  const selectableStatuses = user.status === 'pending'
+    ? STATUSES
+    : STATUSES.filter(s => s.value !== 'pending')
 
   return (
-    <button
-      onClick={onClick}
+    <div
       className="w-full flex items-center gap-4 px-5 py-3.5 text-left transition-colors"
-      style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)', cursor: 'pointer', background: 'transparent' }}
+      style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)', background: 'transparent', cursor: 'pointer' }}
+      onClick={onClick}
       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
@@ -166,21 +186,124 @@ function Row({ user, email, currentUserId, superAdminId, isLast, onClick }: {
         <p className="text-xs truncate" style={{ color: 'var(--text2)' }}>{email}</p>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md"
-          style={{ color: roleC.color, background: roleC.bg }}>
-          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: roleC.color }} />
-          {ROLE_LABEL[user.role] ?? user.role}
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md"
-          style={{ color: statusC.color, background: statusC.bg }}>
-          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusC.color }} />
-          {STATUS_LABEL[user.status] ?? user.status}
-        </span>
+      <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+        {canEdit ? (
+          <>
+            <BadgeDropdown
+              options={ROLES}
+              value={user.role}
+              onChange={handleRoleChange}
+            />
+            <BadgeDropdown
+              options={selectableStatuses}
+              value={user.status}
+              onChange={handleStatusChange}
+            />
+          </>
+        ) : (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md"
+              style={{ color: roleOpt.color, background: roleOpt.bg }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: roleOpt.color }} />
+              {roleOpt.label}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md"
+              style={{ color: statusOpt.color, background: statusOpt.bg }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusOpt.color }} />
+              {STATUS_LABEL[user.status] ?? user.status}
+            </span>
+          </>
+        )}
         <span className="text-xs w-7 text-right" style={{ color: 'var(--text2)' }}>
           {isSelf ? 'вы' : ''}
         </span>
       </div>
-    </button>
+    </div>
+  )
+}
+
+function BadgeDropdown({ options, value, onChange }: {
+  options: { value: string; label: string; color: string; bg: string }[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos]   = useState({ top: 0, left: 0 })
+  const btnRef  = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const current = options.find(o => o.value === value) ?? options[0]
+
+  useEffect(() => {
+    if (!open) return
+    function onOut(e: MouseEvent) {
+      const t = e.target as Node
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={e => {
+          e.stopPropagation()
+          if (btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect()
+            setPos({ top: r.bottom + 4, left: r.left })
+          }
+          setOpen(o => !o)
+        }}
+        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md"
+        style={{ color: current.color, background: current.bg, cursor: 'pointer' }}
+        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.2)')}
+        onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: current.color }} />
+        {current.label}
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="py-1 rounded-xl min-w-[130px]"
+          style={{
+            position: 'fixed', top: pos.top, left: pos.left, zIndex: 10000,
+            background: 'var(--surface2)', border: '1px solid var(--border)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={e => {
+                e.stopPropagation()
+                onChange(opt.value)
+                setOpen(false)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left"
+              style={{
+                color: opt.value === value ? opt.color : 'var(--text)',
+                background: opt.value === value ? opt.bg : 'transparent',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => { if (opt.value !== value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { if (opt.value !== value) e.currentTarget.style.background = 'transparent' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />
+              {opt.label}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
