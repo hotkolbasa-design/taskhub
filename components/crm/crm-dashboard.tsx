@@ -269,10 +269,17 @@ function ComputedRow({ label, v, fmt }: { label: string; v: ValuesSet; fmt: (n: 
 
 function SpendInput({ initialValue, onSave }: { initialValue: number; onSave: (v: number) => void }) {
   const [val, setVal] = useState(String(initialValue || ''))
+  const [focused, setFocused] = useState(false)
+
+  useEffect(() => {
+    if (!focused) setVal(initialValue > 0 ? String(initialValue) : '')
+  }, [initialValue, focused])
+
   return (
     <input type="number" value={val} placeholder="0"
       onChange={e => setVal(e.target.value)}
-      onBlur={() => onSave(Number(val) || 0)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => { setFocused(false); onSave(Number(val) || 0) }}
       className="crm-input"
       style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' } as React.CSSProperties}
     />
