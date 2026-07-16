@@ -245,12 +245,12 @@ function WorkflowBadgeDropdown({ status, taskId, onChange }: { status: string; t
   )
 }
 
-function DeadlineLabel({ deadline }: { deadline: string }) {
+function DeadlineLabel({ deadline, isDone }: { deadline: string; isDone?: boolean }) {
   const date = new Date(deadline)
   const now = new Date()
   now.setHours(0, 0, 0, 0)
-  const isPast = date < now
-  const isToday = date.getTime() === now.getTime()
+  const isPast = !isDone && date < now
+  const isToday = !isDone && date.getTime() === now.getTime()
   const formatted = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
   return (
     <span
@@ -266,10 +266,11 @@ function DeadlineLabel({ deadline }: { deadline: string }) {
   )
 }
 
-function DeadlinePickerInline({ deadline, taskId, onChange }: {
+function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
   deadline: string | null | undefined
   taskId: string
   onChange: (id: string, deadline: string | null) => void
+  isDone?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
@@ -290,8 +291,8 @@ function DeadlinePickerInline({ deadline, taskId, onChange }: {
 
   const date = deadline ? new Date(deadline + 'T00:00:00') : null
   const now = new Date(); now.setHours(0, 0, 0, 0)
-  const isPast = date ? date < now : false
-  const isToday = date ? date.getTime() === now.getTime() : false
+  const isPast = !isDone && (date ? date < now : false)
+  const isToday = !isDone && (date ? date.getTime() === now.getTime() : false)
   const formatted = date ? date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null
 
   const year = viewDate.getFullYear()
@@ -814,8 +815,8 @@ export default function TaskCard({
             )
           }
           {onDeadlineChange
-            ? <DeadlinePickerInline deadline={task.deadline} taskId={task.id} onChange={onDeadlineChange} />
-            : task.deadline && <DeadlineLabel deadline={task.deadline} />
+            ? <DeadlinePickerInline deadline={task.deadline} taskId={task.id} onChange={onDeadlineChange} isDone={task.workflow_status === 'done'} />
+            : task.deadline && <DeadlineLabel deadline={task.deadline} isDone={task.workflow_status === 'done'} />
           }
           {avatarMenuInRow2 && task.assignee && (
             <span className="ml-auto shrink-0">
