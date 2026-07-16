@@ -38,8 +38,10 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     days: days.map(formatDay),
     daysIso: days,  // already "YYYY-MM-DD"
     weeks: weeks.map(formatWeek),
+    weekDays: weeks,  // raw ISO date arrays per week (for client-side rate averaging)
     pipelines,
     marketing,
+    rateMap,
   }
 }
 

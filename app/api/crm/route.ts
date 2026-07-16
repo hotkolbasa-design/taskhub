@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { computeDashboardData, getAvailableMonths } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
-import { saveSpendValue } from '@/lib/crm/spend'
+import { saveSpendValue, saveRateValue } from '@/lib/crm/spend'
 import { getExcludedSources, saveExcludedSources, saveMergedGroups } from '@/lib/crm/settings'
 
 export async function GET(req: NextRequest) {
@@ -49,6 +49,10 @@ export async function POST(req: NextRequest) {
     }
     if (action === 'saveSpend') {
       await saveSpendValue(body.dateIso, body.source, body.field, Number(body.value) || 0)
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'saveRate') {
+      await saveRateValue(body.dateIso, Number(body.rate) || 0)
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveExcluded') {

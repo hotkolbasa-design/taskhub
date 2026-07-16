@@ -21,7 +21,7 @@ type GroupSourceData = SourceData & { sources: string[] }
 type MergedGroup = { name: string; sources: string[] }
 type Pipeline = { name: string; stages: Milestone[] }
 type DashData = {
-  monthKey: string; days: string[]; daysIso: string[]; weeks: string[]
+  monthKey: string; days: string[]; daysIso: string[]; weeks: string[]; weekDays: string[][]
   frozen: boolean; excludedSources: string[]
   pipelines: Pipeline[]
   marketing: {
@@ -29,6 +29,7 @@ type DashData = {
     sources: SourceData[]; overall: SourceData
     groups: GroupSourceData[]
   }
+  rateMap: Record<string, number>
 }
 
 // ─── CSS classes injected once on mount ──────────────────────────────────────
@@ -70,6 +71,9 @@ function cvChip(c: number | null) {
   return <span className="crm-chip">{c}%</span>
 }
 function fmtMoney(v: number, unit: string) {
+  if (v === 0) return '0' + unit
+  if (Math.abs(v) < 0.01) return '<0.01' + unit
+  if (Math.abs(v) < 1) return (Math.round(v * 100) / 100).toLocaleString('ru-RU') + unit
   return (Math.round(v * 10) / 10).toLocaleString('ru-RU') + unit
 }
 function fmtPct(v: number) {
@@ -334,6 +338,50 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
       <ComputedRow label="Цена клиента, тнг" v={spend.costPerClientKzt} fmt={v => fmtMoney(v, ' ₸')} />
       <ComputedRow label="ROMI, %" v={spend.romi} fmt={fmtPct} />
     </>
+  )
+}
+
+// ─── RateSection ─────────────────────────────────────────────────────────────
+
+function RateSection({ data, onSaveRate }: {
+  data: DashData
+  onSaveRate: (dateIso: string, rate: number) => void
+}) {
+  const weekAverages = (data.weekDays ?? []).map(wDays => {
+    const rates = wDays.map(d => data.rateMap?.[d] ?? 0).filter(r => r > 0)
+    return rates.length ? Math.round(rates.reduce((s, r) => s + r, 0) / rates.length) : 0
+  })
+  const allRates = data.daysIso.map(d => data.rateMap?.[d] ?? 0).filter(r => r > 0)
+  const avgTotal = allRates.length ? Math.round(allRates.reduce((s, r) => s + r, 0) / allRates.length) : 0
+
+  return (
+    <Card data={data} header={
+      <span className="flex items-center gap-2" style={{ color: 'var(--text2)' }}>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 4h10M2 7h6M2 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          <path d="M10 8l1.5 1.5L13 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M11.5 9.5V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+        Курс USD / KZT
+      </span>
+    }>
+      <tr>
+        <td className="crm-cell crm-col-label crm-lbl" style={{ color: 'var(--text2)', fontWeight: 500 }}>₸ за 1$</td>
+        {data.daysIso.map((d, i) => (
+          <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
+            <SpendInput initialValue={data.rateMap?.[d] ?? 0} onSave={v => onSaveRate(d, v)} />
+          </td>
+        ))}
+        {weekAverages.map((avg, wi) => (
+          <td key={wi} className={`crm-cell crm-col-week ${avg === 0 ? 'crm-zero' : 'crm-value'}`}>
+            {avg > 0 ? `~${avg}` : '—'}
+          </td>
+        ))}
+        <td className={`crm-cell crm-col-total ${avgTotal === 0 ? 'crm-zero' : ''}`}>
+          {avgTotal > 0 ? `~${avgTotal}` : '—'}
+        </td>
+      </tr>
+    </Card>
   )
 }
 
@@ -758,11 +806,12 @@ function MetricCard({ label, value }: { label: string; value: string | number })
   )
 }
 
-function MarketingView({ data, excluded, onToggleExcluded, onSave, onReload }: {
+function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, onReload }: {
   data: DashData
   excluded: Set<string>
   onToggleExcluded: (src: string, checked: boolean) => void
   onSave: (dateIso: string, source: string, field: string, value: number) => void
+  onSaveRate: (dateIso: string, rate: number) => void
   onReload: () => void
 }) {
   const [sourceModalOpen, setSourceModalOpen] = useState(false)
@@ -812,6 +861,9 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onReload }: {
         <MetricCard label="Выручка" value={summary.totalRevenue.toLocaleString('ru-RU') + ' ₸'} />
         <MetricCard label="Конверсия в продажу" value={(summary.totalLeads ? Math.round(summary.totalSales / summary.totalLeads * 1000) / 10 : 0) + '%'} />
       </div>
+
+      {/* Exchange rate section */}
+      <RateSection data={data} onSaveRate={onSaveRate} />
 
       {/* Overall card */}
       <SourceCard src={data.marketing.overall} data={data} editable={false} onSave={onSave} overall />
@@ -1016,6 +1068,16 @@ export default function CrmDashboard() {
     setData(d)
   }, [selectedMonth])
 
+  const handleSaveRate = useCallback(async (dateIso: string, rate: number) => {
+    await fetch('/api/crm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveRate', dateIso, rate }),
+    })
+    const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
+    setData(d)
+  }, [selectedMonth])
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (error) {
@@ -1106,7 +1168,7 @@ export default function CrmDashboard() {
           <>
             {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} />}
             {tab === 'voronki' && <VoronkiView data={data} />}
-            {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onReload={handleReload} />}
+            {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onSaveRate={handleSaveRate} onReload={handleReload} />}
           </>
         ) : null}
       </div>
