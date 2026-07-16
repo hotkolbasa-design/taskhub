@@ -10,6 +10,11 @@ function parseDateKey(raw: string | number | boolean): string {
   return ''
 }
 
+function dateIsoToSerial(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  return Math.round(Date.UTC(y, m - 1, d) / 86400000 + 25569)
+}
+
 export async function readSpendMap(): Promise<SpendMap> {
   let values: (string | number | boolean)[][] = []
   try { values = await sheetValues(SHEET, 'A2:F') } catch { return {} }
@@ -36,18 +41,11 @@ export async function readRateMap(): Promise<RateMap> {
   try { values = await sheetValues(SHEET, 'H2:I') } catch { return {} }
   const map: RateMap = {}
   for (const row of values) {
-    const serial = row[0]
-    if (typeof serial !== 'number' || serial < 1) continue
-    const dateKey = serialToDateKey(serial)
+    const dateKey = parseDateKey(row[0])
     const rate = Number(row[1]) || 0
     if (dateKey && rate) map[dateKey] = rate
   }
   return map
-}
-
-function dateIsoToSerial(iso: string): number {
-  const [y, m, d] = iso.split('-').map(Number)
-  return Math.round(Date.UTC(y, m - 1, d) / 86400000 + 25569)
 }
 
 const FIELD_COL: Record<string, number> = { spent: 3, impressions: 4, clicks: 5, fbLeads: 6 }
@@ -73,4 +71,19 @@ export async function saveSpendValue(dateIso: string, source: string, field: str
   const rowData: (string | number | null)[] = [dateIsoToSerial(dateIso), source, 0, 0, 0, 0]
   rowData[col - 1] = value
   await appendRow(SHEET, rowData, 'RAW')
+}
+
+export async function saveRateValue(dateIso: string, rate: number): Promise<void> {
+  let rows: (string | number | boolean)[][] = []
+  try { rows = await sheetValues(SHEET, 'H2:I') } catch {}
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowDate = parseDateKey(rows[i][0])
+    if (rowDate === dateIso) {
+      await updateCell(SHEET, `I${i + 2}`, rate)
+      return
+    }
+  }
+
+  await appendRow(SHEET, [dateIsoToSerial(dateIso), rate], 'RAW')
 }

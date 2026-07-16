@@ -60,6 +60,7 @@ export type DashData = {
   days: string[]
   daysIso: string[]
   weeks: string[]
+  weekDays: string[][]
   pipelines: PipelineStat[]
   marketing: {
     summary: { totalLeads: number; totalSales: number; totalRevenue: number }
@@ -67,6 +68,7 @@ export type DashData = {
     overall: { source?: string; milestones: MilestoneStat[]; revenue?: ValuesSet; spend?: SpendMetrics }
     groups: GroupSourceData[]
   }
+  rateMap: Record<string, number>
 }
 
 export type MilestoneDef = {
