@@ -216,17 +216,38 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
     const srcColId = task.column_id ?? cols[0]?.id
     const { columnId: dstColId, insertBeforeId } = preview
 
+    // Определяем авто-статус при перемещении в/из колонки "Готово"
+    let autoWorkflowStatus: string | undefined
+    if (srcColId !== dstColId) {
+      const srcCol = cols.find(c => c.id === srcColId)
+      const dstCol = cols.find(c => c.id === dstColId)
+      if (dstCol?.role === 'done') {
+        autoWorkflowStatus = 'done'
+      } else if (srcCol?.role === 'done') {
+        autoWorkflowStatus = 'in_progress'
+      }
+    }
+
     const newMap = { ...taskMap }
     if (srcColId) newMap[srcColId] = (newMap[srcColId] ?? []).filter(t => t.id !== task.id)
 
+    const movedTask = autoWorkflowStatus
+      ? { ...task, column_id: dstColId, workflow_status: autoWorkflowStatus as SprintTask['workflow_status'] }
+      : { ...task, column_id: dstColId }
+
     const dstTasks = [...(newMap[dstColId] ?? [])]
     const insertIdx = insertBeforeId ? dstTasks.findIndex(t => t.id === insertBeforeId) : -1
-    dstTasks.splice(insertIdx === -1 ? dstTasks.length : insertIdx, 0, { ...task, column_id: dstColId })
+    dstTasks.splice(insertIdx === -1 ? dstTasks.length : insertIdx, 0, movedTask)
     newMap[dstColId] = dstTasks
 
     setTaskMap(newMap)
 
-    const updates = dstTasks.map((t, i) => ({ id: t.id, column_id: dstColId, column_order: i }))
+    const updates = dstTasks.map((t, i) => ({
+      id: t.id,
+      column_id: dstColId,
+      column_order: i,
+      ...(t.id === task.id && autoWorkflowStatus ? { workflow_status: autoWorkflowStatus } : {}),
+    }))
     if (srcColId && srcColId !== dstColId) {
       updates.push(...(newMap[srcColId] ?? []).map((t, i) => ({ id: t.id, column_id: srcColId, column_order: i })))
     }
@@ -385,7 +406,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
                     isBeingDragged={activeColumn?.id === col.id}
                     onAddAfter={() => setAddingAfterColId(col.id)}
                     onDelete={() => handleDeleteColumn(col.id)}
-                    canDelete={cols.length > 1}
+                    canDelete={cols.length > 1 && !col.role}
                     onTaskClick={handleTaskClick}
                   />
                   {draggingType === null && addingAfterColId === col.id && (
@@ -552,6 +573,16 @@ function KanbanColumn({
             </div>
           )}
 
+          {/* Замочек для защищённых колонок */}
+          {!headerHovered && column.role && (
+            <span title="Обязательная колонка" style={{ color: 'var(--text2)', opacity: 0.35, display: 'flex', alignItems: 'center' }}>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+              </svg>
+            </span>
+          )}
+
           {/* Кнопки на ховере */}
           {headerHovered && (
             <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
@@ -577,6 +608,17 @@ function KanbanColumn({
                   <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
               </button>
+
+              {/* Замочек вместо удаления для защищённых */}
+              {column.role && (
+                <span title="Обязательная колонка — удаление недоступно"
+                  style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)', opacity: 0.4 }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                </span>
+              )}
 
               {/* Удалить колонку */}
               {canDelete && (

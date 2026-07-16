@@ -20,12 +20,24 @@ CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON notifications(user_id, i
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Пользователь видит только свои уведомления
-CREATE POLICY "notifications_select" ON notifications
-  FOR SELECT USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'notifications_select'
+  ) THEN
+    CREATE POLICY "notifications_select" ON notifications
+      FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Пользователь может пометить свои уведомления прочитанными
-CREATE POLICY "notifications_update" ON notifications
-  FOR UPDATE USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'notifications_update'
+  ) THEN
+    CREATE POLICY "notifications_update" ON notifications
+      FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Добавить assignee_change и creator_change в activity log (комментарий для документации)
 -- Эти типы добавляются программно в updateTask action
