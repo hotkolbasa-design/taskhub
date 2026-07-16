@@ -214,6 +214,7 @@ type EpicProps = {
   subtaskMinutes: number
   onEdit: (t: BacklogTask) => void
   onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
   onMoveToBacklog?: (id: string) => void
@@ -224,7 +225,7 @@ type EpicProps = {
 function SprintEpicBlock({
   epic, projectId,
   subtaskDone, subtaskTotal, subtaskMinutes,
-  onEdit, onWorkflowChange, onDeadlineChange, onTimeChange, onMoveToBacklog, onRemoveFromEpic,
+  onEdit, onWorkflowChange, onPriorityChange, onDeadlineChange, onTimeChange, onMoveToBacklog, onRemoveFromEpic,
   insertIndicator,
 }: EpicProps) {
   const [expanded, setExpanded] = useState(true)
@@ -268,6 +269,7 @@ function SprintEpicBlock({
           onMoveToBacklog={onMoveToBacklog}
           onEdit={onEdit}
           onWorkflowChange={onWorkflowChange}
+          onPriorityChange={onPriorityChange}
           onDeadlineChange={onDeadlineChange}
           onTimeChange={onTimeChange}
           avatarMenuInRow2
@@ -314,6 +316,7 @@ function SprintEpicBlock({
                 onRemoveFromEpic={onRemoveFromEpic}
                 onEdit={onEdit}
                 onWorkflowChange={onWorkflowChange}
+                onPriorityChange={onPriorityChange}
                 onDeadlineChange={onDeadlineChange}
                 onTimeChange={onTimeChange}
               />
@@ -327,7 +330,7 @@ function SprintEpicBlock({
 
 function SortableSprintTask({
   node, projectId, insertIndicator,
-  onMoveToBacklog, onEdit, onWorkflowChange, onDeadlineChange, onTimeChange,
+  onMoveToBacklog, onEdit, onWorkflowChange, onPriorityChange, onDeadlineChange, onTimeChange,
 }: {
   node: SprintNode
   projectId: string
@@ -335,6 +338,7 @@ function SortableSprintTask({
   onMoveToBacklog?: (id: string) => void
   onEdit: (task: BacklogTask) => void
   onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
 }) {
@@ -367,6 +371,7 @@ function SortableSprintTask({
         onMoveToBacklog={onMoveToBacklog}
         onEdit={onEdit}
         onWorkflowChange={onWorkflowChange}
+        onPriorityChange={onPriorityChange}
         onDeadlineChange={onDeadlineChange}
         onTimeChange={onTimeChange}
       />
@@ -477,6 +482,12 @@ export default function SprintPanel({
   async function handleTimeChange(id: string, minutes: number | null) {
     onTasksChange(tasks.map(t => t.id === id ? { ...t, time_estimate: minutes } : t))
     await updateTask(id, sprint.project_id, { time_estimate: minutes })
+    router.refresh()
+  }
+
+  async function handlePriorityChange(id: string, priority: 'medium' | 'high' | null) {
+    onTasksChange(tasks.map(t => t.id === id ? { ...t, priority } : t))
+    await updateTask(id, sprint.project_id, { priority })
     router.refresh()
   }
 
@@ -950,6 +961,7 @@ export default function SprintPanel({
                     subtaskMinutes={minutes}
                     onEdit={onEditTask}
                     onWorkflowChange={handleWorkflowChange}
+                    onPriorityChange={handlePriorityChange}
                     onDeadlineChange={handleDeadlineChange}
                     onTimeChange={handleTimeChange}
                     onMoveToBacklog={handleMoveToBacklog}
@@ -968,6 +980,7 @@ export default function SprintPanel({
                   onMoveToBacklog={handleMoveToBacklog}
                   onEdit={onEditTask}
                   onWorkflowChange={handleWorkflowChange}
+                  onPriorityChange={handlePriorityChange}
                   onDeadlineChange={handleDeadlineChange}
                   onTimeChange={handleTimeChange}
                 />
