@@ -20,7 +20,7 @@ export default function SprintTaskCard({ task, isOverlay = false }: Props) {
   const isEpic = task.type === 'epic'
 
   const now = new Date(); now.setHours(0, 0, 0, 0)
-  const isOverdue = task.deadline
+  const isOverdue = task.deadline && task.workflow_status !== 'done'
     ? (() => { const d = new Date(task.deadline + 'T00:00:00'); d.setHours(0,0,0,0); return d < now })()
     : false
 
