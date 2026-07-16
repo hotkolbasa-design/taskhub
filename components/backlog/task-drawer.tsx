@@ -15,6 +15,64 @@ const WORKFLOW_OPTIONS: { value: WorkflowStatus; label: string; color: string; b
   { value: 'cancelled',   label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 ]
 
+const PRIORITY_OPTIONS = [
+  { value: null,     label: 'Без приоритета', color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  { value: 'medium', label: 'Средний',        color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
+  { value: 'high',   label: 'Высокий',        color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
+] as const
+
+function PriorityDropdown({ value, onChange }: { value: 'medium' | 'high' | null; onChange: (v: 'medium' | 'high' | null) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = PRIORITY_OPTIONS.find(o => o.value === value) ?? PRIORITY_OPTIONS[0]
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all"
+        style={{ background: current.bg, color: current.color, border: `1px solid ${open ? current.color : 'transparent'}`, cursor: 'pointer' }}
+        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.15)')}
+        onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: current.color }} />
+        {current.label}
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[170px]"
+          style={{ background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
+          {PRIORITY_OPTIONS.map(opt => (
+            <button key={String(opt.value)} type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
+              style={{ color: opt.value === value ? opt.color : 'var(--text)', cursor: 'pointer' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />
+              {opt.label}
+              {opt.value === value && (
+                <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5.5L4 7.5L8 3" stroke={opt.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function WorkflowDropdown({ value, onChange }: { value: WorkflowStatus; onChange: (v: WorkflowStatus) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -281,6 +339,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>(task.workflow_status ?? 'new')
+  const [priority, setPriority] = useState<'medium' | 'high' | null>(task.priority ?? null)
   const [creatorId, setCreatorId] = useState(task.creator_id ?? '')
   const [assigneeId, setAssigneeId] = useState(task.assignee_id ?? '')
   const [deadline, setDeadline] = useState(task.deadline ?? '')
@@ -340,6 +399,12 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
     setWorkflowStatus(v)
     onUpdated({ id: task.id, workflow_status: v })
     await save({ workflow_status: v })
+  }
+
+  async function handlePriorityChange(v: 'medium' | 'high' | null) {
+    setPriority(v)
+    onUpdated({ id: task.id, priority: v })
+    await save({ priority: v })
   }
 
   async function handleCreatorChange(v: string) {
@@ -412,6 +477,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
               {task.type === 'epic' ? 'Эпик' : 'Задача'}
             </span>
             <WorkflowDropdown value={workflowStatus} onChange={handleWorkflowChange} />
+            <PriorityDropdown value={priority} onChange={handlePriorityChange} />
           </div>
           <button onClick={handleClose} className="p-1.5 rounded-md" style={{ color: 'var(--text2)' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}

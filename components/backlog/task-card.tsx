@@ -24,6 +24,114 @@ function Avatar({ name, login, size = 24 }: { name: string | null; login: string
   )
 }
 
+const PRIORITY_OPTIONS = [
+  { value: null,     label: 'Нет',     color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  { value: 'medium', label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
+  { value: 'high',   label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
+] as const
+
+function PriorityBadgeDropdown({ priority, taskId, onChange }: {
+  priority: 'medium' | 'high' | null
+  taskId: string
+  onChange: (id: string, priority: 'medium' | 'high' | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+  const current = PRIORITY_OPTIONS.find(o => o.value === priority) ?? PRIORITY_OPTIONS[0]
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!open) {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) {
+        const spaceBelow = window.innerHeight - rect.bottom
+        if (spaceBelow < 120) {
+          setPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left })
+        } else {
+          setPos({ top: rect.bottom + 4, left: rect.left })
+        }
+      }
+    }
+    setOpen(o => !o)
+  }
+
+  if (priority === null) {
+    return (
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={handleOpen}
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
+        title="Приоритет"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M2 2h6v4l-3 2-3-2V2z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+        </svg>
+        {open && createPortal(
+          <div ref={dropRef} className="py-1 rounded-xl min-w-[130px]"
+            style={{ position: 'fixed', ...pos, zIndex: 10000, background: 'var(--surface2)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
+            {PRIORITY_OPTIONS.map(opt => (
+              <button key={String(opt.value)} type="button"
+                onClick={e => { e.stopPropagation(); onChange(taskId, opt.value); setOpen(false) }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left"
+                style={{ color: opt.value === priority ? opt.color : 'var(--text)', cursor: 'pointer' }}
+                onMouseEnter={e => { if (opt.value !== priority) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={e => { if (opt.value !== priority) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />
+                {opt.label}
+              </button>
+            ))}
+          </div>, document.body
+        )}
+      </button>
+    )
+  }
+
+  return (
+    <button
+      ref={triggerRef}
+      type="button"
+      onClick={handleOpen}
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
+      style={{ background: current.bg, color: current.color, cursor: 'pointer' }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: current.color }} />
+      {current.label}
+      {open && createPortal(
+        <div ref={dropRef} className="py-1 rounded-xl min-w-[130px]"
+          style={{ position: 'fixed', ...pos, zIndex: 10000, background: 'var(--surface2)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
+          {PRIORITY_OPTIONS.map(opt => (
+            <button key={String(opt.value)} type="button"
+              onClick={e => { e.stopPropagation(); onChange(taskId, opt.value); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left"
+              style={{ color: opt.value === priority ? opt.color : 'var(--text)', cursor: 'pointer' }}
+              onMouseEnter={e => { if (opt.value !== priority) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { if (opt.value !== priority) e.currentTarget.style.background = 'transparent' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />
+              {opt.label}
+            </button>
+          ))}
+        </div>, document.body
+      )}
+    </button>
+  )
+}
+
 const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   new:         { label: 'Новая',        color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
   in_progress: { label: 'В работе',     color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
@@ -522,6 +630,7 @@ type Props = {
   onDuplicate?: (task: BacklogTask) => void
   onEdit?: (task: BacklogTask) => void
   onWorkflowChange?: (id: string, status: string) => void
+  onPriorityChange?: (id: string, priority: 'medium' | 'high' | null) => void
   onDeadlineChange?: (id: string, deadline: string | null) => void
   onTimeChange?: (id: string, minutes: number | null) => void
   /** Слот в конце строки 1 — для эпиков: счётчик + прогресс-бар + стрелка */
@@ -544,6 +653,7 @@ export default function TaskCard({
   onDuplicate,
   onEdit,
   onWorkflowChange,
+  onPriorityChange,
   onDeadlineChange,
   onTimeChange,
   row1Suffix,
@@ -686,12 +796,15 @@ export default function TaskCard({
           {row1Suffix}
         </div>
 
-        {/* Строка 2: статус + время + дедлайн [+ аватар+меню если avatarMenuInRow2] */}
+        {/* Строка 2: статус + приоритет + время + дедлайн [+ аватар+меню если avatarMenuInRow2] */}
         <div className="flex items-center gap-2">
           {onWorkflowChange
             ? <WorkflowBadgeDropdown status={task.workflow_status ?? 'new'} taskId={task.id} onChange={onWorkflowChange} />
             : <WorkflowBadge status={task.workflow_status ?? 'new'} />
           }
+          {onPriorityChange && (
+            <PriorityBadgeDropdown priority={task.priority ?? null} taskId={task.id} onChange={onPriorityChange} />
+          )}
           {onTimeChange
             ? <TimePickerInline minutes={task.time_estimate} taskId={task.id} onChange={onTimeChange} />
             : task.time_estimate != null && (

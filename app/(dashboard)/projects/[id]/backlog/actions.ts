@@ -19,6 +19,7 @@ export async function createTask(projectId: string, data: {
   time_estimate?: number | null
   parent_task_id?: string | null
   description?: string | null
+  priority?: 'medium' | 'high' | null
 }) {
   const userId = await getCurrentUserId()
   if (!userId) throw new Error('Не авторизован')
@@ -49,6 +50,7 @@ export async function createTask(projectId: string, data: {
     time_estimate: data.time_estimate ?? null,
     parent_task_id: data.parent_task_id ?? null,
     description: data.description ?? null,
+    priority: data.priority ?? null,
     backlog_order: nextOrder,
   }).select('id').single()
 
@@ -145,6 +147,7 @@ export async function updateTask(taskId: string, projectId: string, data: {
   time_estimate?: number | null
   parent_task_id?: string | null
   workflow_status?: string
+  priority?: 'medium' | 'high' | null
 }) {
   const userId = await getCurrentUserId()
   const admin = createAdminClient()
@@ -167,6 +170,7 @@ export async function updateTask(taskId: string, projectId: string, data: {
       ...(data.time_estimate !== undefined && { time_estimate: data.time_estimate }),
       ...(data.parent_task_id !== undefined && { parent_task_id: data.parent_task_id }),
       ...(data.workflow_status !== undefined && { workflow_status: data.workflow_status }),
+      ...(data.priority !== undefined && { priority: data.priority }),
     })
     .eq('id', taskId)
   if (error) throw new Error(error.message)

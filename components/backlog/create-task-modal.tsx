@@ -417,6 +417,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
         parent_task_id: type === 'task' && parentId ? parentId : null,
         sprint_id: null, column_id: null, column_order: null, backlog_order: 9999,
         workflow_status: 'new' as const,
+        priority: null,
         is_recurring: false, tags: null, description: description.trim() || null,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         assignee: member ? { full_name: member.full_name, login: member.login, avatar_url: member.avatar_url } : null,

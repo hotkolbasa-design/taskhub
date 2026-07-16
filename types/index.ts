@@ -52,6 +52,7 @@ export type Task = {
   backlog_order: number | null
   is_recurring: boolean
   tags: string[] | null
+  priority: 'medium' | 'high' | null
   workflow_status: WorkflowStatus
   created_at: string
   updated_at: string

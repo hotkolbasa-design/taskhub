@@ -68,6 +68,7 @@ function EpicBlock({
   onMoveToSprint,
   onEdit,
   onWorkflowChange,
+  onPriorityChange,
   onDeadlineChange,
   onTimeChange,
   onRemoveFromEpic,
@@ -81,6 +82,7 @@ function EpicBlock({
   onMoveToSprint: (id: string) => void
   onEdit: (task: BacklogTask) => void
   onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
   onRemoveFromEpic: (id: string) => void
@@ -128,6 +130,7 @@ function EpicBlock({
           onOptimisticMoveToSprint={onMoveToSprint}
           onEdit={onEdit}
           onWorkflowChange={onWorkflowChange}
+          onPriorityChange={onPriorityChange}
           onDeadlineChange={onDeadlineChange}
           avatarMenuInRow2
           row1Suffix={
@@ -173,6 +176,7 @@ function EpicBlock({
                 onDuplicate={onDuplicate}
                 onEdit={onEdit}
                 onWorkflowChange={onWorkflowChange}
+                onPriorityChange={onPriorityChange}
                 onDeadlineChange={onDeadlineChange}
                 onTimeChange={onTimeChange}
               />
@@ -186,7 +190,7 @@ function EpicBlock({
 
 function SortableTaskRow({
   task, projectId, hasActiveSprint, insertIndicator,
-  onDelete, onMoveToSprint, onEdit, onWorkflowChange, onDeadlineChange, onTimeChange, onDuplicate,
+  onDelete, onMoveToSprint, onEdit, onWorkflowChange, onPriorityChange, onDeadlineChange, onTimeChange, onDuplicate,
 }: {
   task: BacklogTask
   projectId: string
@@ -196,6 +200,7 @@ function SortableTaskRow({
   onMoveToSprint: (id: string) => void
   onEdit: (task: BacklogTask) => void
   onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
   onDuplicate: (task: BacklogTask) => void
@@ -229,6 +234,7 @@ function SortableTaskRow({
         onDuplicate={onDuplicate}
         onEdit={onEdit}
         onWorkflowChange={onWorkflowChange}
+        onPriorityChange={onPriorityChange}
         onDeadlineChange={onDeadlineChange}
         onTimeChange={onTimeChange}
       />
@@ -689,6 +695,17 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     router.refresh()
   }, [projectId, router])
 
+  const handlePriorityChange = useCallback(async (id: string, priority: 'medium' | 'high' | null) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) return { ...t, priority }
+      if (t.subtasks.some(s => s.id === id))
+        return { ...t, subtasks: t.subtasks.map(s => s.id === id ? { ...s, priority } : s) }
+      return t
+    }))
+    await updateTask(id, projectId, { priority })
+    router.refresh()
+  }, [projectId, router])
+
   const handleRemoveFromEpic = useCallback(async (id: string) => {
     setTasks(prev => {
       const sub = prev.flatMap(t => t.subtasks).find(s => s.id === id)
@@ -869,6 +886,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onMoveToSprint={handleMoveToSprint}
                           onEdit={handleEdit}
                           onWorkflowChange={handleWorkflowChange}
+                          onPriorityChange={handlePriorityChange}
                           onDeadlineChange={handleDeadlineChange}
                           onTimeChange={handleTimeChange}
                           onRemoveFromEpic={handleRemoveFromEpic}
@@ -885,6 +903,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onMoveToSprint={handleMoveToSprint}
                           onEdit={handleEdit}
                           onWorkflowChange={handleWorkflowChange}
+                          onPriorityChange={handlePriorityChange}
                           onDeadlineChange={handleDeadlineChange}
                           onTimeChange={handleTimeChange}
                           onDuplicate={handleDuplicate}
