@@ -1,5 +1,13 @@
 export const TEST_REGEX = /тест|test/i
 
+// Returns true for test leads: contain "тест"/"test" in title,
+// or phone number consists entirely of 7s (e.g. 777777777, +7(777)777-77-77)
+export function isTestTitle(title: string): boolean {
+  if (TEST_REGEX.test(title)) return true
+  const digits = title.replace(/\D/g, '')
+  return digits.length >= 3 && /^7+$/.test(digits)
+}
+
 // Google Sheets serial number → "YYYY-MM-DD"
 // Bitrix24 writes timestamps in Almaty local time, so the serial already
 // represents the local date — no timezone offset needed.
