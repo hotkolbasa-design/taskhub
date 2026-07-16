@@ -46,12 +46,12 @@ export async function updateRange(name: string, range: string, values: (string |
   })
 }
 
-export async function appendRow(name: string, values: (string | number | null)[]): Promise<void> {
+export async function appendRow(name: string, values: (string | number | null)[], inputOption: 'USER_ENTERED' | 'RAW' = 'USER_ENTERED'): Promise<void> {
   const sheets = getClient()
   await sheets.spreadsheets.values.append({
     spreadsheetId: ID(),
     range: `'${name}'!A1`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: inputOption,
     requestBody: { values: [values] },
   })
 }
