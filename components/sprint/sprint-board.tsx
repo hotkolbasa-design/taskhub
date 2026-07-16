@@ -298,7 +298,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
       : (cols.findIndex(c => c.id === addingAfterColId) + 1)
 
     const tempId = `temp-${Date.now()}`
-    const tempCol: SprintColumn = { id: tempId, sprint_id: sprint.id, name, color, order_index: orderIndex }
+    const tempCol: SprintColumn = { id: tempId, sprint_id: sprint.id, name, color, order_index: orderIndex, role: null }
 
     const newCols = [
       ...cols.slice(0, orderIndex),
