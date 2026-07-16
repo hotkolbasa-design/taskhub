@@ -1,5 +1,5 @@
 import { sheetValues } from './sheets'
-import { stripPipeline, TEST_REGEX } from './utils'
+import { stripPipeline, isTestTitle } from './utils'
 import type { SheetRow, MilestoneStat, PipelineStat, PipelineDefinitions } from './types'
 
 export async function loadPipelineDefinitions(): Promise<PipelineDefinitions> {
@@ -46,7 +46,7 @@ export function buildPipelineStats(
 ): PipelineStat {
   const stageStats: MilestoneStat[] = stages.map(stageName => {
     const matching = rows.filter(r =>
-      r.stage === stageName && pipelineFilter(r) && !TEST_REGEX.test(r.title)
+      r.stage === stageName && pipelineFilter(r) && !isTestTitle(r.title)
     )
     const dayValues = days.map(d => countOnDay(matching, d))
     const weekValues = weeks.map(w => sumForWeek(matching, w))

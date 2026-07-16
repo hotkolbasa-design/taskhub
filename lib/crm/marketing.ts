@@ -1,5 +1,5 @@
 import type { SheetRow, MilestoneDef, MilestoneStat, ValuesSet, SpendMetrics, SourceData, GroupSourceData, MergedGroup, SpendMap, RateMap } from './types'
-import { TEST_REGEX, safeDiv } from './utils'
+import { isTestTitle, safeDiv } from './utils'
 
 const MARKETING_MILESTONES: MilestoneDef[] = [
   { name: 'Новая заявка (WhatsApp)', source: 'leads' },
@@ -69,7 +69,7 @@ function buildMilestones(
     const matching = rows.filter(r => {
       const pipelineOk = m.pipeline ? r.pipeline === m.pipeline : true
       const sourceOk = m.noSourceFilter ? true : (sourceFilter ? sourceFilter(r) : true)
-      return names.includes(r.stage) && pipelineOk && sourceOk && !TEST_REGEX.test(r.title)
+      return names.includes(r.stage) && pipelineOk && sourceOk && !isTestTitle(r.title)
     })
     const dayValues = days.map(d => countOnDay(matching, d))
     const weekValues = weeks.map(w => sumForWeek(matching, w))
@@ -86,7 +86,7 @@ function buildRevenue(
 ): ValuesSet {
   const matching = dealsRows.filter(r =>
     r.stage === REVENUE_STAGE && r.pipeline === REVENUE_PIPELINE &&
-    !TEST_REGEX.test(r.title) && (sourceFilter ? sourceFilter(r) : true)
+    !isTestTitle(r.title) && (sourceFilter ? sourceFilter(r) : true)
   )
   const dayValues = days.map(d => sumAmountOnDay(matching, d))
   const weekValues = weeks.map(w => sumAmountForWeek(matching, w))
@@ -176,9 +176,9 @@ export function buildMarketingStats(
   const sources = collectSources(leadsRows, dealsRows)
 
   const totalLeads = leadsRows.filter(r =>
-    (r.stage === 'Новая заявка (WhatsApp)' || r.stage === 'Новая заявка (Instagram)') && !TEST_REGEX.test(r.title)
+    (r.stage === 'Новая заявка (WhatsApp)' || r.stage === 'Новая заявка (Instagram)') && !isTestTitle(r.title)
   ).length
-  const totalSalesRows = dealsRows.filter(r => r.stage === REVENUE_STAGE && !TEST_REGEX.test(r.title))
+  const totalSalesRows = dealsRows.filter(r => r.stage === REVENUE_STAGE && !isTestTitle(r.title))
   const totalRevenue = totalSalesRows.reduce((s, r) => s + r.amount, 0)
 
   const overallMilestones = buildMilestones(leadsRows, dealsRows, days, weeks, null, OVERALL_MILESTONES)
