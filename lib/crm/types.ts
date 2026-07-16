@@ -46,8 +46,8 @@ export type SpendMetrics = {
 export type SourceData = {
   source: string
   milestones: MilestoneStat[]
-  revenue: ValuesSet
-  spend: SpendMetrics
+  revenue?: ValuesSet
+  spend?: SpendMetrics
 }
 
 export type PipelineStat = {
@@ -64,7 +64,7 @@ export type DashData = {
   marketing: {
     summary: { totalLeads: number; totalSales: number; totalRevenue: number }
     sources: SourceData[]
-    overall: { milestones: MilestoneStat[]; revenue: ValuesSet; spend: SpendMetrics }
+    overall: { source?: string; milestones: MilestoneStat[]; revenue?: ValuesSet; spend?: SpendMetrics }
     groups: GroupSourceData[]
   }
 }
