@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { OverviewView } from './overview-view'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -902,7 +903,7 @@ export default function CrmDashboard() {
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'voronki' | 'marketing'>('voronki')
+  const [tab, setTab] = useState<'obzor' | 'voronki' | 'marketing'>('obzor')
   const [freezing, setFreezing] = useState(false)
 
   // Inject CSS once
@@ -1071,7 +1072,7 @@ export default function CrmDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-2 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        {(['voronki', 'marketing'] as const).map(t => (
+        {(['obzor', 'voronki', 'marketing'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className="px-3 py-1.5 rounded-lg text-sm font-medium"
             style={{
@@ -1081,7 +1082,7 @@ export default function CrmDashboard() {
               cursor: 'pointer',
             }}
           >
-            {t === 'voronki' ? 'Воронки' : 'Маркетинг'}
+            {t === 'obzor' ? 'Обзор' : t === 'voronki' ? 'Воронки' : 'Маркетинг'}
           </button>
         ))}
       </div>
@@ -1095,6 +1096,7 @@ export default function CrmDashboard() {
           </div>
         ) : data ? (
           <>
+            {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} />}
             {tab === 'voronki' && <VoronkiView data={data} />}
             {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onReload={handleReload} />}
           </>
