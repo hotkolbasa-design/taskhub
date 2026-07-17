@@ -89,6 +89,7 @@ export type SprintColumn = {
 
 export type SprintTask = Task & {
   assignee: TaskAssignee | null
+  parent_epic: { id: string; title: string } | null
 }
 
 export type BacklogTask = Task & {

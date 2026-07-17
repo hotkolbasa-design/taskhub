@@ -560,6 +560,7 @@ export default function SprintPanel({
       sprint_id: sprint.id,
       column_id: null,
       status: 'sprint',
+      parent_epic: null,
     }
     onTasksChange([...tasks, sprintTask])
     try {
