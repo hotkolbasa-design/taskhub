@@ -5,7 +5,6 @@ export async function getBacklogTasks(projectId: string): Promise<BacklogTask[]>
   const admin = createAdminClient()
 
   // Все backlog задачи проекта с исполнителем
-  // Задачи бэклога + эпики всегда (независимо от их status — они могут быть в спринте)
   const { data: rows, error } = await admin
     .from('tasks')
     .select(`
@@ -13,8 +12,7 @@ export async function getBacklogTasks(projectId: string): Promise<BacklogTask[]>
       assignee:profiles!tasks_assignee_id_fkey(full_name, login, avatar_url)
     `)
     .eq('project_id', projectId)
-    .or('status.eq.backlog,type.eq.epic')
-    .neq('status', 'deleted')
+    .eq('status', 'backlog')
     .order('backlog_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true })
 
