@@ -373,6 +373,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
   const [hours, setHours] = useState('')
   const [minutes, setMinutes] = useState('')
   const [parentId, setParentId] = useState('')
+  const [priority, setPriority] = useState<'medium' | 'high' | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
@@ -401,6 +402,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
           deadline: deadline || null,
           time_estimate,
           parent_task_id: type === 'task' && parentId ? parentId : null,
+          priority: priority || null,
         })
       }
 
@@ -417,7 +419,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
         parent_task_id: type === 'task' && parentId ? parentId : null,
         sprint_id: null, column_id: null, column_order: null, backlog_order: 9999,
         workflow_status: 'new' as const,
-        priority: null,
+        priority: priority || null,
         is_recurring: false, tags: null, description: description.trim() || null,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         assignee: member ? { full_name: member.full_name, login: member.login, avatar_url: member.avatar_url } : null,
@@ -511,6 +513,39 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
                 <NumberStepper value={hours} onChange={setHours} min={0} suffix="ч" />
                 <NumberStepper value={minutes} onChange={setMinutes} min={0} max={59} suffix="мин" />
               </div>
+            </div>
+          </div>
+
+          {/* Приоритет */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Приоритет</label>
+            <div className="flex gap-2">
+              {([
+                { value: null,     label: 'Нет',     color: 'var(--text2)',  bg: 'var(--surface2)',            border: 'var(--border)' },
+                { value: 'medium', label: 'Средний', color: '#F7A84F',       bg: 'rgba(247,168,79,0.14)',      border: 'rgba(247,168,79,0.4)' },
+                { value: 'high',   label: 'Высокий', color: '#F75C6E',       bg: 'rgba(247,92,110,0.14)',      border: 'rgba(247,92,110,0.4)' },
+              ] as const).map(opt => {
+                const isSelected = priority === opt.value
+                return (
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    onClick={() => setPriority(isSelected && opt.value !== null ? null : opt.value)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{
+                      background: isSelected ? opt.bg : 'var(--surface2)',
+                      color: isSelected ? opt.color : 'var(--text2)',
+                      border: `1px solid ${isSelected ? opt.border : 'var(--border)'}`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {opt.value && (
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: isSelected ? opt.color : 'var(--text2)' }} />
+                    )}
+                    {opt.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
