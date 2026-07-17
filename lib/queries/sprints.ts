@@ -21,7 +21,7 @@ export async function getSprintData(projectId: string): Promise<SprintData | nul
 
   if (!sprint) return null
 
-  const [{ data: columns }, { data: tasks }] = await Promise.all([
+  const [{ data: columns }, { data: rawTasks }] = await Promise.all([
     admin
       .from('sprint_columns')
       .select('*')
@@ -29,7 +29,7 @@ export async function getSprintData(projectId: string): Promise<SprintData | nul
       .order('order_index', { ascending: true }),
     admin
       .from('tasks')
-      .select('*, assignee:profiles!tasks_assignee_id_fkey(full_name, login, avatar_url), parent_task:tasks!tasks_parent_task_id_fkey(id, title)')
+      .select('*, assignee:profiles!tasks_assignee_id_fkey(full_name, login, avatar_url)')
       .eq('sprint_id', sprint.id)
       .eq('status', 'sprint')
       .neq('type', 'epic')
@@ -37,13 +37,25 @@ export async function getSprintData(projectId: string): Promise<SprintData | nul
       .order('created_at', { ascending: true }),
   ])
 
+  // Отдельный запрос для эпиков (избегаем inner join, который исключает задачи без эпика)
+  const parentIds = [...new Set((rawTasks ?? []).map((t: any) => t.parent_task_id).filter(Boolean))]
+  let epicMap: Record<string, { id: string; title: string }> = {}
+  if (parentIds.length > 0) {
+    const { data: epics } = await admin
+      .from('tasks')
+      .select('id, title')
+      .in('id', parentIds)
+      .eq('type', 'epic')
+    for (const e of epics ?? []) epicMap[e.id] = e
+  }
+
   return {
     sprint,
     columns: columns ?? [],
-    tasks: (tasks ?? []).map((t: any) => ({
+    tasks: (rawTasks ?? []).map((t: any) => ({
       ...t,
       assignee: t.assignee ?? null,
-      parent_epic: t.parent_task ?? null,
+      parent_epic: t.parent_task_id ? (epicMap[t.parent_task_id] ?? null) : null,
     })),
   }
 }
