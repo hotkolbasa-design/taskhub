@@ -18,25 +18,29 @@ type Profile = {
 
 const ROLE_OPTIONS = [
   { value: 'manager', label: 'Руководитель', color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' },
-  { value: 'member', label: 'Участник', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
-  { value: 'viewer', label: 'Наблюдатель', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
+  { value: 'member',  label: 'Участник',     color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  { value: 'viewer',  label: 'Наблюдатель',  color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
 ]
 
-function UserDropdown({
-  value,
+// ─── Мультиселект пользователей ───────────────────────────────────────────────
+
+function MultiUserDropdown({
+  selected,
   onChange,
   options,
 }: {
-  value: string
-  onChange: (v: string) => void
+  selected: string[]
+  onChange: (ids: string[]) => void
   options: Profile[]
 }) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
-  const selected = options.find(o => o.id === value)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) { setSearch(''); return }
+    inputRef.current?.focus()
     function onOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
@@ -44,38 +48,68 @@ function UserDropdown({
     return () => document.removeEventListener('mousedown', onOutside)
   }, [open])
 
+  const filtered = options.filter(o => {
+    const q = search.toLowerCase()
+    return (
+      (o.full_name?.toLowerCase().includes(q) ?? false) ||
+      o.login.toLowerCase().includes(q)
+    )
+  })
+
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id])
+  }
+
+  const selectedProfiles = selected.map(id => options.find(o => o.id === id)).filter(Boolean) as Profile[]
+
   return (
-    <div ref={ref} className="relative flex-1">
-      <button
+    <div ref={ref} className="relative flex-1 min-w-0">
+      {/* Триггер */}
+      <div
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+        className="flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg cursor-pointer min-h-[38px]"
         style={{
           background: 'var(--surface2)',
-          border: '1px solid var(--border)',
-          color: selected ? 'var(--text)' : 'var(--text2)',
+          border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`,
+          transition: 'border-color 0.15s',
         }}
       >
-        {selected ? (
-          <>
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-              style={{ background: 'var(--accent)', color: '#fff' }}
+        {selectedProfiles.map(p => (
+          <span
+            key={p.id}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium shrink-0"
+            style={{ background: 'rgba(124,92,246,0.15)', color: 'var(--accent)' }}
+          >
+            {p.full_name || p.login}
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); toggle(p.id) }}
+              style={{ color: 'var(--accent)', cursor: 'pointer', lineHeight: 1 }}
             >
-              {(selected.full_name || selected.login)[0].toUpperCase()}
-            </span>
-            <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
-          </>
-        ) : (
-          <span className="flex-1">Выбрать пользователя...</span>
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </span>
+        ))}
+        {selectedProfiles.length === 0 && (
+          <span className="text-sm flex-1" style={{ color: 'var(--text2)' }}>
+            Выбрать пользователей...
+          </span>
         )}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
+        <svg
+          width="12" height="12" viewBox="0 0 12 12" fill="none"
+          className="ml-auto shrink-0"
+          style={{ opacity: 0.5, transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}
+        >
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      </button>
+      </div>
 
+      {/* Дропдаун */}
       {open && (
         <div
-          className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 w-full"
+          className="absolute left-0 top-full mt-1 rounded-xl z-50 w-full overflow-hidden"
           style={{
             background: 'var(--surface2)',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -83,37 +117,100 @@ function UserDropdown({
             animation: 'dropdownIn 0.12s ease-out',
           }}
         >
-          {options.map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => { onChange(opt.id); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
-              style={{ color: opt.id === value ? 'var(--accent)' : 'var(--text)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-            >
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-                style={{ background: opt.id === value ? 'var(--accent)' : 'var(--surface)', color: '#fff' }}
+          {/* Поиск */}
+          <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            <input
+              ref={inputRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск..."
+              className="w-full bg-transparent outline-none text-sm"
+              style={{ color: 'var(--text)' }}
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
+
+          {/* Список */}
+          <div className="max-h-52 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm" style={{ color: 'var(--text2)' }}>Не найдено</p>
+            ) : filtered.map(opt => {
+              const isSelected = selected.includes(opt.id)
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => toggle(opt.id)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left"
+                  style={{ color: 'var(--text)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {/* Чекбокс */}
+                  <span
+                    className="w-4 h-4 rounded flex items-center justify-center shrink-0"
+                    style={{
+                      background: isSelected ? 'var(--accent)' : 'transparent',
+                      border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--text2)'}`,
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {isSelected && (
+                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                        <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </span>
+                  {/* Аватар */}
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+                    style={{ background: isSelected ? 'var(--accent)' : 'var(--surface)', color: '#fff' }}
+                  >
+                    {(opt.full_name || opt.login)[0].toUpperCase()}
+                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate font-medium">{opt.full_name || opt.login}</span>
+                    {opt.full_name && <span className="text-xs truncate" style={{ color: 'var(--text2)' }}>{opt.login}</span>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Футер: Выбрать всех / Снять всё */}
+          {options.length > 1 && (
+            <div className="flex items-center justify-between px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+              <button
+                type="button"
+                onClick={() => onChange(filtered.map(o => o.id))}
+                className="text-xs"
+                style={{ color: 'var(--accent)', cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                {(opt.full_name || opt.login)[0].toUpperCase()}
-              </span>
-              <div className="flex flex-col min-w-0">
-                <span className="truncate font-medium">{opt.full_name || opt.login}</span>
-                {opt.full_name && <span className="text-xs truncate" style={{ color: 'var(--text2)' }}>{opt.login}</span>}
-              </div>
-              {opt.id === value && (
-                <svg className="ml-auto shrink-0" width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 5.5L4 7.5L8 3" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                Выбрать всех
+              </button>
+              {selected.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onChange([])}
+                  className="text-xs"
+                  style={{ color: 'var(--text2)', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+                >
+                  Снять всё
+                </button>
               )}
-            </button>
-          ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
+
+// ─── RoleDropdown ─────────────────────────────────────────────────────────────
 
 function RoleDropdown({
   value,
@@ -126,7 +223,7 @@ function RoleDropdown({
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const current = ROLE_OPTIONS.find(o => o.value === value) ?? ROLE_OPTIONS[0]
+  const current = ROLE_OPTIONS.find(o => o.value === value) ?? ROLE_OPTIONS[1]
 
   useEffect(() => {
     if (!open) return
@@ -138,12 +235,12 @@ function RoleDropdown({
   }, [open])
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <button
         onClick={() => !disabled && setOpen(o => !o)}
         disabled={disabled}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-        style={{ background: current.bg, color: current.color }}
+        style={{ background: current.bg, color: current.color, cursor: disabled ? 'default' : 'pointer' }}
         onMouseEnter={e => { if (!disabled) e.currentTarget.style.filter = 'brightness(1.2)' }}
         onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)' }}
       >
@@ -156,7 +253,7 @@ function RoleDropdown({
 
       {open && (
         <div
-          className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[140px]"
+          className="absolute right-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[140px]"
           style={{
             background: 'var(--surface2)',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -169,7 +266,7 @@ function RoleDropdown({
               key={opt.value}
               onClick={() => { onChange(opt.value as 'manager' | 'member' | 'viewer'); setOpen(false) }}
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left"
-              style={{ color: opt.value === value ? opt.color : 'var(--text)' }}
+              style={{ color: opt.value === value ? opt.color : 'var(--text)', cursor: 'pointer' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
@@ -188,6 +285,8 @@ function RoleDropdown({
   )
 }
 
+// ─── MembersSection ───────────────────────────────────────────────────────────
+
 export default function MembersSection({
   projectId,
   members,
@@ -200,7 +299,7 @@ export default function MembersSection({
   currentUserId: string
 }) {
   const router = useRouter()
-  const [addingId, setAddingId] = useState('')
+  const [addingIds, setAddingIds] = useState<string[]>([])
   const [addingRole, setAddingRole] = useState<'manager' | 'member' | 'viewer'>('member')
   const [loadingAdd, setLoadingAdd] = useState(false)
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set())
@@ -209,7 +308,6 @@ export default function MembersSection({
     () => Object.fromEntries(members.map(m => [m.user_id, m.role]))
   )
 
-  // Синхронизируем с сервером после router.refresh()
   useEffect(() => {
     setOptimisticMembers(members)
     setOptimisticRoles(Object.fromEntries(members.map(m => [m.user_id, m.role])))
@@ -219,29 +317,33 @@ export default function MembersSection({
   const notMembers = availableProfiles.filter(p => !memberIds.has(p.id))
 
   async function handleAdd() {
-    if (!addingId) return
-    const profile = availableProfiles.find(p => p.id === addingId)
-    if (!profile) return
+    if (addingIds.length === 0) return
 
-    // Мгновенно добавляем в UI
-    const newMember: Member = {
-      user_id: addingId,
-      role: addingRole,
-      profile: { full_name: profile.full_name, login: profile.login, avatar_url: null },
-    }
-    setOptimisticMembers(prev => [...prev, newMember])
-    setOptimisticRoles(r => ({ ...r, [addingId]: addingRole }))
-    setAddingId('')
+    // Оптимистично добавляем всех
+    const newMembers: Member[] = addingIds.map(id => {
+      const profile = availableProfiles.find(p => p.id === id)!
+      return { user_id: id, role: addingRole, profile: { full_name: profile.full_name, login: profile.login, avatar_url: null } }
+    })
+    setOptimisticMembers(prev => [...prev, ...newMembers])
+    setOptimisticRoles(r => {
+      const n = { ...r }
+      addingIds.forEach(id => { n[id] = addingRole })
+      return n
+    })
+    const idsToAdd = [...addingIds]
+    setAddingIds([])
 
-    // Сервер фоном
     setLoadingAdd(true)
     try {
-      await addMember(projectId, addingId, addingRole)
+      await Promise.all(idsToAdd.map(id => addMember(projectId, id, addingRole)))
       router.refresh()
     } catch {
-      // Rollback при ошибке
-      setOptimisticMembers(prev => prev.filter(m => m.user_id !== addingId))
-      setOptimisticRoles(r => { const n = { ...r }; delete n[addingId]; return n })
+      setOptimisticMembers(prev => prev.filter(m => !idsToAdd.includes(m.user_id)))
+      setOptimisticRoles(r => {
+        const n = { ...r }
+        idsToAdd.forEach(id => delete n[id])
+        return n
+      })
     } finally {
       setLoadingAdd(false)
     }
@@ -254,14 +356,12 @@ export default function MembersSection({
   }
 
   async function handleRemove(userId: string) {
-    // Мгновенно убираем из UI
     setOptimisticMembers(prev => prev.filter(m => m.user_id !== userId))
     setLoadingIds(s => new Set(s).add(userId))
     try {
       await removeMember(projectId, userId)
       router.refresh()
     } catch {
-      // Rollback при ошибке
       setOptimisticMembers(members)
     } finally {
       setLoadingIds(s => { const n = new Set(s); n.delete(userId); return n })
@@ -325,7 +425,7 @@ export default function MembersSection({
                   onClick={() => handleRemove(m.user_id)}
                   disabled={loading}
                   className="p-1.5 rounded-md transition-colors disabled:opacity-40"
-                  style={{ color: 'var(--text2)' }}
+                  style={{ color: 'var(--text2)', cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
                   title="Удалить участника"
@@ -346,38 +446,33 @@ export default function MembersSection({
         })}
       </div>
 
-      {/* Добавить участника */}
+      {/* Добавить участников */}
       <div className="flex flex-col gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-        <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Добавить участника</p>
+        <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Добавить участников</p>
 
         {notMembers.length === 0 ? (
           <p className="text-xs" style={{ color: 'var(--text2)', opacity: 0.5 }}>
             Все пользователи системы уже добавлены в проект
           </p>
         ) : (
-          <div className="flex gap-2">
-            <UserDropdown
-              value={addingId}
-              onChange={setAddingId}
+          <div className="flex gap-2 items-start">
+            <MultiUserDropdown
+              selected={addingIds}
+              onChange={setAddingIds}
               options={notMembers}
             />
-
-            <RoleDropdown
-              value={addingRole}
-              onChange={setAddingRole}
-            />
-
+            <RoleDropdown value={addingRole} onChange={setAddingRole} />
             <button
               onClick={handleAdd}
-              disabled={!addingId || loadingAdd}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-opacity disabled:opacity-40"
-              style={{ background: 'var(--accent)', color: '#fff' }}
+              disabled={addingIds.length === 0 || loadingAdd}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-opacity disabled:opacity-40 shrink-0"
+              style={{ background: 'var(--accent)', color: '#fff', cursor: addingIds.length === 0 ? 'default' : 'pointer' }}
             >
               {loadingAdd
                 ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
               }
-              Добавить
+              {addingIds.length > 1 ? `Добавить (${addingIds.length})` : 'Добавить'}
             </button>
           </div>
         )}
