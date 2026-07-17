@@ -23,9 +23,114 @@ export const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg:
 
 const WORKFLOW_ORDER: WorkflowStatus[] = ['new', 'in_progress', 'review', 'done', 'cancelled']
 
+type Priority = 'medium' | 'high' | null
+
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  medium: { label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)' },
-  high:   { label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)' },
+  none:   { label: 'Нет',     color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  medium: { label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
+  high:   { label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
+}
+const PRIORITY_ORDER: (Priority)[] = [null, 'medium', 'high']
+
+function PriorityDropdown({
+  value,
+  onChange,
+}: {
+  value: Priority
+  onChange: (v: Priority) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+  const cfg = PRIORITY_CONFIG[value ?? 'none']
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation()
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.bottom + 4, left: rect.left })
+    setOpen(o => !o)
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={handleOpen}
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-all shrink-0"
+        style={{
+          background: cfg.bg,
+          color: cfg.color,
+          cursor: 'pointer',
+          border: `1px solid ${open ? cfg.color : 'transparent'}`,
+        }}
+        title="Сменить приоритет"
+      >
+        <svg width="8" height="9" viewBox="0 0 8 9" fill="none">
+          <path d="M4 1v4M4 6.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+        {cfg.label}
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropRef}
+          className="rounded-xl py-1"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            minWidth: 150,
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          {PRIORITY_ORDER.map(p => {
+            const key = p ?? 'none'
+            const c = PRIORITY_CONFIG[key]
+            const isSelected = p === value
+            return (
+              <button
+                key={key}
+                onClick={(e) => { e.stopPropagation(); onChange(p); setOpen(false) }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left"
+                style={{ color: isSelected ? c.color : 'var(--text)', cursor: 'pointer' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <svg width="8" height="9" viewBox="0 0 8 9" fill="none">
+                  <path d="M4 1v4M4 6.5v.5" stroke={c.color} strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+                {c.label}
+                {isSelected && (
+                  <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5.5L4 7.5L8 3" stroke={c.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>,
+        document.body
+      )}
+    </>
+  )
 }
 
 function StatusDropdown({
@@ -132,11 +237,11 @@ type Props = {
   currentUserId: string
   onClick: () => void
   onStatusChange: (taskId: string, newStatus: WorkflowStatus) => void
+  onPriorityChange: (taskId: string, priority: Priority) => void
 }
 
-export default function MyTaskCard({ task, currentUserId, onClick, onStatusChange }: Props) {
+export default function MyTaskCard({ task, currentUserId, onClick, onStatusChange, onPriorityChange }: Props) {
   const isEpic = task.type === 'epic'
-  const priority = task.priority ? PRIORITY_CONFIG[task.priority] : null
   const isDone = task.workflow_status === 'done' || task.workflow_status === 'cancelled'
 
   const today = new Date(); today.setHours(0, 0, 0, 0)
@@ -209,17 +314,10 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
           value={task.workflow_status as WorkflowStatus}
           onChange={(v) => onStatusChange(task.id, v)}
         />
-        {priority && (
-          <span
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
-            style={{ background: priority.bg, color: priority.color }}
-          >
-            <svg width="7" height="7" viewBox="0 0 7 7" fill="none">
-              <path d="M3.5 1v2.5M3.5 5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
-            {priority.label}
-          </span>
-        )}
+        <PriorityDropdown
+          value={task.priority as Priority}
+          onChange={(v) => onPriorityChange(task.id, v)}
+        />
         {task.is_recurring && (
           <span className="text-xs" style={{ color: 'var(--text2)' }} title="Повторяющаяся">
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
