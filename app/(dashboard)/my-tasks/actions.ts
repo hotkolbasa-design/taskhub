@@ -35,6 +35,17 @@ export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: s
   if (error) throw new Error(error.message)
 }
 
+export async function updateTaskPriority(taskId: string, priority: 'medium' | 'high' | null) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error('Не авторизован')
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('tasks')
+    .update({ priority, updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+  if (error) throw new Error(error.message)
+}
+
 export type DrawerData = {
   task: BacklogTask
   members: { id: string; full_name: string | null; login: string; avatar_url: string | null }[]

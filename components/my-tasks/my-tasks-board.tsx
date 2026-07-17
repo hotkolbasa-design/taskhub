@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import type { MyTask } from '@/lib/queries/my-tasks'
 import MyTaskCard from './my-task-card'
 import TaskDrawer from '@/components/backlog/task-drawer'
-import { getTaskForDrawer, fetchTasksForUser, updateTaskWorkflowStatus } from '@/app/(dashboard)/my-tasks/actions'
+import { getTaskForDrawer, fetchTasksForUser, updateTaskWorkflowStatus, updateTaskPriority } from '@/app/(dashboard)/my-tasks/actions'
 import type { BacklogTask, WorkflowStatus } from '@/types'
 
 type Profile = { id: string; full_name: string | null; login: string; avatar_url: string | null }
@@ -341,6 +341,16 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
     }
   }
 
+  async function handlePriorityChange(taskId: string, priority: 'medium' | 'high' | null) {
+    const prev = tasks.find(t => t.id === taskId)?.priority
+    setTasks(ts => ts.map(t => t.id === taskId ? { ...t, priority } : t))
+    try {
+      await updateTaskPriority(taskId, priority)
+    } catch {
+      setTasks(ts => ts.map(t => t.id === taskId ? { ...t, priority: prev as any } : t))
+    }
+  }
+
   async function handleCardClick(taskId: string) {
     setDrawerLoading(true)
     const data = await getTaskForDrawer(taskId)
@@ -490,6 +500,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                         currentUserId={targetUserId}
                         onClick={() => handleCardClick(task.id)}
                         onStatusChange={handleStatusChange}
+                        onPriorityChange={handlePriorityChange}
                       />
                     ))
                   )}
