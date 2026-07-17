@@ -6,8 +6,8 @@ import { createPortal } from 'react-dom'
 import type { MyTask } from '@/lib/queries/my-tasks'
 import MyTaskCard from './my-task-card'
 import TaskDrawer from '@/components/backlog/task-drawer'
-import { getTaskForDrawer, fetchTasksForUser } from '@/app/(dashboard)/my-tasks/actions'
-import type { BacklogTask } from '@/types'
+import { getTaskForDrawer, fetchTasksForUser, updateTaskWorkflowStatus } from '@/app/(dashboard)/my-tasks/actions'
+import type { BacklogTask, WorkflowStatus } from '@/types'
 
 type Profile = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
@@ -19,7 +19,7 @@ type Props = {
 }
 
 type RoleFilter = 'assignee' | 'creator'
-type ColumnKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'no_deadline'
+type ColumnKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'no_deadline' | 'completed'
 
 const COLUMNS: { key: ColumnKey; label: string; color: string; bg: string }[] = [
   { key: 'overdue',    label: 'Просрочены',          color: '#F75C6E', bg: 'rgba(247,92,110,0.12)' },
@@ -27,9 +27,11 @@ const COLUMNS: { key: ColumnKey; label: string; color: string; bg: string }[] = 
   { key: 'this_week',  label: 'На этой неделе',       color: '#4F8EF7', bg: 'rgba(79,142,247,0.12)' },
   { key: 'next_week',  label: 'На следующей неделе',  color: '#8892A4', bg: 'rgba(136,146,164,0.10)' },
   { key: 'no_deadline',label: 'Без срока',            color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  { key: 'completed',  label: 'Выполненные',          color: '#2DD4A0', bg: 'rgba(45,212,160,0.08)' },
 ]
 
 function getColumnKey(deadline: string | null, workflowStatus: string): ColumnKey {
+  if (workflowStatus === 'done' || workflowStatus === 'cancelled') return 'completed'
   if (!deadline) return 'no_deadline'
 
   const today = new Date(); today.setHours(0,0,0,0)
@@ -275,7 +277,6 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
   const [tasks, setTasks] = useState<MyTask[]>(initialTasks)
   const [roleFilter, setRoleFilter] = useState<RoleFilter[]>(['assignee'])
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
-  const [showCompleted, setShowCompleted] = useState(false)
   const [targetUserId, setTargetUserId] = useState(currentUserId)
   const [loadingTarget, setLoadingTarget] = useState(false)
 
@@ -320,7 +321,6 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
     )
     if (!byRole) return false
     if (projectFilter && t.project_id !== projectFilter) return false
-    if (!showCompleted && (t.workflow_status === 'done' || t.workflow_status === 'cancelled' || t.status === 'done')) return false
     return true
   })
 
@@ -329,6 +329,16 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
   for (const t of filteredTasks) {
     const col = getColumnKey(t.deadline, t.workflow_status)
     grouped[col].push(t)
+  }
+
+  async function handleStatusChange(taskId: string, newStatus: WorkflowStatus) {
+    const prev = tasks.find(t => t.id === taskId)?.workflow_status
+    setTasks(ts => ts.map(t => t.id === taskId ? { ...t, workflow_status: newStatus } : t))
+    try {
+      await updateTaskWorkflowStatus(taskId, newStatus)
+    } catch {
+      setTasks(ts => ts.map(t => t.id === taskId ? { ...t, workflow_status: prev as WorkflowStatus } : t))
+    }
   }
 
   async function handleCardClick(taskId: string) {
@@ -412,24 +422,6 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
               onChange={setProjectFilter}
             />
 
-            {/* Показать выполненные */}
-            <button
-              onClick={() => setShowCompleted(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-              style={{
-                background: showCompleted ? 'rgba(45,212,160,0.1)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${showCompleted ? 'rgba(45,212,160,0.4)' : 'var(--border)'}`,
-                color: showCompleted ? 'var(--green)' : 'var(--text2)',
-                cursor: 'pointer',
-              }}
-            >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                <rect x="1" y="1" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.2"/>
-                <path d="M3 5.5l2 2 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Выполненные
-            </button>
-
             {/* Выбор сотрудника (только admin) */}
             {isAdmin && allProfiles.length > 0 && (
               <EmployeeDropdown
@@ -497,6 +489,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                         task={task}
                         currentUserId={targetUserId}
                         onClick={() => handleCardClick(task.id)}
+                        onStatusChange={handleStatusChange}
                       />
                     ))
                   )}

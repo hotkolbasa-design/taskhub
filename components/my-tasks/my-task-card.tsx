@@ -1,6 +1,9 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { MyTask } from '@/lib/queries/my-tasks'
+import type { WorkflowStatus } from '@/types'
 
 const AVATAR_COLORS = ['#7C5CF6', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
 
@@ -10,7 +13,7 @@ function getAvatarColor(str: string) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
-const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+export const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   new:         { label: 'Новая',       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
   in_progress: { label: 'В работе',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
   review:      { label: 'На проверке', color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
@@ -18,20 +21,121 @@ const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string
   cancelled:   { label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 }
 
+const WORKFLOW_ORDER: WorkflowStatus[] = ['new', 'in_progress', 'review', 'done', 'cancelled']
+
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   medium: { label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)' },
   high:   { label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)' },
+}
+
+function StatusDropdown({
+  value,
+  onChange,
+}: {
+  value: WorkflowStatus
+  onChange: (v: WorkflowStatus) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+  const wf = WORKFLOW_CONFIG[value] ?? WORKFLOW_CONFIG.new
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation()
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.bottom + 4, left: rect.left })
+    setOpen(o => !o)
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={handleOpen}
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-all shrink-0"
+        style={{
+          background: wf.bg,
+          color: wf.color,
+          cursor: 'pointer',
+          border: `1px solid ${open ? wf.color : 'transparent'}`,
+        }}
+        title="Сменить статус"
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wf.color }} />
+        {wf.label}
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropRef}
+          className="rounded-xl py-1"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            minWidth: 170,
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          {WORKFLOW_ORDER.map(status => {
+            const cfg = WORKFLOW_CONFIG[status]
+            return (
+              <button
+                key={status}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onChange(status)
+                  setOpen(false)
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left"
+                style={{ color: status === value ? cfg.color : 'var(--text)', cursor: 'pointer' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.color }} />
+                {cfg.label}
+                {status === value && (
+                  <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M2 5.5L4 7.5L8 3" stroke={cfg.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>,
+        document.body
+      )}
+    </>
+  )
 }
 
 type Props = {
   task: MyTask
   currentUserId: string
   onClick: () => void
+  onStatusChange: (taskId: string, newStatus: WorkflowStatus) => void
 }
 
-export default function MyTaskCard({ task, currentUserId, onClick }: Props) {
+export default function MyTaskCard({ task, currentUserId, onClick, onStatusChange }: Props) {
   const isEpic = task.type === 'epic'
-  const wf = WORKFLOW_CONFIG[task.workflow_status] ?? WORKFLOW_CONFIG.new
   const priority = task.priority ? PRIORITY_CONFIG[task.priority] : null
   const isDone = task.workflow_status === 'done' || task.workflow_status === 'cancelled'
 
@@ -61,9 +165,9 @@ export default function MyTaskCard({ task, currentUserId, onClick }: Props) {
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
-        borderLeft: isEpic ? '3px solid var(--yellow)' : `1px solid var(--border)`,
+        borderLeft: isEpic ? '3px solid var(--yellow)' : '1px solid var(--border)',
         cursor: 'pointer',
-        opacity: isDone ? 0.6 : 1,
+        opacity: isDone ? 0.65 : 1,
         transition: 'border-color 0.12s, box-shadow 0.12s',
       }}
       onMouseEnter={e => {
@@ -77,37 +181,37 @@ export default function MyTaskCard({ task, currentUserId, onClick }: Props) {
     >
       {/* Проект */}
       <div className="flex items-center gap-1.5">
-        <span
-          className="w-2 h-2 rounded-full shrink-0"
-          style={{ background: task.project_color }}
-        />
-        <span className="text-xs truncate" style={{ color: 'var(--text2)' }}>
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: task.project_color }} />
+        <span className="text-xs truncate flex-1" style={{ color: 'var(--text2)' }}>
           {task.project_name}
         </span>
         {isEpic && (
-          <span className="ml-auto text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(247,192,79,0.12)', color: 'var(--yellow)' }}>
+          <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(247,192,79,0.12)', color: 'var(--yellow)' }}>
             Эпик
           </span>
         )}
       </div>
 
       {/* Заголовок */}
-      <p className="text-sm leading-snug" style={{ color: isDone ? 'var(--text2)' : 'var(--text)', textDecoration: isDone ? 'line-through' : 'none' }}>
+      <p
+        className="text-sm leading-snug"
+        style={{
+          color: isDone ? 'var(--text2)' : 'var(--text)',
+          textDecoration: isDone ? 'line-through' : 'none',
+        }}
+      >
         {task.title}
       </p>
 
-      {/* Статус + приоритет */}
+      {/* Статус (кликабельный) + приоритет */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
-          style={{ background: wf.bg, color: wf.color }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wf.color }} />
-          {wf.label}
-        </span>
+        <StatusDropdown
+          value={task.workflow_status as WorkflowStatus}
+          onChange={(v) => onStatusChange(task.id, v)}
+        />
         {priority && (
           <span
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
             style={{ background: priority.bg, color: priority.color }}
           >
             <svg width="7" height="7" viewBox="0 0 7 7" fill="none">
@@ -192,7 +296,6 @@ export default function MyTaskCard({ task, currentUserId, onClick }: Props) {
               }
             </div>
           )}
-          {/* Метка роли текущего пользователя */}
           <span className="ml-1.5 text-xs" style={{ color: 'var(--text2)', opacity: 0.7 }}>
             {isAssignee && isCreator ? 'я' : isAssignee ? 'исп.' : isCreator ? 'пост.' : ''}
           </span>

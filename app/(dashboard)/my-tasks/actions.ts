@@ -20,9 +20,19 @@ async function getCurrentUser() {
 export async function fetchTasksForUser(targetUserId: string) {
   const user = await getCurrentUser()
   if (!user) return []
-  // Only admin can view other users' tasks
   const effectiveId = user.role === 'admin' ? targetUserId : user.id
   return getMyTasks(effectiveId)
+}
+
+export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: string) {
+  const user = await getCurrentUser()
+  if (!user) throw new Error('Не авторизован')
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('tasks')
+    .update({ workflow_status: workflowStatus, updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+  if (error) throw new Error(error.message)
 }
 
 export type DrawerData = {
