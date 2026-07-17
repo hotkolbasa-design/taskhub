@@ -269,7 +269,7 @@ function ComputedRow({ label, v, fmt }: { label: string; v: ValuesSet; fmt: (n: 
 
 // ─── SpendInput ───────────────────────────────────────────────────────────────
 
-function SpendInput({ initialValue, onSave }: { initialValue: number; onSave: (v: number) => void }) {
+function SpendInput({ initialValue, onSave, suffix }: { initialValue: number; onSave: (v: number) => void; suffix?: string }) {
   const [val, setVal] = useState(String(initialValue || ''))
   const focusedRef = useRef(false)
 
@@ -279,25 +279,25 @@ function SpendInput({ initialValue, onSave }: { initialValue: number; onSave: (v
   }, [initialValue])
 
   return (
-    <input type="number" value={val} placeholder="0"
-      onChange={e => setVal(e.target.value)}
-      onFocus={() => { focusedRef.current = true }}
-      onBlur={() => { focusedRef.current = false; onSave(Number(val) || 0) }}
-      className="crm-input"
-      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' } as React.CSSProperties}
-    />
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input type="number" value={val} placeholder="0"
+        onChange={e => setVal(e.target.value)}
+        onFocus={() => { focusedRef.current = true }}
+        onBlur={() => { focusedRef.current = false; onSave(Number(val) || 0) }}
+        className="crm-input"
+        style={{ WebkitAppearance: 'none', MozAppearance: 'textfield', paddingRight: suffix ? 20 : undefined } as React.CSSProperties}
+      />
+      {suffix && (
+        <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 10, fontWeight: 700, color: 'var(--text2)', pointerEvents: 'none', lineHeight: 1 }}>
+          {suffix}
+        </span>
+      )}
+    </div>
   )
 }
 
 // ─── SpendSection ─────────────────────────────────────────────────────────────
 
-function CurrencyBadge({ symbol, color, bg }: { symbol: string; color: string; bg: string }) {
-  return (
-    <span style={{ fontSize: 9, fontWeight: 700, color, background: bg, borderRadius: 3, padding: '1px 4px', flexShrink: 0, lineHeight: '14px', letterSpacing: '0.02em' }}>
-      {symbol}
-    </span>
-  )
-}
 
 function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
   src: string; spend: Spend; daysIso: string[]; data: DashData; editable: boolean
@@ -328,10 +328,7 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
         <td className="crm-cell crm-col-label crm-lbl">{label}</td>
         {v.dayValues.map((x, i) => (
           <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <SpendInput initialValue={x} onSave={val => onSave(daysIso[i], src, field, val)} />
-              {currency === '$' && <CurrencyBadge symbol="$" color="var(--accent)" bg="rgba(124,92,246,0.1)" />}
-            </div>
+            <SpendInput initialValue={x} onSave={val => onSave(daysIso[i], src, field, val)} suffix={currency} />
           </td>
         ))}
         {v.weekValues.map((x, i) => <td key={i} className={cellCls(x, 'crm-col-week')}>{fmt(x)}</td>)}
@@ -392,10 +389,7 @@ function RateSection({ data, onSaveRate }: {
         <td className="crm-cell crm-col-label crm-lbl" style={{ color: 'var(--text2)', fontWeight: 500 }}>₸ за 1$</td>
         {data.daysIso.map((d, i) => (
           <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <SpendInput initialValue={data.rateMap?.[d] ?? 0} onSave={v => onSaveRate(d, v)} />
-              <CurrencyBadge symbol="₸" color="var(--green)" bg="rgba(18,160,122,0.1)" />
-            </div>
+            <SpendInput initialValue={data.rateMap?.[d] ?? 0} onSave={v => onSaveRate(d, v)} suffix="₸" />
           </td>
         ))}
         {weekAverages.map((avg, wi) => (
