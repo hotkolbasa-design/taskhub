@@ -72,6 +72,7 @@ function cvChip(c: number | null) {
 }
 function fmtMoney(v: number, unit: string) {
   if (v === 0) return '0' + unit
+  if (unit.includes('₸')) return Math.round(v).toLocaleString('ru-RU') + unit
   if (Math.abs(v) < 0.01) return '<0.01' + unit
   if (Math.abs(v) < 1) return (Math.round(v * 100) / 100).toLocaleString('ru-RU') + unit
   return (Math.round(v * 10) / 10).toLocaleString('ru-RU') + unit
@@ -240,20 +241,17 @@ function CvRow({ a, b }: { a: Milestone; b: Milestone }) {
 }
 
 function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
+  const fmt = (x: number) => x ? `${Math.round(x).toLocaleString('ru-RU')} ₸` : '0'
   return (
     <tr>
       <td className="crm-cell crm-col-label crm-lbl">{label}</td>
       {v.dayValues.map((x, i) => (
-        <td key={i} className={`crm-cell crm-col-day ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
-          {x ? x.toLocaleString('ru-RU') : 0}
-        </td>
+        <td key={i} className={`crm-cell crm-col-day ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{fmt(x)}</td>
       ))}
       {v.weekValues.map((x, i) => (
-        <td key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>
-          {x ? x.toLocaleString('ru-RU') : 0}
-        </td>
+        <td key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{fmt(x)}</td>
       ))}
-      <td className="crm-cell crm-col-total">{v.total.toLocaleString('ru-RU')} ₸</td>
+      <td className="crm-cell crm-col-total">{Math.round(v.total).toLocaleString('ru-RU')} ₸</td>
     </tr>
   )
 }
@@ -293,26 +291,51 @@ function SpendInput({ initialValue, onSave }: { initialValue: number; onSave: (v
 
 // ─── SpendSection ─────────────────────────────────────────────────────────────
 
+function CurrencyBadge({ symbol, color, bg }: { symbol: string; color: string; bg: string }) {
+  return (
+    <span style={{ fontSize: 9, fontWeight: 700, color, background: bg, borderRadius: 3, padding: '1px 4px', flexShrink: 0, lineHeight: '14px', letterSpacing: '0.02em' }}>
+      {symbol}
+    </span>
+  )
+}
+
 function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
   src: string; spend: Spend; daysIso: string[]; data: DashData; editable: boolean
   onSave: (dateIso: string, source: string, field: string, value: number) => void
 }) {
-  function editRow(label: string, field: string, v: ValuesSet) {
+  function editRow(label: string, field: string, v: ValuesSet, currency?: '$') {
+    const fmt = (n: number) => {
+      if (n === 0) return '0'
+      if (currency === '$') {
+        return (Math.round(n * 100) / 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' $'
+      }
+      return Math.round(n).toLocaleString('ru-RU')
+    }
+    const cellCls = (n: number, col: string) => `crm-cell ${col} ${n === 0 ? 'crm-zero' : 'crm-value'}`
+
     if (!editable) {
-      return <DataRow name={label} dayValues={v.dayValues} weekValues={v.weekValues} total={v.total} />
+      return (
+        <tr>
+          <td className="crm-cell crm-col-label crm-lbl">{label}</td>
+          {v.dayValues.map((x, i) => <td key={i} className={cellCls(x, 'crm-col-day')}>{fmt(x)}</td>)}
+          {v.weekValues.map((x, i) => <td key={i} className={cellCls(x, 'crm-col-week')}>{fmt(x)}</td>)}
+          <td className={`crm-cell crm-col-total ${v.total === 0 ? 'crm-zero' : ''}`}>{fmt(v.total)}</td>
+        </tr>
+      )
     }
     return (
       <tr>
         <td className="crm-cell crm-col-label crm-lbl">{label}</td>
         {v.dayValues.map((x, i) => (
           <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
-            <SpendInput initialValue={x} onSave={val => onSave(daysIso[i], src, field, val)} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <SpendInput initialValue={x} onSave={val => onSave(daysIso[i], src, field, val)} />
+              {currency === '$' && <CurrencyBadge symbol="$" color="var(--accent)" bg="rgba(124,92,246,0.1)" />}
+            </div>
           </td>
         ))}
-        {v.weekValues.map((x, i) => (
-          <td key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{x}</td>
-        ))}
-        <td className={`crm-cell crm-col-total ${v.total === 0 ? 'crm-zero' : ''}`}>{v.total}</td>
+        {v.weekValues.map((x, i) => <td key={i} className={cellCls(x, 'crm-col-week')}>{fmt(x)}</td>)}
+        <td className={`crm-cell crm-col-total ${v.total === 0 ? 'crm-zero' : ''}`}>{fmt(v.total)}</td>
       </tr>
     )
   }
@@ -325,7 +348,7 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
         <td className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</td>
         <td className="crm-spend-filler" colSpan={fillerColSpan} />
       </tr>
-      {editRow('Потрачено, $', 'spent', spend.spent)}
+      {editRow('Потрачено, $', 'spent', spend.spent, '$')}
       {editRow('Показы', 'impressions', spend.impressions)}
       {editRow('Клики', 'clicks', spend.clicks)}
       <ComputedRow label="CTR, %" v={spend.ctr} fmt={fmtPct} />
@@ -369,7 +392,10 @@ function RateSection({ data, onSaveRate }: {
         <td className="crm-cell crm-col-label crm-lbl" style={{ color: 'var(--text2)', fontWeight: 500 }}>₸ за 1$</td>
         {data.daysIso.map((d, i) => (
           <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
-            <SpendInput initialValue={data.rateMap?.[d] ?? 0} onSave={v => onSaveRate(d, v)} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <SpendInput initialValue={data.rateMap?.[d] ?? 0} onSave={v => onSaveRate(d, v)} />
+              <CurrencyBadge symbol="₸" color="var(--green)" bg="rgba(18,160,122,0.1)" />
+            </div>
           </td>
         ))}
         {weekAverages.map((avg, wi) => (
