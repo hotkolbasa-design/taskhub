@@ -29,9 +29,10 @@ export async function getSprintData(projectId: string): Promise<SprintData | nul
       .order('order_index', { ascending: true }),
     admin
       .from('tasks')
-      .select('*, assignee:profiles!tasks_assignee_id_fkey(full_name, login, avatar_url)')
+      .select('*, assignee:profiles!tasks_assignee_id_fkey(full_name, login, avatar_url), parent_task:tasks!tasks_parent_task_id_fkey(id, title)')
       .eq('sprint_id', sprint.id)
       .eq('status', 'sprint')
+      .neq('type', 'epic')
       .order('column_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true }),
   ])
@@ -39,6 +40,10 @@ export async function getSprintData(projectId: string): Promise<SprintData | nul
   return {
     sprint,
     columns: columns ?? [],
-    tasks: (tasks ?? []).map((t: any) => ({ ...t, assignee: t.assignee ?? null })),
+    tasks: (tasks ?? []).map((t: any) => ({
+      ...t,
+      assignee: t.assignee ?? null,
+      parent_epic: t.parent_task ?? null,
+    })),
   }
 }
