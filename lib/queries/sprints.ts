@@ -32,7 +32,6 @@ export async function getSprintData(projectId: string): Promise<SprintData | nul
       .select('*, assignee:profiles!tasks_assignee_id_fkey(full_name, login, avatar_url)')
       .eq('sprint_id', sprint.id)
       .eq('status', 'sprint')
-      .neq('type', 'epic')
       .order('column_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true }),
   ])
