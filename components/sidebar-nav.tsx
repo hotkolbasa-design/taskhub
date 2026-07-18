@@ -79,6 +79,16 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: '/trash',
+    label: 'Корзина',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2.5 4.5h11M6 4.5V3a1 1 0 011-1h2a1 1 0 011 1v1.5M4.5 4.5l.75 8.5A1.5 1.5 0 006.75 14.5h2.5a1.5 1.5 0 001.5-1.5l.75-8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M6.5 7.5v4M9.5 7.5v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
 ]
 
 function timeAgo(dateStr: string): string {
