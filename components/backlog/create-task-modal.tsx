@@ -421,6 +421,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
         workflow_status: 'new' as const,
         priority: priority || null,
         is_recurring: false, tags: null, description: description.trim() || null,
+        deleted_at: null, deleted_by: null,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         assignee: member ? { full_name: member.full_name, login: member.login, avatar_url: member.avatar_url } : null,
         subtasks: [], subtask_total: 0, subtask_done: 0,

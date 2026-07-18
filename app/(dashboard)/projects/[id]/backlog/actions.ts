@@ -72,10 +72,10 @@ export async function createTask(projectId: string, data: {
 
 export async function deleteTask(taskId: string, projectId: string) {
   const admin = createAdminClient()
-  // Мягкое удаление — статус deleted
+  const userId = await getCurrentUserId()
   const { error } = await admin
     .from('tasks')
-    .update({ status: 'deleted' })
+    .update({ status: 'deleted', deleted_at: new Date().toISOString(), deleted_by: userId })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
   revalidatePath(`/projects/${projectId}/backlog`)

@@ -54,6 +54,8 @@ export type Task = {
   tags: string[] | null
   priority: 'medium' | 'high' | null
   workflow_status: WorkflowStatus
+  deleted_at: string | null
+  deleted_by: string | null
   created_at: string
   updated_at: string
 }
