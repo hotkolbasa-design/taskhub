@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import type { TrashTask } from '@/lib/queries/trash'
-import { restoreTask } from '@/app/(dashboard)/trash/actions'
+import { restoreTask, getTaskDrawerData, type DrawerData } from '@/app/(dashboard)/trash/actions'
+import TaskDrawer from '@/components/backlog/task-drawer'
+import type { BacklogTask } from '@/types'
 
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return 'неизвестно'
@@ -29,7 +31,8 @@ function ProjectDot({ color, name }: { color: string; name: string }) {
 function RestoreButton({ taskId, onRestore }: { taskId: string; onRestore: (id: string) => void }) {
   const [pending, startTransition] = useTransition()
 
-  function handleClick() {
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation()
     startTransition(async () => {
       await restoreTask(taskId)
       onRestore(taskId)
@@ -68,9 +71,23 @@ function RestoreButton({ taskId, onRestore }: { taskId: string; onRestore: (id: 
 
 export default function TrashClient({ initialTasks }: { initialTasks: TrashTask[] }) {
   const [tasks, setTasks] = useState(initialTasks)
+  const [drawer, setDrawer] = useState<DrawerData | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
 
   function handleRestore(id: string) {
     setTasks(prev => prev.filter(t => t.id !== id))
+    if (drawer?.task.id === id) setDrawer(null)
+  }
+
+  async function handleOpenTask(taskId: string) {
+    if (loadingId) return
+    setLoadingId(taskId)
+    try {
+      const data = await getTaskDrawerData(taskId)
+      setDrawer(data)
+    } finally {
+      setLoadingId(null)
+    }
   }
 
   return (
@@ -112,67 +129,94 @@ export default function TrashClient({ initialTasks }: { initialTasks: TrashTask[
           </div>
         ) : (
           <div className="flex flex-col gap-1.5" style={{ maxWidth: 760 }}>
-            {tasks.map(task => (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{
-                  background: 'var(--surface2)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                {/* Иконка типа */}
-                <div className="shrink-0">
-                  {task.type === 'epic' ? (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--yellow)' }}>
-                      <path d="M8 1.5L3 7.5h4l-1 4 5-6H8l.5-4.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="rgba(247,192,79,0.15)"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--text2)', opacity: 0.4 }}>
-                      <rect x="1.5" y="1.5" width="11" height="11" rx="2.5" stroke="currentColor" strokeWidth="1.2"/>
-                    </svg>
-                  )}
-                </div>
-
-                {/* Название */}
-                <p
-                  className="text-sm flex-1 min-w-0 truncate"
-                  style={{ color: 'var(--text)' }}
-                  title={task.title}
+            {tasks.map(task => {
+              const isLoading = loadingId === task.id
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => handleOpenTask(task.id)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors"
+                  style={{
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    cursor: isLoading ? 'default' : 'pointer',
+                  }}
+                  onMouseEnter={e => { if (!isLoading) e.currentTarget.style.background = 'var(--surface3, rgba(255,255,255,0.04))' }}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--surface2)'}
                 >
-                  {task.title}
-                </p>
+                  {/* Иконка типа / спиннер */}
+                  <div className="shrink-0 w-4 h-4 flex items-center justify-center">
+                    {isLoading ? (
+                      <span
+                        className="w-3.5 h-3.5 rounded-full border border-t-transparent animate-spin"
+                        style={{ borderColor: 'var(--text2)', borderTopColor: 'transparent' }}
+                      />
+                    ) : task.type === 'epic' ? (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--yellow)' }}>
+                        <path d="M8 1.5L3 7.5h4l-1 4 5-6H8l.5-4.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="rgba(247,192,79,0.15)"/>
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--text2)', opacity: 0.4 }}>
+                        <rect x="1.5" y="1.5" width="11" height="11" rx="2.5" stroke="currentColor" strokeWidth="1.2"/>
+                      </svg>
+                    )}
+                  </div>
 
-                {/* Проект */}
-                <div className="hidden sm:flex shrink-0" style={{ width: 160 }}>
-                  <ProjectDot color={task.project_color} name={task.project_name} />
-                </div>
+                  {/* Название */}
+                  <p
+                    className="text-sm flex-1 min-w-0 truncate"
+                    style={{ color: 'var(--text)' }}
+                    title={task.title}
+                  >
+                    {task.title}
+                  </p>
 
-                {/* Кто удалил */}
-                <div className="hidden md:block shrink-0" style={{ width: 120 }}>
-                  {task.deleter_name ? (
-                    <span className="text-xs truncate block" style={{ color: 'var(--text2)' }}>
-                      {task.deleter_name}
+                  {/* Проект */}
+                  <div className="hidden sm:flex shrink-0" style={{ width: 160 }}>
+                    <ProjectDot color={task.project_color} name={task.project_name} />
+                  </div>
+
+                  {/* Кто удалил */}
+                  <div className="hidden md:block shrink-0" style={{ width: 120 }}>
+                    {task.deleter_name ? (
+                      <span className="text-xs truncate block" style={{ color: 'var(--text2)' }}>
+                        {task.deleter_name}
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: 'var(--text2)', opacity: 0.4 }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Когда удалено */}
+                  <div className="hidden md:block shrink-0" style={{ width: 100 }}>
+                    <span className="text-xs" style={{ color: 'var(--text2)' }}>
+                      {timeAgo(task.deleted_at)}
                     </span>
-                  ) : (
-                    <span className="text-xs" style={{ color: 'var(--text2)', opacity: 0.4 }}>—</span>
-                  )}
-                </div>
+                  </div>
 
-                {/* Когда удалено */}
-                <div className="hidden md:block shrink-0" style={{ width: 100 }}>
-                  <span className="text-xs" style={{ color: 'var(--text2)' }}>
-                    {timeAgo(task.deleted_at)}
-                  </span>
+                  {/* Кнопка восстановления */}
+                  <RestoreButton taskId={task.id} onRestore={handleRestore} />
                 </div>
-
-                {/* Кнопка */}
-                <RestoreButton taskId={task.id} onRestore={handleRestore} />
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
+
+      {/* Drawer */}
+      {drawer && (
+        <TaskDrawer
+          task={drawer.task}
+          projectId={drawer.task.project_id}
+          members={drawer.members}
+          epics={drawer.epics}
+          initialComments={drawer.comments}
+          onClose={() => setDrawer(null)}
+          onUpdated={(updated: Partial<BacklogTask> & { id: string }) => {
+            setDrawer(prev => prev ? { ...prev, task: { ...prev.task, ...updated } } : prev)
+          }}
+        />
+      )}
     </div>
   )
 }
