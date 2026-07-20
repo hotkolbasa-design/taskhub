@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 
 async function getSession() {
   const supabase = await createClient()
@@ -33,8 +33,8 @@ export async function updateProject(projectId: string, data: {
     .eq('id', projectId)
 
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/settings`)
-  revalidatePath('/projects')
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('projects', "default")
 }
 
 export async function addMember(projectId: string, userId: string, role: 'manager' | 'member' | 'viewer') {
@@ -46,7 +46,7 @@ export async function addMember(projectId: string, userId: string, role: 'manage
     .insert({ project_id: projectId, user_id: userId, role })
 
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/settings`)
+  revalidateTag(`tasks-${projectId}`, "default")
 }
 
 export async function updateMemberRole(projectId: string, userId: string, role: 'manager' | 'member' | 'viewer') {
@@ -60,7 +60,7 @@ export async function updateMemberRole(projectId: string, userId: string, role: 
     .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/settings`)
+  revalidateTag(`tasks-${projectId}`, "default")
 }
 
 export async function removeMember(projectId: string, userId: string) {
@@ -74,5 +74,5 @@ export async function removeMember(projectId: string, userId: string) {
     .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/settings`)
+  revalidateTag(`tasks-${projectId}`, "default")
 }

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 
 const WEEKDAY_COLUMNS = [
   { name: 'Новые',       color: '#8892A4' },
@@ -59,7 +59,8 @@ export async function createSprint(projectId: string, data: {
       role: c.role,
     })))
 
-  revalidatePath(`/projects/${projectId}/sprint`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function closeSprint(sprintId: string, projectId: string) {
@@ -96,9 +97,9 @@ export async function closeSprint(sprintId: string, projectId: string) {
     fixed_task_ids: taskIds,
   }).eq('id', sprintId)
 
-  revalidatePath(`/projects/${projectId}/sprint`)
-  revalidatePath(`/projects/${projectId}/backlog`)
-  revalidatePath(`/projects/${projectId}/sprints`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag(`sprints-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function getTasksMissingData(sprintId: string) {
@@ -130,9 +131,9 @@ export async function deleteClosedSprint(sprintId: string, projectId: string) {
   await admin.from('sprint_columns').delete().eq('sprint_id', sprintId)
   await admin.from('sprints').delete().eq('id', sprintId)
 
-  revalidatePath(`/projects/${projectId}/sprint`)
-  revalidatePath(`/projects/${projectId}/backlog`)
-  revalidatePath(`/projects/${projectId}/sprints`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag(`sprints-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function unfixSprint(sprintId: string, projectId: string) {
@@ -144,9 +145,9 @@ export async function unfixSprint(sprintId: string, projectId: string) {
     fixed_task_ids: null,
   }).eq('id', sprintId)
 
-  revalidatePath(`/projects/${projectId}/sprint`)
-  revalidatePath(`/projects/${projectId}/backlog`)
-  revalidatePath(`/projects/${projectId}/sprints`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag(`sprints-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function fixSprint(sprintId: string, projectId: string) {
@@ -167,8 +168,8 @@ export async function fixSprint(sprintId: string, projectId: string) {
     fixed_task_ids: taskIds,
   }).eq('id', sprintId)
 
-  revalidatePath(`/projects/${projectId}/sprint`)
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function moveTaskInSprint(
@@ -202,7 +203,8 @@ export async function deleteSprintColumn(columnId: string, sprintId: string, pro
   }
 
   await admin.from('sprint_columns').delete().eq('id', columnId)
-  revalidatePath(`/projects/${projectId}/sprint`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function reorderSprintColumns(
@@ -248,6 +250,7 @@ export async function createSprintColumn(
   }).select().single()
 
   if (error || !col) throw new Error(error?.message ?? 'Ошибка создания колонки')
-  revalidatePath(`/projects/${projectId}/sprint`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
   return col as { id: string; sprint_id: string; name: string; color: string; order_index: number }
 }

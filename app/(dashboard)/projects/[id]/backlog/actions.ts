@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
 
 async function getCurrentUserId() {
@@ -67,7 +67,8 @@ export async function createTask(projectId: string, data: {
     }])
   }
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function deleteTask(taskId: string, projectId: string) {
@@ -78,7 +79,9 @@ export async function deleteTask(taskId: string, projectId: string) {
     .update({ status: 'deleted', deleted_at: new Date().toISOString(), deleted_by: userId })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
+  revalidateTag('trash', "default")
 }
 
 export async function moveToSprint(taskId: string, projectId: string) {
@@ -135,7 +138,8 @@ export async function moveToSprint(taskId: string, projectId: string) {
     }
   }
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function updateTask(taskId: string, projectId: string, data: {
@@ -224,7 +228,8 @@ export async function updateTask(taskId: string, projectId: string, data: {
     }
   }
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function getActivities(taskId: string) {
@@ -309,7 +314,8 @@ export async function createComment(
     }
   }
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function moveBackToBacklog(taskId: string, projectId: string, parentTaskId?: string | null) {
@@ -368,7 +374,8 @@ export async function moveBackToBacklog(taskId: string, projectId: string, paren
     }
   }
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function reorderBacklog(projectId: string, orderedIds: string[]) {
@@ -378,7 +385,8 @@ export async function reorderBacklog(projectId: string, orderedIds: string[]) {
       admin.from('tasks').update({ backlog_order: index + 1 }).eq('id', id)
     )
   )
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function deleteSprint(sprintId: string, projectId: string) {
@@ -419,14 +427,17 @@ export async function deleteSprint(sprintId: string, projectId: string) {
   await admin.from('sprint_columns').delete().eq('sprint_id', sprintId)
   await admin.from('sprints').delete().eq('id', sprintId)
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag(`sprints-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function updateSprintPeriod(sprintId: string, projectId: string, dateFrom: string, dateTo: string) {
   const admin = createAdminClient()
   const { error } = await admin.from('sprints').update({ date_from: dateFrom, date_to: dateTo }).eq('id', sprintId)
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function createSprint(projectId: string, dateFrom: string, dateTo: string) {
@@ -455,7 +466,8 @@ export async function createSprint(projectId: string, dateFrom: string, dateTo: 
     { sprint_id: sprint.id, name: 'Готово',        color: '#2DD4A0', order_index: 2 },
   ])
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function duplicateTask(taskId: string, projectId: string) {
@@ -499,7 +511,8 @@ export async function duplicateTask(taskId: string, projectId: string) {
   })
 
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function removeFromEpic(taskId: string, projectId: string) {
@@ -509,7 +522,8 @@ export async function removeFromEpic(taskId: string, projectId: string) {
     .update({ parent_task_id: null })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function reorderSprintTasks(projectId: string, orderedIds: string[]) {
@@ -519,7 +533,8 @@ export async function reorderSprintTasks(projectId: string, orderedIds: string[]
       admin.from('tasks').update({ column_order: index }).eq('id', id)
     )
   )
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function createSprintTask(
@@ -586,6 +601,7 @@ export async function createSprintTask(
     }])
   }
 
-  revalidatePath(`/projects/${projectId}/backlog`)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
   return task.id
 }

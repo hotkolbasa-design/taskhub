@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export type TaskStat = {
@@ -50,7 +51,6 @@ function calcStats(tasks: any[]): Pick<SprintStat, 'total_tasks' | 'total_time' 
   const totalTime = nonCancelled.reduce((s, t) => s + (t.time_estimate ?? 0), 0)
   const doneTime = done.reduce((s, t) => s + (t.time_estimate ?? 0), 0)
 
-  // Эффективность считается без отменённых задач
   const efficiency = (() => {
     const relevantTime = [...done, ...notDone].reduce((s, t) => s + (t.time_estimate ?? 0), 0)
     if (relevantTime > 0) return Math.round(doneTime / relevantTime * 100)
@@ -70,168 +70,163 @@ function calcStats(tasks: any[]): Pick<SprintStat, 'total_tasks' | 'total_time' 
   }
 }
 
-export async function getProjectSprintHistory(projectId: string): Promise<SprintStat[]> {
-  const admin = createAdminClient()
+export function getProjectSprintHistory(projectId: string): Promise<SprintStat[]> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient()
 
-  const [{ data: sprints }, { data: project }] = await Promise.all([
-    admin.from('sprints').select('*').eq('project_id', projectId)
-      .or('status.eq.closed,is_fixed.eq.true')
-      .order('date_from', { ascending: false }),
-    admin.from('projects').select('name').eq('id', projectId).single(),
-  ])
+      const [{ data: sprints }, { data: project }] = await Promise.all([
+        admin.from('sprints').select('*').eq('project_id', projectId)
+          .or('status.eq.closed,is_fixed.eq.true')
+          .order('date_from', { ascending: false }),
+        admin.from('projects').select('name').eq('id', projectId).maybeSingle(),
+      ])
 
-  if (!sprints?.length) return []
+      if (!sprints?.length) return []
 
-  const results: SprintStat[] = []
+      const results: SprintStat[] = []
 
-  for (const sprint of sprints) {
-    let rawTasks: any[] = []
+      for (const sprint of sprints) {
+        let rawTasks: any[] = []
 
-    if (sprint.fixed_task_ids?.length) {
-      const { data } = await admin
-        .from('tasks')
-        .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
-        .in('id', sprint.fixed_task_ids)
-        rawTasks = data ?? []
-    } else {
-      const { data } = await admin
-        .from('tasks')
-        .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
-        .eq('sprint_id', sprint.id)
-        rawTasks = data ?? []
-    }
+        if (sprint.fixed_task_ids?.length) {
+          const { data } = await admin
+            .from('tasks')
+            .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
+            .in('id', sprint.fixed_task_ids)
+          rawTasks = data ?? []
+        } else {
+          const { data } = await admin
+            .from('tasks')
+            .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
+            .eq('sprint_id', sprint.id)
+          rawTasks = data ?? []
+        }
 
-    const tasks: TaskStat[] = rawTasks.map(t => ({
-      id: t.id,
-      title: t.title,
-      type: t.type,
-      parent_task_id: t.parent_task_id ?? null,
-      workflow_status: t.workflow_status,
-      task_status: t.status,
-      deadline: t.deadline,
-      time_estimate: t.time_estimate,
-      closed_at: t.closed_at,
-    }))
+        const tasks: TaskStat[] = rawTasks.map(t => ({
+          id: t.id, title: t.title, type: t.type,
+          parent_task_id: t.parent_task_id ?? null,
+          workflow_status: t.workflow_status, task_status: t.status,
+          deadline: t.deadline, time_estimate: t.time_estimate, closed_at: t.closed_at,
+        }))
 
-    results.push({
-      sprint_id: sprint.id,
-      sprint_name: sprint.name,
-      project_id: projectId,
-      project_name: project?.name ?? '',
-      date_from: sprint.date_from,
-      date_to: sprint.date_to,
-      sprint_status: sprint.status,
-      is_fixed: sprint.is_fixed,
-      fixed_at: sprint.fixed_at,
-      tasks,
-      ...calcStats(tasks),
-    })
-  }
+        results.push({
+          sprint_id: sprint.id, sprint_name: sprint.name,
+          project_id: projectId, project_name: project?.name ?? '',
+          date_from: sprint.date_from, date_to: sprint.date_to,
+          sprint_status: sprint.status, is_fixed: sprint.is_fixed, fixed_at: sprint.fixed_at,
+          tasks, ...calcStats(tasks),
+        })
+      }
 
-  return results
+      return results
+    },
+    [`sprint-history-${projectId}`],
+    { tags: [`sprints-${projectId}`] },
+  )()
 }
 
-export async function getUserSprintHistory(userId: string): Promise<SprintStat[]> {
-  const admin = createAdminClient()
+export function getUserSprintHistory(userId: string): Promise<SprintStat[]> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient()
 
-  // Find all sprints where user has tasks
-  const { data: userTasks } = await admin
-    .from('tasks')
-    .select('id, sprint_id, project_id')
-    .eq('assignee_id', userId)
-    .not('sprint_id', 'is', null)
-    .neq('type', 'epic')
-
-  if (!userTasks?.length) return []
-
-  const sprintIds = [...new Set(userTasks.map(t => t.sprint_id as string))]
-
-  const { data: sprints } = await admin
-    .from('sprints')
-    .select('*, projects(name)')
-    .in('id', sprintIds)
-    .order('date_from', { ascending: false })
-
-  if (!sprints?.length) return []
-
-  const results: SprintStat[] = []
-
-  for (const sprint of sprints) {
-    let rawTasks: any[] = []
-
-    if (sprint.fixed_task_ids?.length) {
-      const { data } = await admin
+      const { data: userTasks } = await admin
         .from('tasks')
-        .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
-        .in('id', sprint.fixed_task_ids)
+        .select('id, sprint_id, project_id')
         .eq('assignee_id', userId)
-        rawTasks = data ?? []
-    } else {
-      const { data } = await admin
-        .from('tasks')
-        .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
-        .eq('sprint_id', sprint.id)
-        .eq('assignee_id', userId)
-        rawTasks = data ?? []
-    }
+        .not('sprint_id', 'is', null)
+        .neq('type', 'epic')
 
-    if (!rawTasks.length) continue
+      if (!userTasks?.length) return []
 
-    const tasks: TaskStat[] = rawTasks.map(t => ({
-      id: t.id,
-      title: t.title,
-      type: t.type,
-      parent_task_id: t.parent_task_id ?? null,
-      workflow_status: t.workflow_status,
-      task_status: t.status,
-      deadline: t.deadline,
-      time_estimate: t.time_estimate,
-      closed_at: t.closed_at,
-    }))
+      const sprintIds = [...new Set(userTasks.map(t => t.sprint_id as string))]
 
-    results.push({
-      sprint_id: sprint.id,
-      sprint_name: sprint.name,
-      project_id: sprint.project_id,
-      project_name: (sprint as any).projects?.name ?? '',
-      date_from: sprint.date_from,
-      date_to: sprint.date_to,
-      sprint_status: sprint.status,
-      is_fixed: sprint.is_fixed,
-      fixed_at: sprint.fixed_at,
-      tasks,
-      ...calcStats(tasks),
-    })
-  }
+      const { data: sprints } = await admin
+        .from('sprints')
+        .select('*, projects(name)')
+        .in('id', sprintIds)
+        .order('date_from', { ascending: false })
 
-  return results
+      if (!sprints?.length) return []
+
+      const results: SprintStat[] = []
+
+      for (const sprint of sprints) {
+        let rawTasks: any[] = []
+
+        if (sprint.fixed_task_ids?.length) {
+          const { data } = await admin
+            .from('tasks')
+            .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
+            .in('id', sprint.fixed_task_ids)
+            .eq('assignee_id', userId)
+          rawTasks = data ?? []
+        } else {
+          const { data } = await admin
+            .from('tasks')
+            .select('id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at')
+            .eq('sprint_id', sprint.id)
+            .eq('assignee_id', userId)
+          rawTasks = data ?? []
+        }
+
+        if (!rawTasks.length) continue
+
+        const tasks: TaskStat[] = rawTasks.map(t => ({
+          id: t.id, title: t.title, type: t.type,
+          parent_task_id: t.parent_task_id ?? null,
+          workflow_status: t.workflow_status, task_status: t.status,
+          deadline: t.deadline, time_estimate: t.time_estimate, closed_at: t.closed_at,
+        }))
+
+        results.push({
+          sprint_id: sprint.id, sprint_name: sprint.name,
+          project_id: sprint.project_id, project_name: (sprint as any).projects?.name ?? '',
+          date_from: sprint.date_from, date_to: sprint.date_to,
+          sprint_status: sprint.status, is_fixed: sprint.is_fixed, fixed_at: sprint.fixed_at,
+          tasks, ...calcStats(tasks),
+        })
+      }
+
+      return results
+    },
+    [`user-sprint-history-${userId}`],
+    { tags: [`analytics-${userId}`] },
+  )()
 }
 
-export async function getVisibleUsers(currentUserId: string, currentUserRole: string): Promise<AnalyticsUser[]> {
-  const admin = createAdminClient()
+export function getVisibleUsers(currentUserId: string, currentUserRole: string): Promise<AnalyticsUser[]> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient()
 
-  if (currentUserRole === 'admin') {
-    const { data } = await admin
-      .from('profiles')
-      .select('id, full_name, login, avatar_url, role')
-      .eq('status', 'active')
-      .order('full_name', { ascending: true })
-    return (data ?? []) as AnalyticsUser[]
-  }
+      if (currentUserRole === 'admin') {
+        const { data } = await admin
+          .from('profiles')
+          .select('id, full_name, login, avatar_url, role')
+          .eq('status', 'active')
+          .order('full_name', { ascending: true })
+        return (data ?? []) as AnalyticsUser[]
+      }
 
-  const { data: access } = await admin
-    .from('access_settings')
-    .select('visible_user_ids')
-    .eq('user_id', currentUserId)
-    .maybeSingle()
+      const { data: access } = await admin
+        .from('access_settings')
+        .select('visible_user_ids')
+        .eq('user_id', currentUserId)
+        .maybeSingle()
 
-  const ids = [currentUserId, ...(access?.visible_user_ids ?? [])]
-  const { data } = await admin
-    .from('profiles')
-    .select('id, full_name, login, avatar_url, role')
-    .in('id', ids)
-    .eq('status', 'active')
-    .order('full_name', { ascending: true })
+      const ids = [currentUserId, ...(access?.visible_user_ids ?? [])]
+      const { data } = await admin
+        .from('profiles')
+        .select('id, full_name, login, avatar_url, role')
+        .in('id', ids)
+        .eq('status', 'active')
+        .order('full_name', { ascending: true })
 
-  return (data ?? []) as AnalyticsUser[]
+      return (data ?? []) as AnalyticsUser[]
+    },
+    [`visible-users-${currentUserId}-${currentUserRole}`],
+    { tags: ['profiles'] },
+  )()
 }
