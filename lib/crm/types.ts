@@ -69,6 +69,7 @@ export type DashData = {
     groups: GroupSourceData[]
   }
   rateMap: Record<string, number>
+  plan: number
 }
 
 export type MilestoneDef = {

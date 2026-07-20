@@ -34,3 +34,19 @@ export async function getMergedGroups(): Promise<MergedGroup[]> {
 export async function saveMergedGroups(groups: MergedGroup[]): Promise<void> {
   await updateRange(SHEET, 'K2:L2', [['mergedGroups', JSON.stringify(groups)]])
 }
+
+export async function getMonthPlans(): Promise<Record<string, number>> {
+  try {
+    const values = await sheetValues(SHEET, 'K3:L3')
+    if (values[0]?.[0] === 'monthPlans' && values[0]?.[1]) {
+      return JSON.parse(String(values[0][1]))
+    }
+  } catch {}
+  return {}
+}
+
+export async function saveMonthPlan(monthKey: string, plan: number): Promise<void> {
+  const plans = await getMonthPlans()
+  plans[monthKey] = plan
+  await updateRange(SHEET, 'K3:L3', [['monthPlans', JSON.stringify(plans)]])
+}
