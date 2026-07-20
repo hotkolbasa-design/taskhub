@@ -412,11 +412,11 @@ function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
+    <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
       <div className="px-5 py-3.5 text-sm font-semibold" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
         {header}
       </div>
-      <div className="crm-wrap" data-crm-scroll="1">
+      <div>
         <table className="crm-table">
           <thead>
             <HeadRow data={data} />
@@ -808,10 +808,12 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
 
 function VoronkiView({ data }: { data: DashData }) {
   return (
-    <div>
-      {data.pipelines.map((p, i) => (
-        <PipelineCard key={p.name} p={p} data={data} idx={i} />
-      ))}
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ minWidth: 'max-content' }}>
+        {data.pipelines.map((p, i) => (
+          <PipelineCard key={p.name} p={p} data={data} idx={i} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -875,7 +877,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
 
   return (
     <div>
-      {/* Summary metrics */}
+      {/* Summary metrics — no scroll */}
       <div className="grid grid-cols-4 gap-4 mb-5">
         <MetricCard label="Всего лидов" value={summary.totalLeads} />
         <MetricCard label="Продаж" value={summary.totalSales} />
@@ -883,13 +885,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
         <MetricCard label="Конверсия в продажу" value={(summary.totalLeads ? Math.round(summary.totalSales / summary.totalLeads * 1000) / 10 : 0) + '%'} />
       </div>
 
-      {/* Exchange rate section */}
-      <RateSection data={data} onSaveRate={onSaveRate} />
-
-      {/* Overall card */}
-      <SourceCard src={data.marketing.overall} data={data} editable={false} onSave={onSave} overall />
-
-      {/* Toolbar: source filter + group management */}
+      {/* Toolbar: source filter + group management — no scroll */}
       <div className="flex items-center gap-3 mb-5">
         <button onClick={() => setSourceModalOpen(true)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
@@ -923,42 +919,53 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
         </button>
       </div>
 
-      {/* Merged group cards */}
-      {groups.map(group => (
-        <MergedSourceCard
-          key={group.source}
-          group={group}
-          data={data}
-          onSave={onSave}
-          onDelete={() => handleDeleteGroup(group.source)}
-          allSources={data.marketing.sources}
-          ungroupedSources={ungroupedSourceNames}
-          onUpdateGroup={handleUpdateGroup}
-        />
-      ))}
+      {/* Single shared scroll container for all table cards */}
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: 'max-content' }}>
+          {/* Exchange rate section */}
+          <RateSection data={data} onSaveRate={onSaveRate} />
 
-      {/* Visible individual source cards */}
-      {visible.length === 0 && groups.length === 0 && (
-        <p className="text-sm py-4 px-1" style={{ color: 'var(--text2)' }}>Ни один источник не выбран.</p>
-      )}
-      {visible.map(src => (
-        <SourceCard key={src.source} src={src} data={data} editable onSave={onSave} />
-      ))}
+          {/* Overall card */}
+          <SourceCard src={data.marketing.overall} data={data} editable={false} onSave={onSave} overall />
 
-      {/* Archive */}
-      {archived.length > 0 && (
-        <>
-          <div className="flex items-center gap-3 my-6" style={{ opacity: 0.5 }}>
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text2)' }}>Архив ({archived.length})</span>
-            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-          </div>
-          {archived.map(src => (
-            <div key={src.source} style={{ opacity: 0.55 }}>
-              <SourceCard src={src} data={data} editable={false} onSave={onSave} />
-            </div>
+          {/* Merged group cards */}
+          {groups.map(group => (
+            <MergedSourceCard
+              key={group.source}
+              group={group}
+              data={data}
+              onSave={onSave}
+              onDelete={() => handleDeleteGroup(group.source)}
+              allSources={data.marketing.sources}
+              ungroupedSources={ungroupedSourceNames}
+              onUpdateGroup={handleUpdateGroup}
+            />
           ))}
-        </>
-      )}
+
+          {/* Visible individual source cards */}
+          {visible.length === 0 && groups.length === 0 && (
+            <p className="text-sm py-4 px-1" style={{ color: 'var(--text2)' }}>Ни один источник не выбран.</p>
+          )}
+          {visible.map(src => (
+            <SourceCard key={src.source} src={src} data={data} editable onSave={onSave} />
+          ))}
+
+          {/* Archive */}
+          {archived.length > 0 && (
+            <>
+              <div className="flex items-center gap-3 my-6" style={{ opacity: 0.5 }}>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text2)' }}>Архив ({archived.length})</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              {archived.map(src => (
+                <div key={src.source} style={{ opacity: 0.55 }}>
+                  <SourceCard src={src} data={data} editable={false} onSave={onSave} />
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
 
       {sourceModalOpen && (
         <SourceModal sources={allSources} excluded={excluded} onChange={onToggleExcluded} onClose={() => setSourceModalOpen(false)} />
