@@ -413,7 +413,7 @@ function Card({ header, data, children }: {
 }) {
   return (
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
-      <div className="px-5 py-3.5 text-sm font-semibold" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+      <div className="px-5 py-3.5 text-sm font-semibold" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)', position: 'sticky', left: 0, zIndex: 3 }}>
         {header}
       </div>
       <div>
