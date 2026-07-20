@@ -87,19 +87,20 @@ function WeeklyLineChart({ weekLabels, factValues, forecastValues, planPerWeek, 
 
 // ─── 01 · Plan ────────────────────────────────────────────────────────────────
 
-function PlanSection({ data }: { data: DashData }) {
-  const planKey = `crm-plan-${data.monthKey}`
-  const [plan, setPlan] = useState(300)
-  const [planInput, setPlanInput] = useState('300')
+function PlanSection({ data, onSavePlan }: { data: DashData; onSavePlan: (plan: number) => void }) {
+  const serverPlan = data.plan > 0 ? data.plan : 300
+  const [plan, setPlan] = useState(serverPlan)
+  const [planInput, setPlanInput] = useState(String(serverPlan))
 
   useEffect(() => {
-    const v = parseInt(localStorage.getItem(planKey) ?? '')
-    if (v > 0) { setPlan(v); setPlanInput(String(v)) }
-  }, [planKey])
+    const v = data.plan > 0 ? data.plan : 300
+    setPlan(v)
+    setPlanInput(String(v))
+  }, [data.plan, data.monthKey])
 
   function commitPlan() {
     const n = parseInt(planInput)
-    if (n > 0) { setPlan(n); localStorage.setItem(planKey, String(n)) }
+    if (n > 0) { setPlan(n); onSavePlan(n) }
     else setPlanInput(String(plan))
   }
 
@@ -483,10 +484,10 @@ function FunnelMatrix({ data }: { data: DashData }) {
 
 // ─── export ───────────────────────────────────────────────────────────────────
 
-export function OverviewView({ data, onGoMarketing }: { data: DashData; onGoMarketing: () => void }) {
+export function OverviewView({ data, onGoMarketing, onSavePlan }: { data: DashData; onGoMarketing: () => void; onSavePlan: (plan: number) => void }) {
   return (
     <div>
-      <PlanSection data={data} />
+      <PlanSection data={data} onSavePlan={onSavePlan} />
       <SpendSection data={data} onGoMarketing={onGoMarketing} />
       <FunnelMatrix data={data} />
     </div>

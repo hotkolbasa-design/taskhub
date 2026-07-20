@@ -2,7 +2,7 @@ import { readSheetRows } from './read-sheet'
 import { loadPipelineDefinitions, buildPipelineStats } from './pipelines'
 import { buildMarketingStats } from './marketing'
 import { readSpendMap, readRateMap } from './spend'
-import { getMergedGroups } from './settings'
+import { getMergedGroups, getMonthPlans } from './settings'
 import { getMonthDays, getWeekGroups, formatDay, formatWeek } from './utils'
 import type { DashData } from './types'
 
@@ -31,7 +31,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
   const weeks = getWeekGroups(days)
 
   // Fetch all data in parallel (including auto exchange rate)
-  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap, groups, autoRate] = await Promise.all([
+  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap, groups, autoRate, monthPlans] = await Promise.all([
     loadPipelineDefinitions(),
     readSheetRows('Лиды'),
     readSheetRows('Сделки'),
@@ -39,7 +39,10 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     readRateMap(),
     getMergedGroups(),
     fetchUsdKztRate(),
+    getMonthPlans(),
   ])
+
+  const plan = monthPlans[monthKey] ?? 0
 
   // Fill days that have no manually-set rate with the auto-fetched rate
   if (autoRate > 0) {
@@ -66,6 +69,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     pipelines,
     marketing,
     rateMap,
+    plan,
   }
 }
 

@@ -30,6 +30,7 @@ type DashData = {
     groups: GroupSourceData[]
   }
   rateMap: Record<string, number>
+  plan: number
 }
 
 // ─── CSS classes injected once on mount ──────────────────────────────────────
@@ -1098,6 +1099,15 @@ export default function CrmDashboard() {
     setData(d)
   }, [selectedMonth])
 
+  const handleSavePlan = useCallback(async (plan: number) => {
+    setData(prev => prev ? { ...prev, plan } : prev)
+    await fetch('/api/crm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'savePlan', monthKey: selectedMonth, plan }),
+    })
+  }, [selectedMonth])
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (error) {
@@ -1186,7 +1196,7 @@ export default function CrmDashboard() {
           </div>
         ) : data ? (
           <>
-            {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} />}
+            {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} onSavePlan={handleSavePlan} />}
             {tab === 'voronki' && <VoronkiView data={data} />}
             {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onSaveRate={handleSaveRate} onReload={handleReload} />}
           </>
