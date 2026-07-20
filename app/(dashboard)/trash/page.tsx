@@ -8,7 +8,7 @@ export default async function TrashPage() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/login')
 
-  const tasks = await getTrashTasks(session.user.id)
+  const tasks = await getTrashTasks(session.user.id).catch(() => [])
 
   return <TrashClient initialTasks={tasks} />
 }

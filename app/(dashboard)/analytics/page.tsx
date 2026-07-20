@@ -15,9 +15,9 @@ export default async function AnalyticsPage() {
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
-    .single()
+    .maybeSingle()
 
-  const users = await getVisibleUsers(session.user.id, profile?.role ?? 'employee')
+  const users = await getVisibleUsers(session.user.id, profile?.role ?? 'employee').catch(() => [])
 
   if (!users.length) redirect('/dashboard')
 
@@ -25,7 +25,7 @@ export default async function AnalyticsPage() {
   const sprintsByUser: Record<string, Awaited<ReturnType<typeof getUserSprintHistory>>> = {}
   await Promise.all(
     users.map(async user => {
-      sprintsByUser[user.id] = await getUserSprintHistory(user.id)
+      sprintsByUser[user.id] = await getUserSprintHistory(user.id).catch(() => [])
     })
   )
 

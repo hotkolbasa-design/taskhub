@@ -22,8 +22,8 @@ export default async function ProjectSprintsPage({ params }: { params: Promise<{
   if (!project) redirect('/projects')
 
   const [sprints, myProfile] = await Promise.all([
-    getProjectSprintHistory(id),
-    admin.from('profiles').select('role').eq('id', session.user.id).maybeSingle().then(r => r.data),
+    getProjectSprintHistory(id).catch(() => []),
+    Promise.resolve(admin.from('profiles').select('role').eq('id', session.user.id).maybeSingle()).then(r => r.data).catch(() => null),
   ])
 
   return (

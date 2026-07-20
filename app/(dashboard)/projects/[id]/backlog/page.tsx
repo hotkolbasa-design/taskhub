@@ -23,11 +23,11 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
   if (!project) redirect('/projects')
 
   const [tasks, members, activeSprint, sprintData, myProfile] = await Promise.all([
-    getBacklogTasks(id),
-    getProjectMembers(id),
-    getActiveSprintForProject(id),
-    getSprintData(id),
-    admin.from('profiles').select('role').eq('id', session.user.id).maybeSingle().then(r => r.data),
+    getBacklogTasks(id).catch(() => []),
+    getProjectMembers(id).catch(() => []),
+    getActiveSprintForProject(id).catch(() => null),
+    getSprintData(id).catch(() => null),
+    Promise.resolve(admin.from('profiles').select('role').eq('id', session.user.id).maybeSingle()).then(r => r.data).catch(() => null),
   ])
 
   return (
@@ -95,7 +95,7 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
         projectId={id}
         initialTasks={tasks}
         members={members}
-        membersMap={Object.fromEntries(members.map(m => [m.id, m.full_name || m.login]))}
+        membersMap={Object.fromEntries(members.map((m: any) => [m.id, m.full_name || m.login]))}
         hasActiveSprint={!!activeSprint}
         currentUserId={session.user.id}
         defaultAssigneeMode={project.default_assignee_mode ?? 'manual'}

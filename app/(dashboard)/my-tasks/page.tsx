@@ -19,8 +19,8 @@ export default async function MyTasksPage() {
   const isAdmin = profile.role === 'admin'
 
   const [tasks, allProfiles] = await Promise.all([
-    getMyTasks(profile.id),
-    isAdmin ? getAllProfiles() : Promise.resolve([]),
+    getMyTasks(profile.id).catch(() => []),
+    isAdmin ? getAllProfiles().catch(() => []) : Promise.resolve([]),
   ])
 
   return (
