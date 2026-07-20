@@ -17,7 +17,7 @@ export default async function ProjectsPage() {
     .maybeSingle()
 
   const isAdmin = profile?.role === 'admin'
-  const projects = await getProjects(session.user.id, isAdmin)
+  const projects = await getProjects(session.user.id, isAdmin).catch(() => [])
 
   return <ProjectsClient projects={projects} />
 }

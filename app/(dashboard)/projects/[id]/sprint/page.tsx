@@ -24,21 +24,10 @@ export default async function SprintPage({ params }: { params: Promise<{ id: str
   if (!project) redirect('/projects')
 
   const [sprintData, members, myMembership, myProfile] = await Promise.all([
-    getSprintData(id),
-    getProjectMembers(id),
-    admin
-      .from('project_members')
-      .select('role')
-      .eq('project_id', id)
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-      .then(r => r.data),
-    admin
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .maybeSingle()
-      .then(r => r.data),
+    getSprintData(id).catch(() => null),
+    getProjectMembers(id).catch(() => []),
+    Promise.resolve(admin.from('project_members').select('role').eq('project_id', id).eq('user_id', session.user.id).maybeSingle()).then(r => r.data).catch(() => null),
+    Promise.resolve(admin.from('profiles').select('role').eq('id', session.user.id).maybeSingle()).then(r => r.data).catch(() => null),
   ])
 
   const canManage =
