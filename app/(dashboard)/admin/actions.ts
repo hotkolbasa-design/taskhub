@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -40,7 +40,7 @@ export async function approveUser(userId: string) {
   await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ status: 'active' }).eq('id', userId)
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }
 
 export async function deactivateUser(userId: string) {
@@ -48,7 +48,7 @@ export async function deactivateUser(userId: string) {
   await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ status: 'inactive' }).eq('id', userId)
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }
 
 export async function setStatus(userId: string, status: 'active' | 'inactive') {
@@ -56,7 +56,7 @@ export async function setStatus(userId: string, status: 'active' | 'inactive') {
   await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ status }).eq('id', userId)
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }
 
 export async function setRole(userId: string, role: 'admin' | 'employee') {
@@ -68,14 +68,14 @@ export async function setRole(userId: string, role: 'admin' | 'employee') {
   await guardTarget(userId, caller.id)
   const admin = createAdminClient()
   await admin.from('profiles').update({ role }).eq('id', userId)
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }
 
 export async function updateUserName(userId: string, fullName: string) {
   await requireAdmin()
   const admin = createAdminClient()
   await admin.from('profiles').update({ full_name: fullName }).eq('id', userId)
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }
 
 export async function updateUserProfile(
@@ -85,7 +85,7 @@ export async function updateUserProfile(
   await requireAdmin()
   const admin = createAdminClient()
   await admin.from('profiles').update(updates).eq('id', userId)
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }
 
 export async function inviteUser(data: {
@@ -119,5 +119,5 @@ export async function inviteUser(data: {
     })
   }
 
-  revalidatePath('/admin')
+  revalidateTag('profiles', "default")
 }

@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import type { BacklogTask } from '@/types'
 
 export async function restoreTask(taskId: string) {
@@ -17,7 +17,11 @@ export async function restoreTask(taskId: string) {
     })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
-  revalidatePath('/trash')
+  // Узнаём projectId чтобы инвалидировать кэш бэклога
+  const { data: task } = await admin.from('tasks').select('project_id').eq('id', taskId).maybeSingle()
+  if (task?.project_id) revalidateTag(`tasks-${task.project_id}`, "default")
+  revalidateTag('trash', "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export type DrawerData = {

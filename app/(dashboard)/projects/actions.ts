@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 
 export async function createProject(formData: {
   name: string
@@ -40,7 +40,7 @@ export async function createProject(formData: {
 
   if (memberError) throw new Error(memberError.message)
 
-  revalidatePath('/projects')
+  revalidateTag('projects', "default")
   return project
 }
 
@@ -79,5 +79,5 @@ export async function deleteProject(projectId: string) {
   await admin.from('project_members').delete().eq('project_id', projectId)
   await admin.from('projects').delete().eq('id', projectId)
 
-  revalidatePath('/projects')
+  revalidateTag('projects', "default")
 }
