@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { OverviewView } from './overview-view'
+
+// Shared scroll container ref — passed via context so Card headers can follow scroll
+const CrmScrollCtx = createContext<React.RefObject<HTMLDivElement | null>>({ current: null })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -411,9 +414,26 @@ function RateSection({ data, onSaveRate }: {
 function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
+  const scrollRef = useContext(CrmScrollCtx)
+  const headerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      if (headerRef.current) headerRef.current.style.transform = `translateX(${el.scrollLeft}px)`
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [scrollRef])
+
   return (
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
-      <div className="px-5 py-3.5 text-sm font-semibold" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)', position: 'sticky', left: 0, zIndex: 3 }}>
+      <div
+        ref={headerRef}
+        className="px-5 py-3.5 text-sm font-semibold"
+        style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}
+      >
         {header}
       </div>
       <div>
@@ -807,14 +827,17 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
 // ─── VoronkiView ─────────────────────────────────────────────────────────────
 
 function VoronkiView({ data }: { data: DashData }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <div style={{ minWidth: 'max-content' }}>
-        {data.pipelines.map((p, i) => (
-          <PipelineCard key={p.name} p={p} data={data} idx={i} />
-        ))}
+    <CrmScrollCtx.Provider value={scrollRef}>
+      <div ref={scrollRef} style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: 'max-content' }}>
+          {data.pipelines.map((p, i) => (
+            <PipelineCard key={p.name} p={p} data={data} idx={i} />
+          ))}
+        </div>
       </div>
-    </div>
+    </CrmScrollCtx.Provider>
   )
 }
 
@@ -839,6 +862,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
 }) {
   const [sourceModalOpen, setSourceModalOpen] = useState(false)
   const [groupModalOpen, setGroupModalOpen] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const allSources = data.marketing.sources.map(s => s.source)
   const groups = data.marketing.groups ?? []
@@ -920,7 +944,8 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
       </div>
 
       {/* Single shared scroll container for all table cards */}
-      <div style={{ overflowX: 'auto' }}>
+      <CrmScrollCtx.Provider value={scrollRef}>
+      <div ref={scrollRef} style={{ overflowX: 'auto' }}>
         <div style={{ minWidth: 'max-content' }}>
           {/* Exchange rate section */}
           <RateSection data={data} onSaveRate={onSaveRate} />
@@ -966,6 +991,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
           )}
         </div>
       </div>
+      </CrmScrollCtx.Provider>
 
       {sourceModalOpen && (
         <SourceModal sources={allSources} excluded={excluded} onChange={onToggleExcluded} onClose={() => setSourceModalOpen(false)} />
@@ -1000,20 +1026,6 @@ export default function CrmDashboard() {
     style.textContent = CRM_STYLES
     document.head.appendChild(style)
     return () => style.remove()
-  }, [])
-
-  // Sync horizontal scroll across all crm-wrap containers
-  useEffect(() => {
-    const onScroll = (e: Event) => {
-      const src = e.target as HTMLElement
-      if (src?.dataset?.crmScroll !== '1') return
-      const sl = src.scrollLeft
-      document.querySelectorAll<HTMLElement>('[data-crm-scroll="1"]').forEach(el => {
-        if (el !== src && el.scrollLeft !== sl) el.scrollLeft = sl
-      })
-    }
-    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
-    return () => document.removeEventListener('scroll', onScroll, true)
   }, [])
 
   // Load months on mount
