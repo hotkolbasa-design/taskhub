@@ -294,7 +294,7 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const files = Array.from(e.clipboardData.items)
-      .filter(item => item.type.startsWith('image/'))
+      .filter(item => item.kind === 'file')
       .map(item => item.getAsFile())
       .filter(Boolean) as File[]
 
@@ -304,17 +304,17 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
   }, [])
 
   function addFiles(files: File[]) {
-    const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024)
+    const valid = files.filter(f => f.size <= 25 * 1024 * 1024)
     const newPending: PendingFile[] = valid.map(file => ({
       file,
-      previewUrl: URL.createObjectURL(file),
+      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
     }))
     setPendingFiles(prev => [...prev, ...newPending].slice(0, 5))
   }
 
   function removePending(index: number) {
     setPendingFiles(prev => {
-      URL.revokeObjectURL(prev[index].previewUrl)
+      if (prev[index].previewUrl) URL.revokeObjectURL(prev[index].previewUrl)
       return prev.filter((_, i) => i !== index)
     })
   }
@@ -450,14 +450,36 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
                       )}
                       {comment.attachments?.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                          {comment.attachments.map((att, i) => (
-                            <button key={i} onClick={() => setLightboxUrl(att.url)}
-                              className="rounded-lg overflow-hidden shrink-0 transition-opacity hover:opacity-80"
-                              style={{ width: 120, height: 90 }}>
-                              <img src={att.url} alt={att.name}
-                                className="w-full h-full object-cover" />
-                            </button>
-                          ))}
+                          {comment.attachments.map((att, i) => {
+                            const isImage = /\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i.test(att.name) ||
+                              att.url.match(/\.(png|jpg|jpeg|gif|webp|svg|bmp)(\?|$)/i)
+                            if (isImage) {
+                              return (
+                                <button key={i} onClick={() => setLightboxUrl(att.url)}
+                                  className="rounded-lg overflow-hidden shrink-0 transition-opacity hover:opacity-80"
+                                  style={{ width: 120, height: 90, cursor: 'pointer' }}>
+                                  <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                                </button>
+                              )
+                            }
+                            return (
+                              <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" download={att.name}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors"
+                                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', textDecoration: 'none', cursor: 'pointer', maxWidth: 200 }}
+                                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                                  <path d="M3 2a1 1 0 0 1 1-1h5.586a1 1 0 0 1 .707.293l3.414 3.414A1 1 0 0 1 14 5.414V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                                  <path d="M9 1.5V5a1 1 0 0 0 1 1h3.5" stroke="currentColor" strokeWidth="1.2"/>
+                                </svg>
+                                <span className="text-xs truncate" style={{ color: 'var(--text)' }}>{att.name}</span>
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--text2)', flexShrink: 0 }}>
+                                  <path d="M6 1v7M3 5.5L6 8l3-2.5M2 10.5h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </a>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -476,11 +498,23 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
               <div className="flex flex-wrap gap-2 mb-2">
                 {pendingFiles.map((pf, i) => (
                   <div key={i} className="relative rounded-lg overflow-hidden shrink-0"
-                    style={{ width: 64, height: 64 }}>
-                    <img src={pf.previewUrl} alt="" className="w-full h-full object-cover" />
+                    style={pf.previewUrl
+                      ? { width: 64, height: 64 }
+                      : { height: 48, maxWidth: 160, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8 }
+                    }>
+                    {pf.previewUrl
+                      ? <img src={pf.previewUrl} alt="" className="w-full h-full object-cover" />
+                      : <>
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                            <path d="M3 2a1 1 0 0 1 1-1h5.586a1 1 0 0 1 .707.293l3.414 3.414A1 1 0 0 1 14 5.414V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                            <path d="M9 1.5V5a1 1 0 0 0 1 1h3.5" stroke="currentColor" strokeWidth="1.2"/>
+                          </svg>
+                          <span className="text-xs truncate" style={{ color: 'var(--text)', maxWidth: 100 }}>{pf.file.name}</span>
+                        </>
+                    }
                     <button onClick={() => removePending(i)}
                       className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}>
+                      style={{ background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer' }}>
                       <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
                         <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
@@ -541,7 +575,7 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
               </div>
             </div>
 
-            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+            <input ref={fileInputRef} type="file" multiple className="hidden"
               onChange={e => {
                 if (e.target.files) addFiles(Array.from(e.target.files))
                 e.target.value = ''

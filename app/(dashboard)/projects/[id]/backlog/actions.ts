@@ -266,7 +266,7 @@ export async function uploadAttachment(formData: FormData): Promise<string> {
 
   const { error } = await admin.storage
     .from('task-attachments')
-    .upload(path, buffer, { contentType: file.type || 'image/png' })
+    .upload(path, buffer, { contentType: file.type || 'application/octet-stream' })
 
   if (error) throw new Error(error.message)
 
