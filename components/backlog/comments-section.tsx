@@ -226,6 +226,7 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<CommentAuthor | null>(null)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -361,15 +362,24 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
       setUploading(filesToUpload.length > 0)
       const attachments = filesToUpload.length > 0 ? await uploadFiles(filesToUpload) : []
       setUploading(false)
-      await createComment(taskId, projectId, messageText, attachments)
 
+      if (filesToUpload.length > 0 && attachments.length < filesToUpload.length) {
+        setComments(prev => prev.filter(c => c.id !== tempId))
+        setText(messageText)
+        setPendingFiles(filesToUpload)
+        setUploadError('Не удалось загрузить файл. Проверьте размер (макс. 25 МБ).')
+        return
+      }
+
+      await createComment(taskId, projectId, messageText, attachments)
       const fresh = await getComments(taskId)
       setComments(fresh as Comment[])
-      filesToUpload.forEach(f => URL.revokeObjectURL(f.previewUrl))
+      filesToUpload.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl) })
     } catch {
       setComments(prev => prev.filter(c => c.id !== tempId))
       setText(messageText)
       setPendingFiles(filesToUpload)
+      setUploadError('Ошибка отправки. Попробуйте ещё раз.')
     } finally {
       setSending(false)
       setUploading(false)
@@ -494,6 +504,17 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
         {/* Инпут */}
         {!collapsed && (
           <div className="px-5 py-3 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+            {uploadError && (
+              <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg text-xs"
+                style={{ background: 'rgba(247,92,110,0.1)', color: '#F75C6E', border: '1px solid rgba(247,92,110,0.2)' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M6 3.5v3M6 8.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                {uploadError}
+                <button onClick={() => setUploadError(null)} className="ml-auto" style={{ cursor: 'pointer', opacity: 0.7 }}>✕</button>
+              </div>
+            )}
             {pendingFiles.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
                 {pendingFiles.map((pf, i) => (
