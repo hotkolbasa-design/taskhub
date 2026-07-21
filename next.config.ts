@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // Without this, workStore.cacheLifeProfiles is undefined and revalidateTag throws,
   // silently failing to invalidate the cache.
   cacheLife: {},
+  experimental: {
+    serverActions: {
+      // Default body limit is 1MB — raises it to allow file uploads up to 25MB.
+      bodySizeLimit: '25mb',
+    },
+  },
 };
 
 export default nextConfig;
