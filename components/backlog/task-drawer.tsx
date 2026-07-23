@@ -347,6 +347,8 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
   const [minutes, setMinutes] = useState(() => task.time_estimate != null ? String(task.time_estimate % 60) : '')
   const [parentId, setParentId] = useState(task.parent_task_id ?? '')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  // Инкрементится после каждого сохранения — сигнал для CommentsSection перезагрузить активность
+  const [activityRefresh, setActivityRefresh] = useState(0)
 
   // Отслеживаем последние сохранённые значения для текстовых полей
   const savedTitle = useRef(task.title)
@@ -373,6 +375,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
       await updateTask(task.id, projectId, data)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus(s => s === 'saved' ? 'idle' : s), 2000)
+      setActivityRefresh(v => v + 1)
       router.refresh()
     } catch {
       setSaveStatus('idle')
@@ -595,7 +598,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
         </div>
 
         {/* Комментарии */}
-        <CommentsSection taskId={task.id} projectId={projectId} initialComments={initialComments} />
+        <CommentsSection taskId={task.id} projectId={projectId} initialComments={initialComments} refreshSignal={activityRefresh} />
 
         {/* Футер */}
         <div className="px-5 py-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--border)' }}>

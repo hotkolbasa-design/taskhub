@@ -228,9 +228,10 @@ type Props = {
   taskId: string
   projectId: string
   initialComments?: unknown[]
+  refreshSignal?: number
 }
 
-export default function CommentsSection({ taskId, projectId, initialComments }: Props) {
+export default function CommentsSection({ taskId, projectId, initialComments, refreshSignal = 0 }: Props) {
   const [comments, setComments] = useState<Comment[]>((initialComments ?? []) as Comment[])
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -308,6 +309,17 @@ export default function CommentsSection({ taskId, projectId, initialComments }: 
   useEffect(() => {
     if (!loading) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [feed.length, loading])
+
+  // Перезагружаем активность когда в дравере сохраняется изменение (title, deadline и т.д.)
+  const didMountRef = useRef(false)
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return }
+    let cancelled = false
+    getActivities(taskId)
+      .then(data => { if (!cancelled) setActivities(data as Activity[]) })
+      .catch(() => { /* молча */ })
+    return () => { cancelled = true }
+  }, [refreshSignal, taskId])
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const files = Array.from(e.clipboardData.items)
