@@ -102,7 +102,23 @@ function ActivityRow({ activity }: { activity: Activity }) {
   let icon: React.ReactNode
   let text: React.ReactNode
 
-  if (activity.type === 'status_change') {
+  if (activity.type === 'title_change') {
+    icon = (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: '#7C5CF6', flexShrink: 0 }}>
+        <path d="M2 11.5V9.5L9 2.5a1.4 1.4 0 0 1 2 2l-7 7H2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+        <path d="M8 3.5l2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    )
+    text = (
+      <span>
+        <b style={{ color: 'var(--text)' }}>{actor}</b>
+        {' изменил название: '}
+        <span style={{ color: 'var(--text2)' }}>«{activity.old_value ?? '—'}»</span>
+        {' → '}
+        <span style={{ color: '#7C5CF6', fontWeight: 500 }}>«{activity.new_value ?? '—'}»</span>
+      </span>
+    )
+  } else if (activity.type === 'status_change') {
     const oldLabel = STATUS_LABELS[activity.old_value ?? ''] ?? activity.old_value ?? '?'
     const newLabel = STATUS_LABELS[activity.new_value ?? ''] ?? activity.new_value ?? '?'
     const newColor = STATUS_COLORS[activity.new_value ?? ''] ?? 'var(--text2)'

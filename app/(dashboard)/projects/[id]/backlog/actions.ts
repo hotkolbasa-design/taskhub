@@ -188,6 +188,9 @@ export async function updateTask(taskId: string, projectId: string, data: {
     const creatorId = current.creator_id as string | null
     const assigneeId = current.assignee_id as string | null
 
+    if (data.title !== undefined && data.title.trim() !== (current.title ?? '')) {
+      activities.push({ task_id: taskId, actor_id: userId, type: 'title_change', old_value: (current.title as string | null) ?? null, new_value: data.title.trim() })
+    }
     if (data.workflow_status !== undefined && data.workflow_status !== current.workflow_status) {
       activities.push({ task_id: taskId, actor_id: userId, type: 'status_change', old_value: current.workflow_status, new_value: data.workflow_status })
       const recipients = buildRecipients({ actorId: userId, creatorId, assigneeId })
