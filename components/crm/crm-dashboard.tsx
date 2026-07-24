@@ -1,11 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { OverviewView } from './overview-view'
-
-// Shared scroll container ref — passed via context so Card headers can follow scroll
-const CrmScrollCtx = createContext<React.RefObject<HTMLDivElement | null>>({ current: null })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -414,38 +411,37 @@ function RateSection({ data, onSaveRate }: {
 function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
-  const scrollRef = useContext(CrmScrollCtx)
-  const headerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const onScroll = () => {
-      if (headerRef.current) headerRef.current.style.transform = `translateX(${el.scrollLeft}px)`
-    }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [scrollRef])
-
+  // +2 = label column + total column
+  const colSpan = data.days.length + data.weeks.length + 2
   return (
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
-      <div
-        ref={headerRef}
-        className="px-5 py-3.5 text-sm font-semibold"
-        style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}
-      >
-        {header}
-      </div>
-      <div>
-        <table className="crm-table">
-          <thead>
-            <HeadRow data={data} />
-          </thead>
-          <tbody>
-            {children}
-          </tbody>
-        </table>
-      </div>
+      <table className="crm-table">
+        <thead>
+          {/* Header row: single full-width sticky th — works like td.crm-lbl */}
+          <tr>
+            <th
+              colSpan={colSpan}
+              className="crm-lbl"
+              style={{
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: 600,
+                textAlign: 'left',
+                background: 'var(--surface2)',
+                borderBottom: '1px solid var(--border)',
+                zIndex: 4,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {header}
+            </th>
+          </tr>
+          <HeadRow data={data} />
+        </thead>
+        <tbody>
+          {children}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -566,51 +562,47 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
   return (
     <div className="mb-5">
       <Card data={data} header={
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{group.source}</span>
-            <button
-              type="button"
-              onClick={() => setExpanded(e => !e)}
-              style={{ color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500, background: 'none', border: 'none', padding: 0 }}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-                <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              {expanded ? 'Свернуть' : `Показать ${localSources.length} источника`}
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)' }}>
-              Объединено
-            </span>
-            <button
-              type="button"
-              onClick={() => setEditing(e => !e)}
-              title={editing ? 'Готово' : 'Редактировать состав группы'}
-              style={{ color: editing ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer', background: editing ? 'rgba(124,92,246,0.1)' : 'none', border: 'none', padding: 3, borderRadius: 5, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
-              onMouseEnter={e => { if (!editing) e.currentTarget.style.color = 'var(--text)' }}
-              onMouseLeave={e => { if (!editing) e.currentTarget.style.color = 'var(--text2)' }}
-            >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M9 2.5l1.5 1.5-6 6-2 .5.5-2 6-6z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              title="Удалить группу"
-              style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', alignItems: 'center' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-            >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M2 3.5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                <path d="M4.5 3.5V2.75A.75.75 0 015.25 2h2.5a.75.75 0 01.75.75V3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                <rect x="2.5" y="3.5" width="8" height="7" rx=".75" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            </button>
-          </div>
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{group.source}</span>
+          <button
+            type="button"
+            onClick={() => setExpanded(e => !e)}
+            style={{ color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 500, background: 'none', border: 'none', padding: 0 }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+              <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {expanded ? 'Свернуть' : `Показать ${localSources.length} источника`}
+          </button>
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)' }}>
+            Объединено
+          </span>
+          <button
+            type="button"
+            onClick={() => setEditing(e => !e)}
+            title={editing ? 'Готово' : 'Редактировать состав группы'}
+            style={{ color: editing ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer', background: editing ? 'rgba(124,92,246,0.1)' : 'none', border: 'none', padding: 3, borderRadius: 5, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+            onMouseEnter={e => { if (!editing) e.currentTarget.style.color = 'var(--text)' }}
+            onMouseLeave={e => { if (!editing) e.currentTarget.style.color = 'var(--text2)' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M9 2.5l1.5 1.5-6 6-2 .5.5-2 6-6z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Удалить группу"
+            style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', alignItems: 'center' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M2 3.5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M4.5 3.5V2.75A.75.75 0 015.25 2h2.5a.75.75 0 01.75.75V3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <rect x="2.5" y="3.5" width="8" height="7" rx=".75" stroke="currentColor" strokeWidth="1.2"/>
+            </svg>
+          </button>
         </div>
       }>
         {group.milestones.map((m, i) => (
@@ -827,17 +819,14 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
 // ─── VoronkiView ─────────────────────────────────────────────────────────────
 
 function VoronkiView({ data }: { data: DashData }) {
-  const scrollRef = useRef<HTMLDivElement>(null)
   return (
-    <CrmScrollCtx.Provider value={scrollRef}>
-      <div ref={scrollRef} style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: 'max-content' }}>
-          {data.pipelines.map((p, i) => (
-            <PipelineCard key={p.name} p={p} data={data} idx={i} />
-          ))}
-        </div>
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ minWidth: 'max-content' }}>
+        {data.pipelines.map((p, i) => (
+          <PipelineCard key={p.name} p={p} data={data} idx={i} />
+        ))}
       </div>
-    </CrmScrollCtx.Provider>
+    </div>
   )
 }
 
@@ -862,7 +851,6 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
 }) {
   const [sourceModalOpen, setSourceModalOpen] = useState(false)
   const [groupModalOpen, setGroupModalOpen] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
 
   const allSources = data.marketing.sources.map(s => s.source)
   const groups = data.marketing.groups ?? []
@@ -944,8 +932,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
       </div>
 
       {/* Single shared scroll container for all table cards */}
-      <CrmScrollCtx.Provider value={scrollRef}>
-      <div ref={scrollRef} style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto' }}>
         <div style={{ minWidth: 'max-content' }}>
           {/* Exchange rate section */}
           <RateSection data={data} onSaveRate={onSaveRate} />
@@ -991,7 +978,6 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
           )}
         </div>
       </div>
-      </CrmScrollCtx.Provider>
 
       {sourceModalOpen && (
         <SourceModal sources={allSources} excluded={excluded} onChange={onToggleExcluded} onClose={() => setSourceModalOpen(false)} />
