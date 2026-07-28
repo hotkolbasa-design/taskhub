@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidateTag } from 'next/cache'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
+import { backlogArchivePatch } from '@/lib/queries/task-archive'
 
 async function getCurrentUserId() {
   const supabase = await createClient()
@@ -159,9 +160,15 @@ export async function updateTask(taskId: string, projectId: string, data: {
   // Читаем текущие значения для сравнения
   const { data: current } = await admin
     .from('tasks')
-    .select('workflow_status, deadline, time_estimate, assignee_id, creator_id, title')
+    .select('workflow_status, status, deadline, time_estimate, assignee_id, creator_id, title')
     .eq('id', taskId)
     .single()
+
+  // Выполненная в бэклоге задача уходит в архив (см. task-archive.ts)
+  const archivePatch =
+    data.workflow_status !== undefined && current
+      ? await backlogArchivePatch(admin, projectId, current.status, current.workflow_status, data.workflow_status)
+      : {}
 
   const { error } = await admin
     .from('tasks')
@@ -175,6 +182,7 @@ export async function updateTask(taskId: string, projectId: string, data: {
       ...(data.parent_task_id !== undefined && { parent_task_id: data.parent_task_id }),
       ...(data.workflow_status !== undefined && { workflow_status: data.workflow_status }),
       ...(data.priority !== undefined && { priority: data.priority }),
+      ...archivePatch,
     })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
