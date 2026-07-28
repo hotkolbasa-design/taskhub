@@ -1,8 +1,10 @@
 'use server'
 
+import { revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getMyTasks } from '@/lib/queries/my-tasks'
+import { backlogArchivePatch } from '@/lib/queries/task-archive'
 import type { BacklogTask } from '@/types'
 
 async function getCurrentUser() {
@@ -28,11 +30,26 @@ export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: s
   const user = await getCurrentUser()
   if (!user) throw new Error('Не авторизован')
   const admin = createAdminClient()
+
+  const { data: current } = await admin
+    .from('tasks')
+    .select('status, workflow_status, project_id')
+    .eq('id', taskId)
+    .maybeSingle()
+
+  // Выполненная в бэклоге задача уходит в архив (см. task-archive.ts)
+  const archivePatch = current
+    ? await backlogArchivePatch(admin, current.project_id, current.status, current.workflow_status, workflowStatus)
+    : {}
+
   const { error } = await admin
     .from('tasks')
-    .update({ workflow_status: workflowStatus, updated_at: new Date().toISOString() })
+    .update({ workflow_status: workflowStatus, ...archivePatch, updated_at: new Date().toISOString() })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
+
+  if (current) revalidateTag(`tasks-${current.project_id}`, 'default')
+  revalidateTag('my-tasks', 'default')
 }
 
 export async function updateTaskPriority(taskId: string, priority: 'medium' | 'high' | null) {
