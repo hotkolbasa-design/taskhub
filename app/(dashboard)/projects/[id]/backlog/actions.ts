@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidateTag } from 'next/cache'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
-import { backlogArchivePatch } from '@/lib/queries/task-archive'
+import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive } from '@/lib/queries/task-archive'
 
 async function getCurrentUserId() {
   const supabase = await createClient()
@@ -160,7 +160,7 @@ export async function updateTask(taskId: string, projectId: string, data: {
   // Читаем текущие значения для сравнения
   const { data: current } = await admin
     .from('tasks')
-    .select('workflow_status, status, deadline, time_estimate, assignee_id, creator_id, title')
+    .select('workflow_status, status, type, deadline, time_estimate, assignee_id, creator_id, title')
     .eq('id', taskId)
     .single()
 
@@ -186,6 +186,12 @@ export async function updateTask(taskId: string, projectId: string, data: {
     })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
+
+  // Эпик уходит в архив вместе с подзадачами
+  if (data.workflow_status !== undefined && current?.type === 'epic') {
+    const action = archiveAction(current.status, current.workflow_status, data.workflow_status)
+    await syncEpicSubtasksArchive(admin, projectId, taskId, action)
+  }
 
   // Записываем историю изменений + уведомления
   if (current && userId) {

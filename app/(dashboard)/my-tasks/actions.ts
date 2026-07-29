@@ -4,7 +4,7 @@ import { revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getMyTasks } from '@/lib/queries/my-tasks'
-import { backlogArchivePatch } from '@/lib/queries/task-archive'
+import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive } from '@/lib/queries/task-archive'
 import type { BacklogTask } from '@/types'
 
 async function getCurrentUser() {
@@ -33,7 +33,7 @@ export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: s
 
   const { data: current } = await admin
     .from('tasks')
-    .select('status, workflow_status, project_id')
+    .select('status, workflow_status, type, project_id')
     .eq('id', taskId)
     .maybeSingle()
 
@@ -47,6 +47,11 @@ export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: s
     .update({ workflow_status: workflowStatus, ...archivePatch, updated_at: new Date().toISOString() })
     .eq('id', taskId)
   if (error) throw new Error(error.message)
+
+  // Эпик уходит в архив вместе с подзадачами
+  if (current?.type === 'epic') {
+    await syncEpicSubtasksArchive(admin, current.project_id, taskId, archiveAction(current.status, current.workflow_status, workflowStatus))
+  }
 
   if (current) revalidateTag(`tasks-${current.project_id}`, 'default')
   revalidateTag('my-tasks', 'default')
