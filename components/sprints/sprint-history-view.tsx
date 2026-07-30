@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SprintStat, TaskStat } from '@/lib/queries/analytics'
 import { unfixSprint, deleteClosedSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
+import { getTaskForDrawer, type DrawerData } from '@/app/(dashboard)/my-tasks/actions'
+import TaskDrawer from '@/components/backlog/task-drawer'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -90,15 +92,19 @@ function StatCard({ value, label, color }: { value: string | number; label: stri
   )
 }
 
-function TaskRow({ task, isSubtask = false, overrideTime }: { task: TaskStat; isSubtask?: boolean; overrideTime?: number | null }) {
+function TaskRow({ task, isSubtask = false, overrideTime, onOpen }: { task: TaskStat; isSubtask?: boolean; overrideTime?: number | null; onOpen: (taskId: string) => void }) {
   const displayTime = overrideTime !== undefined ? overrideTime : task.time_estimate
   return (
     <div className="grid items-center text-sm"
+      onClick={() => onOpen(task.id)}
       style={{
         gridTemplateColumns: '1fr 140px 100px 80px',
         borderBottom: '1px solid var(--border)',
         background: isSubtask ? 'rgba(255,255,255,0.018)' : 'transparent',
-      }}>
+        cursor: 'pointer',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+      onMouseLeave={e => (e.currentTarget.style.background = isSubtask ? 'rgba(255,255,255,0.018)' : 'transparent')}>
       <span className="flex items-center gap-2 truncate pr-4 py-2.5"
         style={{ paddingLeft: isSubtask ? 36 : 16 }}>
         {task.type === 'epic' && (
@@ -122,17 +128,21 @@ function TaskRow({ task, isSubtask = false, overrideTime }: { task: TaskStat; is
   )
 }
 
-function EpicGroup({ epic, subtasks }: { epic: TaskStat; subtasks: TaskStat[] }) {
+function EpicGroup({ epic, subtasks, onOpen }: { epic: TaskStat; subtasks: TaskStat[]; onOpen: (taskId: string) => void }) {
   const epicTime = subtasks.reduce((s, t) => s + (t.time_estimate ?? 0), 0)
   return (
     <div style={{ borderLeft: '2px solid rgba(247,192,79,0.45)', marginBottom: subtasks.length ? 0 : undefined }}>
       {/* Epic header */}
       <div className="grid items-center text-sm"
+        onClick={() => onOpen(epic.id)}
         style={{
           gridTemplateColumns: '1fr 140px 100px 80px',
           borderBottom: '1px solid var(--border)',
           background: 'rgba(247,192,79,0.05)',
-        }}>
+          cursor: 'pointer',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,192,79,0.1)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,192,79,0.05)')}>
         <span className="flex items-center gap-2 truncate pr-4 py-2.5" style={{ paddingLeft: 14 }}>
           <span className="shrink-0 w-4 h-4 rounded flex items-center justify-center"
             style={{ background: 'rgba(247,192,79,0.15)', color: 'var(--yellow)' }}>
@@ -155,13 +165,13 @@ function EpicGroup({ epic, subtasks }: { epic: TaskStat; subtasks: TaskStat[] })
       </div>
       {/* Subtasks */}
       {subtasks.map(sub => (
-        <TaskRow key={sub.id} task={sub} isSubtask />
+        <TaskRow key={sub.id} task={sub} isSubtask onOpen={onOpen} />
       ))}
     </div>
   )
 }
 
-function TaskList({ tasks, allTasks }: { tasks: TaskStat[]; allTasks: TaskStat[] }) {
+function TaskList({ tasks, allTasks, onOpen }: { tasks: TaskStat[]; allTasks: TaskStat[]; onOpen: (taskId: string) => void }) {
   const epics = tasks.filter(t => t.type === 'epic')
   const epicIds = new Set(epics.map(e => e.id))
   const standalone = tasks.filter(t => t.type !== 'epic' && !t.parent_task_id)
@@ -178,16 +188,16 @@ function TaskList({ tasks, allTasks }: { tasks: TaskStat[]; allTasks: TaskStat[]
   return (
     <>
       {epics.map(epic => (
-        <EpicGroup key={epic.id} epic={epic} subtasks={subtaskMap[epic.id] ?? []} />
+        <EpicGroup key={epic.id} epic={epic} subtasks={subtaskMap[epic.id] ?? []} onOpen={onOpen} />
       ))}
       {standalone.map(task => (
-        <TaskRow key={task.id} task={task} />
+        <TaskRow key={task.id} task={task} onOpen={onOpen} />
       ))}
     </>
   )
 }
 
-function SprintCard({ sprint, isAdmin }: { sprint: SprintStat; isAdmin: boolean }) {
+function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdmin: boolean; onOpenTask: (taskId: string) => void }) {
   const [open, setOpen] = useState(false)
   const [showAll, setShowAll] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -316,7 +326,7 @@ function SprintCard({ sprint, isAdmin }: { sprint: SprintStat; isAdmin: boolean 
               <span>Дедлайн</span>
               <span>Время</span>
             </div>
-            <TaskList tasks={visibleTasks} allTasks={sprint.tasks} />
+            <TaskList tasks={visibleTasks} allTasks={sprint.tasks} onOpen={onOpenTask} />
             {sprint.tasks.length > 5 && !showAll && (
               <button
                 className="w-full py-2.5 text-xs font-medium"
@@ -333,6 +343,20 @@ function SprintCard({ sprint, isAdmin }: { sprint: SprintStat; isAdmin: boolean 
 }
 
 export default function SprintHistoryView({ sprints, isAdmin = false }: { sprints: SprintStat[]; isAdmin?: boolean }) {
+  const [drawerData, setDrawerData] = useState<DrawerData | null>(null)
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null)
+
+  async function handleOpenTask(taskId: string) {
+    if (loadingTaskId) return
+    setLoadingTaskId(taskId)
+    try {
+      const data = await getTaskForDrawer(taskId)
+      if (data) setDrawerData(data)
+    } finally {
+      setLoadingTaskId(null)
+    }
+  }
+
   if (!sprints.length) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -344,8 +368,30 @@ export default function SprintHistoryView({ sprints, isAdmin = false }: { sprint
   return (
     <div className="flex flex-col gap-4">
       {sprints.map(sprint => (
-        <SprintCard key={sprint.sprint_id} sprint={sprint} isAdmin={isAdmin} />
+        <SprintCard key={sprint.sprint_id} sprint={sprint} isAdmin={isAdmin} onOpenTask={handleOpenTask} />
       ))}
+
+      {/* Загрузка задачи */}
+      {loadingTaskId && !drawerData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <span className="w-8 h-8 rounded-full border-2 animate-spin"
+            style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: '#fff' }} />
+        </div>
+      )}
+
+      {/* Просмотр задачи из истории (только чтение) */}
+      {drawerData && (
+        <TaskDrawer
+          task={drawerData.task}
+          projectId={drawerData.task.project_id}
+          members={drawerData.members}
+          epics={drawerData.epics}
+          initialComments={drawerData.comments}
+          onClose={() => setDrawerData(null)}
+          onUpdated={() => {}}
+          readOnly
+        />
+      )}
     </div>
   )
 }

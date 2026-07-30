@@ -229,9 +229,10 @@ type Props = {
   projectId: string
   initialComments?: unknown[]
   refreshSignal?: number
+  readOnly?: boolean
 }
 
-export default function CommentsSection({ taskId, projectId, initialComments, refreshSignal = 0 }: Props) {
+export default function CommentsSection({ taskId, projectId, initialComments, refreshSignal = 0, readOnly = false }: Props) {
   const [comments, setComments] = useState<Comment[]>((initialComments ?? []) as Comment[])
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -530,7 +531,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
         )}
 
         {/* Инпут */}
-        {!collapsed && (
+        {!collapsed && !readOnly && (
           <div className="px-5 py-3 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
             {uploadError && (
               <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg text-xs"

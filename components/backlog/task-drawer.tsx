@@ -21,7 +21,7 @@ const PRIORITY_OPTIONS = [
   { value: 'high',   label: 'Высокий',        color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
 ] as const
 
-function PriorityDropdown({ value, onChange }: { value: 'medium' | 'high' | null; onChange: (v: 'medium' | 'high' | null) => void }) {
+function PriorityDropdown({ value, onChange, readOnly = false }: { value: 'medium' | 'high' | null; onChange: (v: 'medium' | 'high' | null) => void; readOnly?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const current = PRIORITY_OPTIONS.find(o => o.value === value) ?? PRIORITY_OPTIONS[0]
@@ -35,19 +35,21 @@ function PriorityDropdown({ value, onChange }: { value: 'medium' | 'high' | null
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)}
+      <button type="button" onClick={() => { if (readOnly) return; setOpen(o => !o) }}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all"
-        style={{ background: current.bg, color: current.color, border: `1px solid ${open ? current.color : 'transparent'}`, cursor: 'pointer' }}
-        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.15)')}
+        style={{ background: current.bg, color: current.color, border: `1px solid ${open ? current.color : 'transparent'}`, cursor: readOnly ? 'default' : 'pointer' }}
+        onMouseEnter={e => { if (!readOnly) e.currentTarget.style.filter = 'brightness(1.15)' }}
         onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
       >
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: current.color }} />
         {current.label}
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
-          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        {!readOnly && (
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+            <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </button>
-      {open && (
+      {open && !readOnly && (
         <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[170px]"
           style={{ background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
           {PRIORITY_OPTIONS.map(opt => (
@@ -73,7 +75,7 @@ function PriorityDropdown({ value, onChange }: { value: 'medium' | 'high' | null
   )
 }
 
-function WorkflowDropdown({ value, onChange }: { value: WorkflowStatus; onChange: (v: WorkflowStatus) => void }) {
+function WorkflowDropdown({ value, onChange, readOnly = false }: { value: WorkflowStatus; onChange: (v: WorkflowStatus) => void; readOnly?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const current = WORKFLOW_OPTIONS.find(o => o.value === value) ?? WORKFLOW_OPTIONS[0]
@@ -87,19 +89,21 @@ function WorkflowDropdown({ value, onChange }: { value: WorkflowStatus; onChange
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)}
+      <button type="button" onClick={() => { if (readOnly) return; setOpen(o => !o) }}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all"
-        style={{ background: current.bg, color: current.color, border: `1px solid ${open ? current.color : 'transparent'}` }}
-        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.15)')}
+        style={{ background: current.bg, color: current.color, border: `1px solid ${open ? current.color : 'transparent'}`, cursor: readOnly ? 'default' : 'pointer' }}
+        onMouseEnter={e => { if (!readOnly) e.currentTarget.style.filter = 'brightness(1.15)' }}
         onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
       >
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: current.color }} />
         {current.label}
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
-          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        {!readOnly && (
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+            <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </button>
-      {open && (
+      {open && !readOnly && (
         <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 min-w-[160px]"
           style={{ background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
           {WORKFLOW_OPTIONS.map(opt => (
@@ -127,7 +131,7 @@ function WorkflowDropdown({ value, onChange }: { value: WorkflowStatus; onChange
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
-function UserDropdown({ value, onChange, members }: { value: string; onChange: (v: string) => void; members: Member[] }) {
+function UserDropdown({ value, onChange, members, readOnly = false }: { value: string; onChange: (v: string) => void; members: Member[]; readOnly?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const selected = members.find(m => m.id === value)
@@ -141,9 +145,9 @@ function UserDropdown({ value, onChange, members }: { value: string; onChange: (
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)}
+      <button type="button" onClick={() => { if (readOnly) return; setOpen(o => !o) }}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left"
-        style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: selected ? 'var(--text)' : 'var(--text2)' }}
+        style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: selected ? 'var(--text)' : 'var(--text2)', cursor: readOnly ? 'default' : 'pointer' }}
       >
         {selected ? (
           <>
@@ -153,11 +157,13 @@ function UserDropdown({ value, onChange, members }: { value: string; onChange: (
             <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
           </>
         ) : <span className="flex-1 text-sm" style={{ color: 'var(--text2)' }}>Не назначено</span>}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
-          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        {!readOnly && (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
+            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
       </button>
-      {open && (
+      {open && !readOnly && (
         <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 w-full"
           style={{ background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
           <button type="button" onClick={() => { onChange(''); setOpen(false) }}
@@ -199,7 +205,7 @@ function UserDropdown({ value, onChange, members }: { value: string; onChange: (
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 
-function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function DatePicker({ value, onChange, readOnly = false }: { value: string; onChange: (v: string) => void; readOnly?: boolean }) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => value ? new Date(value + 'T00:00:00') : new Date())
   const ref = useRef<HTMLDivElement>(null)
@@ -248,16 +254,16 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)}
+      <button type="button" onClick={() => { if (readOnly) return; setOpen(o => !o) }}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left"
-        style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: value ? 'var(--text)' : 'var(--text2)' }}
+        style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: value ? 'var(--text)' : 'var(--text2)', cursor: readOnly ? 'default' : 'pointer' }}
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--text2)', flexShrink: 0 }}>
           <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
           <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
         </svg>
-        <span className="flex-1">{displayValue || 'Выберите дату'}</span>
-        {value && (
+        <span className="flex-1">{displayValue || (readOnly ? '—' : 'Выберите дату')}</span>
+        {value && !readOnly && (
           <span onClick={e => { e.stopPropagation(); onChange('') }} style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -268,7 +274,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
           </span>
         )}
       </button>
-      {open && (
+      {open && !readOnly && (
         <div className="absolute left-0 top-full mt-1 rounded-2xl z-50 p-4"
           style={{ background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)', animation: 'dropdownIn 0.12s ease-out', minWidth: 268 }}>
           <div className="flex items-center justify-between mb-3">
@@ -332,9 +338,10 @@ type Props = {
   initialComments?: unknown[]
   onClose: () => void
   onUpdated: (updated: Partial<BacklogTask> & { id: string }) => void
+  readOnly?: boolean
 }
 
-export default function TaskDrawer({ task, projectId, members, epics, initialComments, onClose, onUpdated }: Props) {
+export default function TaskDrawer({ task, projectId, members, epics, initialComments, onClose, onUpdated, readOnly = false }: Props) {
   const router = useRouter()
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -370,6 +377,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
   }
 
   async function save(data: Parameters<typeof updateTask>[2]) {
+    if (readOnly) return
     setSaveStatus('saving')
     try {
       await updateTask(task.id, projectId, data)
@@ -479,8 +487,19 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
               {task.type === 'epic' ? 'Эпик' : 'Задача'}
             </span>
-            <WorkflowDropdown value={workflowStatus} onChange={handleWorkflowChange} />
-            <PriorityDropdown value={priority} onChange={handlePriorityChange} />
+            <WorkflowDropdown value={workflowStatus} onChange={handleWorkflowChange} readOnly={readOnly} />
+            <PriorityDropdown value={priority} onChange={handlePriorityChange} readOnly={readOnly} />
+            {readOnly && (
+              <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md font-medium"
+                style={{ background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)' }}
+                title="Задача из истории спринтов — только просмотр">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+                </svg>
+                Только просмотр
+              </span>
+            )}
           </div>
           <button onClick={handleClose} className="p-1.5 rounded-md" style={{ color: 'var(--text2)' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
@@ -498,6 +517,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             value={title}
             onChange={e => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
+            readOnly={readOnly}
             rows={2}
             className="w-full bg-transparent outline-none resize-none text-lg font-semibold"
             style={{ color: 'var(--text)', lineHeight: 1.6 }}
@@ -515,30 +535,31 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
               value={description}
               onChange={e => setDescription(e.target.value)}
               onBlur={handleDescriptionBlur}
+              readOnly={readOnly}
               rows={4}
-              placeholder="Добавьте описание..."
+              placeholder={readOnly ? '—' : 'Добавьте описание...'}
               className="px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onFocus={e => { if (!readOnly) e.currentTarget.style.borderColor = 'var(--accent)' }}
             />
           </div>
 
           {/* Постановщик */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Постановщик</label>
-            <UserDropdown value={creatorId} onChange={handleCreatorChange} members={members} />
+            <UserDropdown value={creatorId} onChange={handleCreatorChange} members={members} readOnly={readOnly} />
           </div>
 
           {/* Исполнитель */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Исполнитель</label>
-            <UserDropdown value={assigneeId} onChange={handleAssigneeChange} members={members} />
+            <UserDropdown value={assigneeId} onChange={handleAssigneeChange} members={members} readOnly={readOnly} />
           </div>
 
           {/* Дедлайн */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Дедлайн</label>
-            <DatePicker value={deadline} onChange={handleDeadlineChange} />
+            <DatePicker value={deadline} onChange={handleDeadlineChange} readOnly={readOnly} />
           </div>
 
           {/* Дата создания */}
@@ -563,7 +584,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
               <div className="flex items-center gap-1.5 flex-1 px-3 py-2 rounded-lg"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                 <input type="number" value={hours} onChange={e => setHours(e.target.value)}
-                  onBlur={handleTimeBlur}
+                  onBlur={handleTimeBlur} readOnly={readOnly}
                   placeholder="0" min="0"
                   className="w-full bg-transparent outline-none text-sm"
                   style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
@@ -573,7 +594,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
               <div className="flex items-center gap-1.5 flex-1 px-3 py-2 rounded-lg"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                 <input type="number" value={minutes} onChange={e => setMinutes(e.target.value)}
-                  onBlur={handleTimeBlur}
+                  onBlur={handleTimeBlur} readOnly={readOnly}
                   placeholder="0" min="0" max="59"
                   className="w-full bg-transparent outline-none text-sm"
                   style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
@@ -587,9 +608,9 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
           {task.type === 'task' && availableEpics.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Эпик</label>
-              <select value={parentId} onChange={e => handleParentChange(e.target.value)}
+              <select value={parentId} onChange={e => handleParentChange(e.target.value)} disabled={readOnly}
                 className="px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: parentId ? 'var(--text)' : 'var(--text2)', colorScheme: 'dark' }}>
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: parentId ? 'var(--text)' : 'var(--text2)', colorScheme: 'dark', cursor: readOnly ? 'default' : 'pointer' }}>
                 <option value="">Без эпика</option>
                 {availableEpics.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
               </select>
@@ -598,7 +619,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
         </div>
 
         {/* Комментарии */}
-        <CommentsSection taskId={task.id} projectId={projectId} initialComments={initialComments} refreshSignal={activityRefresh} />
+        <CommentsSection taskId={task.id} projectId={projectId} initialComments={initialComments} refreshSignal={activityRefresh} readOnly={readOnly} />
 
         {/* Футер */}
         <div className="px-5 py-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--border)' }}>
