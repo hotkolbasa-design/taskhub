@@ -501,7 +501,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
           for (const sub of node.subtasks) flat.push(sprintTasks.find(t => t.id === sub.id)!)
         }
         setSprintTasks(flat.filter(Boolean))
-        await moveTaskInSprint(reordered.map((t, i) => ({ id: t.id, column_id: t.column_id ?? '', column_order: i })))
+        await moveTaskInSprint(reordered.map((t, i) => ({ id: t.id, column_id: t.column_id ?? '', column_order: i })), projectId)
       }
       return
     }

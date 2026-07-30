@@ -173,7 +173,8 @@ export async function fixSprint(sprintId: string, projectId: string) {
 }
 
 export async function moveTaskInSprint(
-  updates: { id: string; column_id: string; column_order: number; workflow_status?: string }[]
+  updates: { id: string; column_id: string; column_order: number; workflow_status?: string }[],
+  projectId: string,
 ) {
   const admin = createAdminClient()
 
@@ -184,6 +185,10 @@ export async function moveTaskInSprint(
       return admin.from('tasks').update(patch).eq('id', u.id)
     })
   )
+
+  // Без ревалидации getSprintData (unstable_cache) отдаёт старый снимок → задачи «схлопываются» в одну колонку при следующем заходе
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
 }
 
 export async function deleteSprintColumn(columnId: string, sprintId: string, projectId: string) {
@@ -208,7 +213,8 @@ export async function deleteSprintColumn(columnId: string, sprintId: string, pro
 }
 
 export async function reorderSprintColumns(
-  updates: { id: string; order_index: number }[]
+  updates: { id: string; order_index: number }[],
+  projectId: string,
 ) {
   const admin = createAdminClient()
   await Promise.all(
@@ -216,6 +222,8 @@ export async function reorderSprintColumns(
       admin.from('sprint_columns').update({ order_index: u.order_index }).eq('id', u.id)
     )
   )
+
+  revalidateTag(`tasks-${projectId}`, "default")
 }
 
 export async function createSprintColumn(
