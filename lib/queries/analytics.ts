@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { computeEfficiency } from '@/lib/utils/efficiency'
 
 export type TaskStat = {
   id: string
@@ -51,13 +52,7 @@ function calcStats(tasks: any[]): Pick<SprintStat, 'total_tasks' | 'total_time' 
   const totalTime = nonCancelled.reduce((s, t) => s + (t.time_estimate ?? 0), 0)
   const doneTime = done.reduce((s, t) => s + (t.time_estimate ?? 0), 0)
 
-  const efficiency = (() => {
-    const relevantTime = [...done, ...notDone].reduce((s, t) => s + (t.time_estimate ?? 0), 0)
-    if (relevantTime > 0) return Math.round(doneTime / relevantTime * 100)
-    const relevantCount = done.length + notDone.length
-    if (relevantCount > 0) return Math.round(done.length / relevantCount * 100)
-    return 0
-  })()
+  const efficiency = computeEfficiency(active)
 
   return {
     total_tasks: nonCancelled.length,
