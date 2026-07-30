@@ -199,7 +199,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
         reordered.forEach(c => { next[c.id] = prev[c.id] ?? [] })
         return next
       })
-      await reorderSprintColumns(reordered.map((c, i) => ({ id: c.id, order_index: i })))
+      await reorderSprintColumns(reordered.map((c, i) => ({ id: c.id, order_index: i })), projectId)
       router.refresh()
       return
     }
@@ -251,7 +251,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
     if (srcColId && srcColId !== dstColId) {
       updates.push(...(newMap[srcColId] ?? []).map((t, i) => ({ id: t.id, column_id: srcColId, column_order: i })))
     }
-    await moveTaskInSprint(updates)
+    await moveTaskInSprint(updates, projectId)
     router.refresh()
   }
 
