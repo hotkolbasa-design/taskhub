@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { SprintTask, Sprint, BacklogTask } from '@/types'
+import type { SprintTask, Sprint, BacklogTask, TaskAssignee } from '@/types'
 import { minutesToDisplay } from '@/lib/utils/time'
+import { computeEfficiency, efficiencyColor } from '@/lib/utils/efficiency'
 import { updateTask, moveBackToBacklog, updateSprintPeriod, deleteSprint, removeFromEpic, createSprintTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { getTasksMissingData, fixSprint, unfixSprint, closeSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import TaskCard from './task-card'
@@ -399,6 +400,95 @@ function SprintRootBottomDrop({ disabled }: { disabled: boolean }) {
   )
 }
 
+type EffRow = { assignee: TaskAssignee | null; eff: number; done: number; total: number }
+
+function EffAvatar({ name, login, size = 20 }: { name: string | null; login: string; size?: number }) {
+  const initial = (name || login || '—')[0].toUpperCase()
+  return (
+    <span className="rounded-full flex items-center justify-center font-medium shrink-0"
+      style={{ width: size, height: size, background: 'var(--accent)', color: '#fff', fontSize: size * 0.42 }}>
+      {initial}
+    </span>
+  )
+}
+
+function EfficiencyStat({ overall, rows }: { overall: number; rows: EffRow[] }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node)) return
+      if (popRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  function toggle() {
+    if (!open && triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 268) })
+    }
+    setOpen(o => !o)
+  }
+
+  return (
+    <>
+      <button ref={triggerRef} type="button" onClick={toggle}
+        className="flex flex-col items-center px-3 py-1" title="Текущая эффективность спринта"
+        style={{ minWidth: 52, cursor: 'pointer', background: open ? 'var(--surface)' : 'transparent' }}>
+        <span className="text-sm font-semibold leading-none flex items-center gap-0.5"
+          style={{ color: efficiencyColor(overall), fontFamily: 'var(--font-mono)' }}>
+          {overall}%
+          <svg width="8" height="8" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>эффект.</span>
+      </button>
+
+      {open && pos && createPortal(
+        <div ref={popRef}
+          style={{
+            position: 'fixed', top: pos.top, left: pos.left, width: 260, zIndex: 1000,
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+            padding: 10, boxShadow: '0 16px 48px rgba(0,0,0,0.5)', animation: 'dropdownIn 0.12s ease-out',
+          }}>
+          <div className="flex items-center justify-between px-1 pb-2 mb-1" style={{ borderBottom: '1px solid var(--border)' }}>
+            <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>По исполнителям</span>
+            <span className="text-xs font-semibold" style={{ color: efficiencyColor(overall), fontFamily: 'var(--font-mono)' }}>
+              всего {overall}%
+            </span>
+          </div>
+          {rows.length === 0 ? (
+            <div className="text-xs px-1 py-1.5" style={{ color: 'var(--text2)' }}>Нет задач</div>
+          ) : rows.map((r, i) => (
+            <div key={r.assignee?.login ?? `none-${i}`} className="flex items-center gap-2 px-1 py-1.5">
+              <EffAvatar name={r.assignee?.full_name ?? null} login={r.assignee?.login ?? '—'} />
+              <span className="text-xs truncate flex-1" style={{ color: 'var(--text)' }}>
+                {r.assignee?.full_name || r.assignee?.login || 'Без исполнителя'}
+              </span>
+              <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text2)' }}>{r.done}/{r.total}</span>
+              <div className="w-10 h-1.5 rounded-full overflow-hidden shrink-0" style={{ background: 'var(--surface2)' }}>
+                <div className="h-full rounded-full" style={{ width: `${r.eff}%`, background: efficiencyColor(r.eff) }} />
+              </div>
+              <span className="text-xs font-semibold shrink-0 text-right" style={{ width: 34, color: efficiencyColor(r.eff), fontFamily: 'var(--font-mono)' }}>
+                {r.eff}%
+              </span>
+            </div>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
+
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
 type Props = {
@@ -441,6 +531,27 @@ export default function SprintPanel({
   const taskCount = tasks.filter(t => t.type === 'task' && t.workflow_status !== 'cancelled').length
   const epicCount = tasks.filter(t => t.type === 'epic').length
   const totalMinutes = tasks.filter(t => t.type === 'task' && t.workflow_status !== 'cancelled').reduce((s, t) => s + (t.time_estimate ?? 0), 0)
+
+  // Эффективность вживую (та же формула, что в истории), общая + по исполнителям
+  const toEff = (t: SprintTask) => ({ type: t.type, workflow_status: t.workflow_status, time_estimate: t.time_estimate, task_status: t.status })
+  const overallEfficiency = computeEfficiency(tasks.map(toEff))
+  const efficiencyRows: EffRow[] = (() => {
+    const groups = new Map<string, { assignee: TaskAssignee | null; items: SprintTask[] }>()
+    for (const t of tasks) {
+      if (t.type === 'epic' || t.workflow_status === 'cancelled') continue
+      const key = t.assignee_id ?? '__none__'
+      if (!groups.has(key)) groups.set(key, { assignee: t.assignee, items: [] })
+      groups.get(key)!.items.push(t)
+    }
+    return [...groups.values()]
+      .map(g => ({
+        assignee: g.assignee,
+        eff: computeEfficiency(g.items.map(toEff)),
+        done: g.items.filter(t => t.workflow_status === 'done').length,
+        total: g.items.length,
+      }))
+      .sort((a, b) => b.eff - a.eff)
+  })()
 
   function formatDate(iso: string) {
     const d = new Date(iso + 'T00:00:00')
@@ -671,6 +782,12 @@ export default function SprintPanel({
                 <span className="text-sm font-semibold leading-none" style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{minutesToDisplay(totalMinutes)}</span>
                 <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>объём</span>
               </div>
+            )}
+            {taskCount > 0 && (
+              <>
+                <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
+                <EfficiencyStat overall={overallEfficiency} rows={efficiencyRows} />
+              </>
             )}
           </div>
 
