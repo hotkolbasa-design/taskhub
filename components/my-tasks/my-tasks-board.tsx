@@ -275,7 +275,9 @@ function EmployeeDropdown({
 export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdmin, allProfiles }: Props) {
   const router = useRouter()
   const [tasks, setTasks] = useState<MyTask[]>(initialTasks)
-  const [roleFilter, setRoleFilter] = useState<RoleFilter[]>(['assignee'])
+  // Админ/руководитель в основном ставит задачи → по умолчанию видит и исполнителя, и постановщика.
+  // Обычный сотрудник — только свои (исполнитель).
+  const [roleFilter, setRoleFilter] = useState<RoleFilter[]>(isAdmin ? ['assignee', 'creator'] : ['assignee'])
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
   const [targetUserId, setTargetUserId] = useState(currentUserId)
   const [loadingTarget, setLoadingTarget] = useState(false)
