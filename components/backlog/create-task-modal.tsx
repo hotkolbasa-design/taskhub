@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import type { BacklogTask } from '@/types'
 
@@ -126,21 +127,37 @@ function EpicDropdown({ value, onChange, options }: { value: string; onChange: (
 
 function UserDropdown({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: Member[] }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const selected = options.find(o => o.id === value)
 
   useEffect(() => {
     if (!open) return
-    const onOut = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onOut = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (
+        btnRef.current && !btnRef.current.contains(target) &&
+        menuRef.current && !menuRef.current.contains(target)
+      ) setOpen(false)
+    }
     document.addEventListener('mousedown', onOut)
     return () => document.removeEventListener('mousedown', onOut)
   }, [open])
 
+  function handleOpen() {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+    setOpen(o => !o)
+  }
+
   return (
-    <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)}
+    <div>
+      <button ref={btnRef} type="button" onClick={handleOpen}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left"
-        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: selected ? 'var(--text)' : 'var(--text2)' }}
+        style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: selected ? 'var(--text)' : 'var(--text2)', cursor: 'pointer' }}
       >
         {selected ? (
           <>
@@ -154,19 +171,31 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1 py-1 rounded-xl z-50 w-full"
-          style={{ background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out' }}>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={menuRef}
+          className="py-1 rounded-xl overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            maxHeight: 192,
+            zIndex: 9999,
+            background: 'var(--surface2)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            animation: 'dropdownIn 0.12s ease-out',
+          }}>
           <button type="button" onClick={() => { onChange(''); setOpen(false) }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
-            style={{ color: !value ? 'var(--accent)' : 'var(--text2)' }}
+            style={{ color: !value ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
           >Не назначено</button>
           {options.map(opt => (
             <button key={opt.id} type="button" onClick={() => { onChange(opt.id); setOpen(false) }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
-              style={{ color: opt.id === value ? 'var(--accent)' : 'var(--text)' }}
+              style={{ color: opt.id === value ? 'var(--accent)' : 'var(--text)', cursor: 'pointer' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
@@ -180,7 +209,8 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
               </div>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
