@@ -51,8 +51,13 @@ function PriorityDropdown({
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [open])
 
   function handleOpen(e: React.MouseEvent) {
@@ -152,8 +157,13 @@ function StatusDropdown({
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [open])
 
   function handleOpen(e: React.MouseEvent) {

@@ -47,8 +47,13 @@ function PriorityBadgeDropdown({ priority, taskId, onChange }: {
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [open])
 
   function handleOpen(e: React.MouseEvent) {
@@ -167,8 +172,13 @@ function WorkflowBadgeDropdown({ status, taskId, onChange }: { status: string; t
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [open])
 
   function handleOpen(e: React.MouseEvent) {
@@ -285,8 +295,13 @@ function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [open])
 
   const date = deadline ? new Date(deadline + 'T00:00:00') : null
@@ -480,8 +495,13 @@ function TimePickerInline({ minutes, taskId, onChange }: {
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [open])
 
   function openPicker(e: React.MouseEvent) {
@@ -679,8 +699,13 @@ export default function TaskCard({
         setDeleteConfirm(false)
       }
     }
+    const onScroll = () => { setMenuOpen(false); setDeleteConfirm(false) }
     document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
   }, [menuOpen])
 
   function openMenu(e: React.MouseEvent) {
