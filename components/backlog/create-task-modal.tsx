@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { createTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { getAvatarColor } from '@/lib/utils/avatar'
 import type { BacklogTask } from '@/types'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
@@ -161,7 +162,7 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
       >
         {selected ? (
           <>
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0" style={{ background: 'var(--accent)', color: '#fff' }}>
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0" style={{ background: getAvatarColor(selected.full_name || selected.login), color: '#fff' }}>
               {(selected.full_name || selected.login)[0].toUpperCase()}
             </span>
             <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
@@ -200,7 +201,7 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-                style={{ background: opt.id === value ? 'var(--accent)' : 'var(--surface)', color: '#fff' }}>
+                style={{ background: getAvatarColor(opt.full_name || opt.login), color: '#fff' }}>
                 {(opt.full_name || opt.login)[0].toUpperCase()}
               </span>
               <div className="flex flex-col min-w-0">

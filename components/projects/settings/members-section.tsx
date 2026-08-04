@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { addMember, updateMemberRole, removeMember } from '@/app/(dashboard)/projects/[id]/settings/actions'
+import { getAvatarColor } from '@/lib/utils/avatar'
 
 type Member = {
   user_id: string
@@ -164,7 +165,7 @@ function MultiUserDropdown({
                   {/* Аватар */}
                   <span
                     className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-                    style={{ background: isSelected ? 'var(--accent)' : 'var(--surface)', color: '#fff' }}
+                    style={{ background: getAvatarColor(opt.full_name || opt.login), color: '#fff' }}
                   >
                     {(opt.full_name || opt.login)[0].toUpperCase()}
                   </span>

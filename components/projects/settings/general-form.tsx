@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateProject } from '@/app/(dashboard)/projects/[id]/settings/actions'
+import { getAvatarColor } from '@/lib/utils/avatar'
 
 const COLORS = [
   '#7C5CF6', '#2DD4A0', '#F75C6E', '#F7C04F',
@@ -37,7 +38,7 @@ function UserDropdown({ value, onChange, members }: { value: string; onChange: (
       >
         {selected ? (
           <>
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0" style={{ background: 'var(--accent)', color: '#fff' }}>
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0" style={{ background: getAvatarColor(selected.full_name || selected.login), color: '#fff' }}>
               {(selected.full_name || selected.login)[0].toUpperCase()}
             </span>
             <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
@@ -58,7 +59,7 @@ function UserDropdown({ value, onChange, members }: { value: string; onChange: (
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-                style={{ background: m.id === value ? 'var(--accent)' : 'var(--surface)', color: '#fff' }}>
+                style={{ background: getAvatarColor(m.full_name || m.login), color: '#fff' }}>
                 {(m.full_name || m.login)[0].toUpperCase()}
               </span>
               <div className="flex flex-col min-w-0">
