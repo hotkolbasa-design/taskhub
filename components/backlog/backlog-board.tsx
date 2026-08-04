@@ -30,7 +30,6 @@ import type { WorkflowStatus, SprintTask, Sprint } from '@/types'
 import TaskCard from './task-card'
 import CreateTaskModal from './create-task-modal'
 import TaskDrawer from './task-drawer'
-import UserFilter from '@/components/common/user-filter'
 import SprintPanel, {
   SPRINT_DROP_ID,
   buildSprintTree,
@@ -57,6 +56,7 @@ type Props = {
   defaultAssigneeId: string | null
   sprintPanelData?: SprintPanelData | null
   isAdmin?: boolean
+  assigneeFilter?: string[]
 }
 
 type DragPreview = { container: string; insertAt: number }
@@ -283,11 +283,10 @@ function findTaskDeep(taskList: BacklogTask[], id: string): BacklogTask | null {
   return null
 }
 
-export default function BacklogBoard({ projectId, initialTasks, members, membersMap, hasActiveSprint, currentUserId, defaultAssigneeMode, defaultAssigneeId, sprintPanelData = null, isAdmin = false }: Props) {
+export default function BacklogBoard({ projectId, initialTasks, members, membersMap, hasActiveSprint, currentUserId, defaultAssigneeMode, defaultAssigneeId, sprintPanelData = null, isAdmin = false, assigneeFilter = [] }: Props) {
   const router = useRouter()
   const [tasks, setTasks] = useState<BacklogTask[]>(initialTasks)
   const [sprintTasks, setSprintTasks] = useState<SprintTask[]>(sprintPanelData?.tasks ?? [])
-  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([])
   const [showModal, setShowModal] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
@@ -856,19 +855,16 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                   </>
                 })()}
               </div>
-              <div className="flex items-center gap-2">
-                <UserFilter users={members} selected={assigneeFilter} onChange={setAssigneeFilter} />
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
-                  style={{ background: 'var(--accent)', color: '#fff' }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                  Добавить задачу
-                </button>
-              </div>
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ background: 'var(--accent)', color: '#fff' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+                Добавить задачу
+              </button>
             </div>
 
             {/* Контент */}
