@@ -768,7 +768,7 @@ export default function SprintPanel({
         </div>
 
         {/* Строка 2: статы + кнопка фиксации */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-x-3 gap-y-2 flex-wrap justify-between">
           {/* Статистика — компактная строка */}
           <div className="flex items-center gap-0 rounded-lg overflow-hidden shrink-0"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -804,7 +804,7 @@ export default function SprintPanel({
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isFixed ? (
               <>
                 <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium"
