@@ -502,6 +502,7 @@ type Props = {
   onSprintDeleted: () => void
   isAdmin?: boolean
   members?: Member[]
+  assigneeFilter?: string[]
 }
 
 export default function SprintPanel({
@@ -509,6 +510,7 @@ export default function SprintPanel({
   onTasksChange, onTaskRemoved, onEditTask, onSprintDeleted,
   isAdmin = false,
   members = [],
+  assigneeFilter = [],
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: SPRINT_DROP_ID })
   const router = useRouter()
@@ -525,19 +527,30 @@ export default function SprintPanel({
   const [showAddModal, setShowAddModal] = useState(false)
   const [missingData, setMissingData] = useState<{ missingDeadline: { id: string; title: string }[]; missingTime: { id: string; title: string }[] } | null>(null)
 
-  const tree = buildSprintTree(tasks)
+  // Фильтр по исполнителю влияет только на ОТОБРАЖЕНИЕ (дерево + статы);
+  // мутации (onTasksChange) всегда работают с полным массивом tasks.
+  const filterSet = new Set(assigneeFilter)
+  const viewTasks = (() => {
+    if (assigneeFilter.length === 0) return tasks
+    const matchIds = new Set(tasks.filter(t => t.assignee_id != null && filterSet.has(t.assignee_id)).map(t => t.id))
+    const keep = new Set(matchIds)
+    for (const t of tasks) if (matchIds.has(t.id) && t.parent_task_id) keep.add(t.parent_task_id)
+    return tasks.filter(t => keep.has(t.id))
+  })()
+
+  const tree = buildSprintTree(viewTasks)
   const topLevelIds = tree.map(t => t.id)
 
-  const taskCount = tasks.filter(t => t.type === 'task' && t.workflow_status !== 'cancelled').length
-  const epicCount = tasks.filter(t => t.type === 'epic').length
-  const totalMinutes = tasks.filter(t => t.type === 'task' && t.workflow_status !== 'cancelled').reduce((s, t) => s + (t.time_estimate ?? 0), 0)
+  const taskCount = viewTasks.filter(t => t.type === 'task' && t.workflow_status !== 'cancelled').length
+  const epicCount = viewTasks.filter(t => t.type === 'epic').length
+  const totalMinutes = viewTasks.filter(t => t.type === 'task' && t.workflow_status !== 'cancelled').reduce((s, t) => s + (t.time_estimate ?? 0), 0)
 
   // Эффективность вживую (та же формула, что в истории), общая + по исполнителям
   const toEff = (t: SprintTask) => ({ type: t.type, workflow_status: t.workflow_status, time_estimate: t.time_estimate, task_status: t.status })
-  const overallEfficiency = computeEfficiency(tasks.map(toEff))
+  const overallEfficiency = computeEfficiency(viewTasks.map(toEff))
   const efficiencyRows: EffRow[] = (() => {
     const groups = new Map<string, { assignee: TaskAssignee | null; items: SprintTask[] }>()
-    for (const t of tasks) {
+    for (const t of viewTasks) {
       if (t.type === 'epic' || t.workflow_status === 'cancelled') continue
       const key = t.assignee_id ?? '__none__'
       if (!groups.has(key)) groups.set(key, { assignee: t.assignee, items: [] })
@@ -755,7 +768,7 @@ export default function SprintPanel({
         </div>
 
         {/* Строка 2: статы + кнопка фиксации */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Статистика — компактная строка */}
           <div className="flex items-center gap-0 rounded-lg overflow-hidden shrink-0"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>

@@ -957,6 +957,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
               }}
               isAdmin={isAdmin}
               members={members}
+              assigneeFilter={assigneeFilter}
             />
           ) : (
             <EmptySprintPanel projectId={projectId} />
