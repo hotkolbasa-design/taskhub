@@ -394,7 +394,7 @@ export default function MembersSection({
             >
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-                style={{ background: 'var(--accent)', color: '#fff' }}
+                style={{ background: getAvatarColor(name), color: '#fff' }}
               >
                 {name[0].toUpperCase()}
               </div>
