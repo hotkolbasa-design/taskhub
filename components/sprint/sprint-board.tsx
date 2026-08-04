@@ -31,6 +31,7 @@ import {
   deleteSprintColumn,
 } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import SprintTaskCard from './sprint-task-card'
+import UserFilter from '@/components/common/user-filter'
 
 type TaskMap = Record<string, SprintTask[]>
 
@@ -87,9 +88,18 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
   // Add column state
   const [addingAfterColId, setAddingAfterColId] = useState<string | 'end' | null>(null)
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  )
+  // Фильтр по исполнителю. При активном фильтре DnD отключаем, чтобы не
+  // переупорядочивать/перемещать отфильтрованное подмножество и не сломать column_order.
+  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([])
+  const filterActive = assigneeFilter.length > 0
+  const filterSet = new Set(assigneeFilter)
+  const visibleColTasks = (colId: string) => {
+    const list = taskMap[colId] ?? []
+    return filterActive ? list.filter(t => t.assignee_id != null && filterSet.has(t.assignee_id)) : list
+  }
+
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  const sensors = useSensors(...(filterActive ? [] : [pointerSensor]))
 
   const handleTaskClick = useCallback((task: SprintTask) => {
     setSelectedTask(task)
@@ -365,6 +375,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
         </div>
 
         <div className="flex items-center gap-2">
+          <UserFilter users={members} selected={assigneeFilter} onChange={setAssigneeFilter} />
           {canManage && (
             <button
               onClick={handleCloseSprint}
@@ -399,7 +410,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
                 <div key={col.id} className="flex items-start">
                   <KanbanColumn
                     column={col}
-                    tasks={taskMap[col.id] ?? []}
+                    tasks={visibleColTasks(col.id)}
                     dragPreview={dragPreview}
                     activeTaskId={activeTask?.id ?? null}
                     isTaskDragging={draggingType === 'task'}

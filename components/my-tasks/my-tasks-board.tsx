@@ -6,7 +6,8 @@ import { createPortal } from 'react-dom'
 import type { MyTask } from '@/lib/queries/my-tasks'
 import MyTaskCard from './my-task-card'
 import TaskDrawer from '@/components/backlog/task-drawer'
-import { getTaskForDrawer, fetchTasksForUser, updateTaskWorkflowStatus, updateTaskPriority } from '@/app/(dashboard)/my-tasks/actions'
+import UserFilter from '@/components/common/user-filter'
+import { getTaskForDrawer, fetchTasksForUsers, updateTaskWorkflowStatus, updateTaskPriority } from '@/app/(dashboard)/my-tasks/actions'
 import type { BacklogTask, WorkflowStatus } from '@/types'
 
 type Profile = { id: string; full_name: string | null; login: string; avatar_url: string | null }
@@ -164,112 +165,6 @@ function ProjectDropdown({
   )
 }
 
-function EmployeeDropdown({
-  profiles,
-  value,
-  onChange,
-}: {
-  profiles: Profile[]
-  value: string
-  onChange: (v: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, left: 0 })
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const dropRef = useRef<HTMLDivElement>(null)
-  const selected = profiles.find(p => p.id === value)
-
-  useEffect(() => {
-    if (!open) return
-    const onOut = (e: MouseEvent) => {
-      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onOut)
-    return () => document.removeEventListener('mousedown', onOut)
-  }, [open])
-
-  function handleOpen() {
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (rect) setPos({ top: rect.bottom + 4, left: rect.left })
-    setOpen(o => !o)
-  }
-
-  const displayName = selected?.full_name || selected?.login || ''
-  const initial = displayName[0]?.toUpperCase()
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        onClick={handleOpen}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
-        style={{
-          background: open ? 'var(--surface2)' : 'rgba(255,255,255,0.05)',
-          border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`,
-          color: 'var(--text)',
-          cursor: 'pointer',
-        }}
-      >
-        <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-          style={{ background: 'var(--accent)', color: '#fff' }}>
-          {initial}
-        </div>
-        <span className="max-w-[140px] truncate">{displayName}</span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.5 }}>
-          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-
-      {open && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={dropRef}
-          className="rounded-xl py-1"
-          style={{
-            position: 'fixed',
-            top: pos.top,
-            left: pos.left,
-            minWidth: 220,
-            maxHeight: 320,
-            overflowY: 'auto',
-            zIndex: 9999,
-            background: 'var(--surface)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            animation: 'dropdownIn 0.12s ease-out',
-          }}
-        >
-          {profiles.map(p => {
-            const name = p.full_name || p.login
-            return (
-              <button
-                key={p.id}
-                onClick={() => { onChange(p.id); setOpen(false) }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
-                style={{ color: p.id === value ? 'var(--accent)' : 'var(--text)', cursor: 'pointer' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-              >
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-                  style={{ background: 'var(--accent)', color: '#fff' }}>
-                  {name[0]?.toUpperCase()}
-                </div>
-                <span className="flex-1 truncate">{name}</span>
-                {p.id === value && (
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 5.5L4 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </button>
-            )
-          })}
-        </div>,
-        document.body
-      )}
-    </>
-  )
-}
-
 // ——— Main Board ———
 
 export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdmin, allProfiles }: Props) {
@@ -279,22 +174,26 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
   // сотрудники тоже раздают задачи друг другу. Сузить можно кнопками.
   const [roleFilter, setRoleFilter] = useState<RoleFilter[]>(['assignee', 'creator'])
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
-  const [targetUserId, setTargetUserId] = useState(currentUserId)
+  // Кого показывать (по исполнителю/постановщику). По умолчанию — текущий пользователь.
+  // Мультивыбор чужих сотрудников доступен только админу.
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([currentUserId])
   const [loadingTarget, setLoadingTarget] = useState(false)
 
   // Drawer state
   const [drawerData, setDrawerData] = useState<Awaited<ReturnType<typeof getTaskForDrawer>>>(null)
   const [drawerLoading, setDrawerLoading] = useState(false)
 
-  // Refresh tasks when targetUserId changes
+  // Подгружаем задачи выбранных сотрудников (для себя — уже загружены на сервере)
   useEffect(() => {
-    if (targetUserId === currentUserId) return
+    const isSelf = selectedUsers.length === 1 && selectedUsers[0] === currentUserId
+    if (isSelf) { setTasks(initialTasks); return }
+    if (selectedUsers.length === 0) { setTasks(initialTasks); return }
     setLoadingTarget(true)
-    fetchTasksForUser(targetUserId)
+    fetchTasksForUsers(selectedUsers)
       .then(data => { setTasks(data); setLoadingTarget(false) })
       .catch(() => setLoadingTarget(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetUserId])
+  }, [selectedUsers])
 
   function toggleRole(role: RoleFilter) {
     setRoleFilter(prev => {
@@ -316,10 +215,11 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
   })()
 
   // Filter tasks
+  const selectedSet = new Set(selectedUsers.length ? selectedUsers : [currentUserId])
   const filteredTasks = tasks.filter(t => {
     const byRole = (
-      (roleFilter.includes('assignee') && t.assignee_id === targetUserId) ||
-      (roleFilter.includes('creator') && t.creator_id === targetUserId)
+      (roleFilter.includes('assignee') && t.assignee_id != null && selectedSet.has(t.assignee_id)) ||
+      (roleFilter.includes('creator') && t.creator_id != null && selectedSet.has(t.creator_id))
     )
     if (!byRole) return false
     if (projectFilter && t.project_id !== projectFilter) return false
@@ -376,9 +276,13 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
   }
 
   const targetDisplayName = (() => {
-    if (targetUserId === currentUserId) return null
-    const p = allProfiles.find(p => p.id === targetUserId)
-    return p?.full_name || p?.login || ''
+    const isSelf = selectedUsers.length === 1 && selectedUsers[0] === currentUserId
+    if (isSelf || selectedUsers.length === 0) return null
+    const names = selectedUsers
+      .map(id => { const p = allProfiles.find(p => p.id === id); return p?.full_name || p?.login || '' })
+      .filter(Boolean)
+    if (names.length <= 2) return names.join(', ')
+    return `${names.slice(0, 2).join(', ')} +${names.length - 2}`
   })()
 
   return (
@@ -412,7 +316,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                   cursor: 'pointer',
                 }}
               >
-                Я исполнитель
+                Исполнитель
               </button>
               <button
                 onClick={() => toggleRole('creator')}
@@ -423,7 +327,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                   cursor: 'pointer',
                 }}
               >
-                Я постановщик
+                Постановщик
               </button>
             </div>
 
@@ -434,15 +338,16 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
               onChange={setProjectFilter}
             />
 
-            {/* Выбор сотрудника (только admin) */}
+            {/* Фильтр по сотрудникам (только admin) */}
             {isAdmin && allProfiles.length > 0 && (
-              <EmployeeDropdown
-                profiles={allProfiles}
-                value={targetUserId}
-                onChange={id => {
-                  setTargetUserId(id)
+              <UserFilter
+                users={allProfiles}
+                selected={selectedUsers.length === 1 && selectedUsers[0] === currentUserId ? [] : selectedUsers}
+                onChange={ids => {
+                  setSelectedUsers(ids.length ? ids : [currentUserId])
                   setProjectFilter(null)
                 }}
+                placeholder="Мои задачи"
               />
             )}
           </div>
@@ -499,7 +404,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                       <MyTaskCard
                         key={task.id}
                         task={task}
-                        currentUserId={targetUserId}
+                        currentUserId={currentUserId}
                         onClick={() => handleCardClick(task.id)}
                         onStatusChange={handleStatusChange}
                         onPriorityChange={handlePriorityChange}

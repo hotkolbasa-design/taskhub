@@ -30,6 +30,7 @@ import type { WorkflowStatus, SprintTask, Sprint } from '@/types'
 import TaskCard from './task-card'
 import CreateTaskModal from './create-task-modal'
 import TaskDrawer from './task-drawer'
+import UserFilter from '@/components/common/user-filter'
 import SprintPanel, {
   SPRINT_DROP_ID,
   buildSprintTree,
@@ -286,6 +287,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
   const router = useRouter()
   const [tasks, setTasks] = useState<BacklogTask[]>(initialTasks)
   const [sprintTasks, setSprintTasks] = useState<SprintTask[]>(sprintPanelData?.tasks ?? [])
+  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([])
   const [showModal, setShowModal] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
@@ -363,12 +365,31 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     backlogPanelRef.current = node
   }, [setBacklogDropRef])
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  )
+  // Фильтр по исполнителю. При активном фильтре DnD отключаем — иначе
+  // переупорядочивание отфильтрованного подмножества сломает backlog_order.
+  const filterActive = assigneeFilter.length > 0
+  const filterSet = new Set(assigneeFilter)
+
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  const sensors = useSensors(...(filterActive ? [] : [pointerSensor]))
+
+  const visibleTasks = (() => {
+    if (!filterActive) return tasks
+    const out: BacklogTask[] = []
+    for (const t of tasks) {
+      if (t.type === 'epic') {
+        const subs = t.subtasks.filter(s => s.assignee_id != null && filterSet.has(s.assignee_id))
+        const epicMatch = t.assignee_id != null && filterSet.has(t.assignee_id)
+        if (epicMatch || subs.length) out.push({ ...t, subtasks: subs })
+      } else if (t.assignee_id != null && filterSet.has(t.assignee_id)) {
+        out.push(t)
+      }
+    }
+    return out
+  })()
 
   // Только top-level айди для root sortable
-  const sortableIds = tasks.map(t => t.id)
+  const sortableIds = visibleTasks.map(t => t.id)
 
   // Geometry-based panel detection: надёжнее closestCenter при пустом бэклоге
   function handleDragMove({ active }: DragMoveEvent) {
@@ -823,7 +844,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
             >
               <div className="flex items-center gap-3">
                 {(() => {
-                  const all = tasks.flatMap(t => t.type === 'epic' ? [t, ...t.subtasks] : [t])
+                  const all = visibleTasks.flatMap(t => t.type === 'epic' ? [t, ...t.subtasks] : [t])
                   const tc = all.filter(t => t.type === 'task').length
                   const ec = all.filter(t => t.type === 'epic').length
                   const mins = all.filter(t => t.type === 'task').reduce((s, t) => s + (t.time_estimate ?? 0), 0)
@@ -831,25 +852,28 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                     {tc > 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{tc} {plural(tc, 'задача', 'задачи', 'задач')}</span>}
                     {ec > 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{ec} {plural(ec, 'эпик', 'эпика', 'эпиков')}</span>}
                     {mins > 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{minutesToDisplay(mins)}</span>}
-                    {tc === 0 && ec === 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>Бэклог пуст</span>}
+                    {tc === 0 && ec === 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{filterActive ? 'Нет задач по фильтру' : 'Бэклог пуст'}</span>}
                   </>
                 })()}
               </div>
-              <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
-                style={{ background: 'var(--accent)', color: '#fff' }}
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
-                Добавить задачу
-              </button>
+              <div className="flex items-center gap-2">
+                <UserFilter users={members} selected={assigneeFilter} onChange={setAssigneeFilter} />
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+                  style={{ background: 'var(--accent)', color: '#fff' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                  Добавить задачу
+                </button>
+              </div>
             </div>
 
             {/* Контент */}
             <div className="flex-1 p-3">
-            {tasks.length === 0 ? (
+            {visibleTasks.length === 0 ? (
               <div
                 className="flex flex-col items-center justify-center gap-3 py-16 rounded-xl"
                 style={{ border: '1px dashed var(--border)' }}
@@ -858,21 +882,23 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                   <rect x="6" y="4" width="28" height="32" rx="3" stroke="var(--text2)" strokeWidth="2"/>
                   <path d="M13 14h14M13 20h14M13 26h8" stroke="var(--text2)" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
-                <p className="text-sm" style={{ color: 'var(--text2)' }}>Бэклог пуст</p>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="text-sm px-4 py-2 rounded-lg font-medium"
-                  style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)' }}
-                >
-                  Создать первую задачу
-                </button>
+                <p className="text-sm" style={{ color: 'var(--text2)' }}>{filterActive ? 'Нет задач по выбранным исполнителям' : 'Бэклог пуст'}</p>
+                {!filterActive && (
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="text-sm px-4 py-2 rounded-lg font-medium"
+                    style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)' }}
+                  >
+                    Создать первую задачу
+                  </button>
+                )}
               </div>
             ) : (
             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
               <div className="flex flex-col gap-2">
-                {tasks.map((task, i) => {
+                {visibleTasks.map((task, i) => {
                   const isInsertBefore = dragPreview?.container === 'root' && dragPreview.insertAt === i
-                  const isInsertAfterLast = i === tasks.length - 1 && dragPreview?.container === 'root' && dragPreview.insertAt >= tasks.length
+                  const isInsertAfterLast = i === visibleTasks.length - 1 && dragPreview?.container === 'root' && dragPreview.insertAt >= visibleTasks.length
                   const insertIndicator = isInsertBefore ? 'before' as const : isInsertAfterLast ? 'after' as const : undefined
 
                   return (

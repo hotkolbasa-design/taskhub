@@ -3,7 +3,7 @@
 import { revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { getMyTasks } from '@/lib/queries/my-tasks'
+import { getMyTasks, getTasksForUsers } from '@/lib/queries/my-tasks'
 import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive } from '@/lib/queries/task-archive'
 import type { BacklogTask } from '@/types'
 
@@ -24,6 +24,14 @@ export async function fetchTasksForUser(targetUserId: string) {
   if (!user) return []
   const effectiveId = user.role === 'admin' ? targetUserId : user.id
   return getMyTasks(effectiveId)
+}
+
+// Мультивыбор сотрудников в «Мои задачи» — только админ может смотреть чужие задачи
+export async function fetchTasksForUsers(userIds: string[]) {
+  const user = await getCurrentUser()
+  if (!user) return []
+  if (user.role !== 'admin') return getMyTasks(user.id)
+  return getTasksForUsers(userIds)
 }
 
 export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: string) {
