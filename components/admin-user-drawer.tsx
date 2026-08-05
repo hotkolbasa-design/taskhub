@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { setRole, setStatus, updateUserProfile } from '@/app/(dashboard)/admin/actions'
+import { getAvatarColor } from '@/lib/utils/avatar'
 
 const ROLES = [
   { value: 'employee', label: 'Employee', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
@@ -152,7 +153,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
           {/* Avatar + badges */}
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-semibold shrink-0"
-              style={{ background: 'var(--accent)', color: '#fff' }}>
+              style={{ background: getAvatarColor(displayName), color: '#fff' }}>
               {displayName[0].toUpperCase()}
             </div>
             <div className="flex flex-col gap-2">

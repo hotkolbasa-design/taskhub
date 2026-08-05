@@ -9,6 +9,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { SprintTask, Sprint, BacklogTask, TaskAssignee } from '@/types'
 import { minutesToDisplay } from '@/lib/utils/time'
 import { computeEfficiency, efficiencyColor } from '@/lib/utils/efficiency'
+import { getAvatarColor } from '@/lib/utils/avatar'
 import { updateTask, moveBackToBacklog, updateSprintPeriod, deleteSprint, removeFromEpic, createSprintTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { getTasksMissingData, fixSprint, unfixSprint, closeSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import TaskCard from './task-card'
@@ -403,11 +404,11 @@ function SprintRootBottomDrop({ disabled }: { disabled: boolean }) {
 type EffRow = { assignee: TaskAssignee | null; eff: number; done: number; total: number }
 
 function EffAvatar({ name, login, size = 20 }: { name: string | null; login: string; size?: number }) {
-  const initial = (name || login || '—')[0].toUpperCase()
+  const label = name || login || '—'
   return (
     <span className="rounded-full flex items-center justify-center font-medium shrink-0"
-      style={{ width: size, height: size, background: 'var(--accent)', color: '#fff', fontSize: size * 0.42 }}>
-      {initial}
+      style={{ width: size, height: size, background: getAvatarColor(label), color: '#fff', fontSize: size * 0.42 }}>
+      {label[0].toUpperCase()}
     </span>
   )
 }
