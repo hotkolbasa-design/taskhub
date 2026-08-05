@@ -48,6 +48,7 @@ export async function addMember(projectId: string, userId: string, role: 'manage
   if (error) throw new Error(error.message)
   revalidateTag(`tasks-${projectId}`, "default")
   revalidateTag(`members-${projectId}`, "default")
+  revalidateTag('projects', "default")
 }
 
 export async function updateMemberRole(projectId: string, userId: string, role: 'manager' | 'member' | 'viewer') {
@@ -63,6 +64,7 @@ export async function updateMemberRole(projectId: string, userId: string, role: 
   if (error) throw new Error(error.message)
   revalidateTag(`tasks-${projectId}`, "default")
   revalidateTag(`members-${projectId}`, "default")
+  revalidateTag('projects', "default")
 }
 
 export async function removeMember(projectId: string, userId: string) {
@@ -78,4 +80,5 @@ export async function removeMember(projectId: string, userId: string) {
   if (error) throw new Error(error.message)
   revalidateTag(`tasks-${projectId}`, "default")
   revalidateTag(`members-${projectId}`, "default")
+  revalidateTag('projects', "default")
 }
