@@ -20,7 +20,7 @@ export function archiveAction(
   return null
 }
 
-async function nextBacklogOrder(admin: Admin, projectId: string): Promise<number> {
+export async function nextBacklogOrder(admin: Admin, projectId: string): Promise<number> {
   const { data: last } = await admin
     .from('tasks')
     .select('backlog_order')

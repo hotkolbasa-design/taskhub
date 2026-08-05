@@ -649,6 +649,7 @@ type Props = {
   onMoveToBacklog?: (id: string) => void
   onRemoveFromEpic?: (id: string) => void
   onDuplicate?: (task: BacklogTask) => void
+  onConvertType?: (id: string, toType: 'task' | 'epic') => void
   onEdit?: (task: BacklogTask) => void
   onWorkflowChange?: (id: string, status: string) => void
   onPriorityChange?: (id: string, priority: 'medium' | 'high' | null) => void
@@ -672,6 +673,7 @@ export default function TaskCard({
   onMoveToBacklog,
   onRemoveFromEpic,
   onDuplicate,
+  onConvertType,
   onEdit,
   onWorkflowChange,
   onPriorityChange,
@@ -973,6 +975,22 @@ export default function TaskCard({
             </button>
           )}
 
+          {!!onConvertType && (
+            <button
+              type="button"
+              onClick={() => { setMenuOpen(false); onConvertType(task.id, task.type === 'epic' ? 'task' : 'epic') }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors"
+              style={{ color: 'var(--text2)', cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="shrink-0">
+                <path d="M3 4.5h8M3 4.5l1.8-1.8M3 4.5l1.8 1.8M11 9.5H3M11 9.5L9.2 7.7M11 9.5l-1.8 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {task.type === 'epic' ? 'Сделать задачей' : 'Сделать эпиком'}
+            </button>
+          )}
+
           {!!onDuplicate && task.type === 'task' && (
             <button
               type="button"
@@ -990,7 +1008,7 @@ export default function TaskCard({
             </button>
           )}
 
-          {((hasActiveSprint && !onMoveToBacklog) || !!onMoveToBacklog || (!!onRemoveFromEpic && !!task.parent_task_id) || (!!onDuplicate && task.type === 'task')) && (
+          {((hasActiveSprint && !onMoveToBacklog) || !!onMoveToBacklog || (!!onRemoveFromEpic && !!task.parent_task_id) || !!onConvertType || (!!onDuplicate && task.type === 'task')) && (
             <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
           )}
 

@@ -23,7 +23,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { reorderBacklog, reorderSprintTasks, updateTask, getComments, moveToSprint, moveBackToBacklog, createSprint, removeFromEpic, duplicateTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { reorderBacklog, reorderSprintTasks, updateTask, getComments, moveToSprint, moveBackToBacklog, createSprint, removeFromEpic, duplicateTask, convertTaskType } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { minutesToDisplay } from '@/lib/utils/time'
 import { moveTaskInSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import type { WorkflowStatus, SprintTask, Sprint } from '@/types'
@@ -74,6 +74,7 @@ function EpicBlock({
   onTimeChange,
   onRemoveFromEpic,
   onDuplicate,
+  onConvertType,
   insertIndicator,
 }: {
   epic: BacklogTask
@@ -88,6 +89,7 @@ function EpicBlock({
   onTimeChange: (id: string, minutes: number | null) => void
   onRemoveFromEpic: (id: string) => void
   onDuplicate: (task: BacklogTask) => void
+  onConvertType: (id: string, toType: 'task' | 'epic') => void
   insertIndicator?: 'before' | 'after'
 }) {
   const [expanded, setExpanded] = useState(true)
@@ -133,6 +135,7 @@ function EpicBlock({
           onWorkflowChange={onWorkflowChange}
           onPriorityChange={onPriorityChange}
           onDeadlineChange={onDeadlineChange}
+          onConvertType={onConvertType}
           avatarMenuInRow2
           row1Suffix={
             <div className="flex items-center gap-1.5 shrink-0">
@@ -175,6 +178,7 @@ function EpicBlock({
                 onOptimisticMoveToSprint={onMoveToSprint}
                 onRemoveFromEpic={onRemoveFromEpic}
                 onDuplicate={onDuplicate}
+                onConvertType={onConvertType}
                 onEdit={onEdit}
                 onWorkflowChange={onWorkflowChange}
                 onPriorityChange={onPriorityChange}
@@ -191,7 +195,7 @@ function EpicBlock({
 
 function SortableTaskRow({
   task, projectId, hasActiveSprint, insertIndicator,
-  onDelete, onMoveToSprint, onEdit, onWorkflowChange, onPriorityChange, onDeadlineChange, onTimeChange, onDuplicate,
+  onDelete, onMoveToSprint, onEdit, onWorkflowChange, onPriorityChange, onDeadlineChange, onTimeChange, onDuplicate, onConvertType,
 }: {
   task: BacklogTask
   projectId: string
@@ -205,6 +209,7 @@ function SortableTaskRow({
   onDeadlineChange: (id: string, deadline: string | null) => void
   onTimeChange: (id: string, minutes: number | null) => void
   onDuplicate: (task: BacklogTask) => void
+  onConvertType: (id: string, toType: 'task' | 'epic') => void
 }) {
   const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({ id: task.id })
   return (
@@ -233,6 +238,7 @@ function SortableTaskRow({
         onOptimisticDelete={onDelete}
         onOptimisticMoveToSprint={onMoveToSprint}
         onDuplicate={onDuplicate}
+        onConvertType={onConvertType}
         onEdit={onEdit}
         onWorkflowChange={onWorkflowChange}
         onPriorityChange={onPriorityChange}
@@ -790,6 +796,11 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     }
   }, [projectId, router])
 
+  const handleConvertType = useCallback(async (id: string, toType: 'task' | 'epic') => {
+    await convertTaskType(id, projectId, toType)
+    router.refresh()
+  }, [projectId, router])
+
   function handleCreated(task: BacklogTask) {
     if (task.parent_task_id) {
       // Добавляем как подзадачу к эпику
@@ -913,6 +924,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onTimeChange={handleTimeChange}
                           onRemoveFromEpic={handleRemoveFromEpic}
                           onDuplicate={handleDuplicate}
+                          onConvertType={handleConvertType}
                           insertIndicator={insertIndicator}
                         />
                       ) : (
@@ -929,6 +941,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                           onDeadlineChange={handleDeadlineChange}
                           onTimeChange={handleTimeChange}
                           onDuplicate={handleDuplicate}
+                          onConvertType={handleConvertType}
                         />
                       )}
                     </Fragment>
