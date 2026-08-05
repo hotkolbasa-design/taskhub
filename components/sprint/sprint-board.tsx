@@ -30,6 +30,7 @@ import {
   createSprintColumn,
   deleteSprintColumn,
 } from '@/app/(dashboard)/projects/[id]/sprint/actions'
+import { updateTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import SprintTaskCard from './sprint-task-card'
 import UserFilter from '@/components/common/user-filter'
 
@@ -119,6 +120,17 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
       setSelectedTask(prev => prev ? { ...prev, ...updated } : prev)
     }
   }, [selectedTask])
+
+  // Инлайн-смена статуса/приоритета прямо на карточке (без открытия drawer)
+  const handleInlineWorkflow = useCallback(async (taskId: string, status: string) => {
+    handleTaskUpdated({ id: taskId, workflow_status: status as SprintTask['workflow_status'] })
+    await updateTask(taskId, projectId, { workflow_status: status })
+  }, [handleTaskUpdated, projectId])
+
+  const handleInlinePriority = useCallback(async (taskId: string, priority: 'medium' | 'high' | null) => {
+    handleTaskUpdated({ id: taskId, priority })
+    await updateTask(taskId, projectId, { priority })
+  }, [handleTaskUpdated, projectId])
 
   const findTask = useCallback((id: string): SprintTask | undefined => {
     for (const tasks of Object.values(taskMap)) {
@@ -419,6 +431,8 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
                     onDelete={() => handleDeleteColumn(col.id)}
                     canDelete={cols.length > 1 && !col.role}
                     onTaskClick={handleTaskClick}
+                    onWorkflowChange={handleInlineWorkflow}
+                    onPriorityChange={handleInlinePriority}
                   />
                   {draggingType === null && addingAfterColId === col.id && (
                     <AddColumnForm
@@ -486,6 +500,8 @@ function KanbanColumn({
   onDelete,
   canDelete,
   onTaskClick,
+  onWorkflowChange,
+  onPriorityChange,
 }: {
   column: SprintColumn
   tasks: SprintTask[]
@@ -497,6 +513,8 @@ function KanbanColumn({
   onDelete: () => void
   canDelete: boolean
   onTaskClick: (task: SprintTask) => void
+  onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
 }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -689,6 +707,8 @@ function KanbanColumn({
           activeTaskId={activeTaskId}
           isEmptyTarget={isEmptyTarget}
           onTaskClick={onTaskClick}
+          onWorkflowChange={onWorkflowChange}
+          onPriorityChange={onPriorityChange}
         />
       </div>
     </div>
@@ -704,6 +724,8 @@ function TaskDropZone({
   activeTaskId,
   isEmptyTarget,
   onTaskClick,
+  onWorkflowChange,
+  onPriorityChange,
 }: {
   columnId: string
   tasks: SprintTask[]
@@ -711,6 +733,8 @@ function TaskDropZone({
   activeTaskId: string | null
   isEmptyTarget: boolean
   onTaskClick: (task: SprintTask) => void
+  onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
 }) {
   const { setNodeRef } = useDroppable({ id: `drop-${columnId}` })
 
@@ -735,6 +759,8 @@ function TaskDropZone({
             insertBefore={insertBefore}
             insertAfter={isLastAndAppend}
             onTaskClick={onTaskClick}
+            onWorkflowChange={onWorkflowChange}
+            onPriorityChange={onPriorityChange}
           />
         )
       })}
@@ -757,12 +783,16 @@ function DraggableCard({
   insertBefore,
   insertAfter,
   onTaskClick,
+  onWorkflowChange,
+  onPriorityChange,
 }: {
   task: SprintTask
   isDragging: boolean
   insertBefore: boolean
   insertAfter: boolean
   onTaskClick: (task: SprintTask) => void
+  onWorkflowChange: (id: string, status: string) => void
+  onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
 }) {
   const {
     attributes,
@@ -797,7 +827,7 @@ function DraggableCard({
         touchAction: 'none',
       }}
     >
-      <SprintTaskCard task={task} />
+      <SprintTaskCard task={task} onWorkflowChange={onWorkflowChange} onPriorityChange={onPriorityChange} />
     </div>
   )
 }

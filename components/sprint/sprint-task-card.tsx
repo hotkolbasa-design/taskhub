@@ -1,5 +1,7 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { SprintTask } from '@/types'
 import { minutesToDisplay } from '@/lib/utils/time'
 
@@ -18,18 +20,154 @@ const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string
   done:        { label: 'Выполнена',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
   cancelled:   { label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 }
+const WORKFLOW_KEYS = ['new', 'in_progress', 'review', 'done', 'cancelled']
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   medium: { label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)' },
   high:   { label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)' },
 }
+const PRIORITY_OPTIONS: { value: 'medium' | 'high' | null; label: string; color: string }[] = [
+  { value: null,     label: 'Нет',     color: '#8892A4' },
+  { value: 'medium', label: 'Средний', color: '#F7A84F' },
+  { value: 'high',   label: 'Высокий', color: '#F75C6E' },
+]
+
+// Общий портал-дропдаун: гасит всплытие (не открывает drawer / не стартует drag), закрывается по скроллу
+function usePortalDropdown() {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    const onScroll = () => setOpen(false)
+    document.addEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onOut)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [open])
+
+  function toggle(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!open) {
+      const r = triggerRef.current?.getBoundingClientRect()
+      if (r) setPos({ top: r.bottom + 4, left: Math.min(r.left, window.innerWidth - 172) })
+    }
+    setOpen(o => !o)
+  }
+
+  return { open, setOpen, pos, triggerRef, dropRef, toggle }
+}
+
+const menuStyle: React.CSSProperties = {
+  position: 'fixed', zIndex: 10000, minWidth: 160, padding: '4px 0', borderRadius: 12,
+  background: 'var(--surface2)', border: '1px solid rgba(255,255,255,0.1)',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out',
+}
+
+function StatusDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { open, setOpen, pos, triggerRef, dropRef, toggle } = usePortalDropdown()
+  const cur = WORKFLOW_CONFIG[value] ?? WORKFLOW_CONFIG.new
+
+  return (
+    <>
+      <button ref={triggerRef} type="button" onClick={toggle} onPointerDown={e => e.stopPropagation()}
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
+        style={{ background: cur.bg, color: cur.color, cursor: 'pointer' }}>
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cur.color }} />
+        {cur.label}
+        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && pos && createPortal(
+        <div ref={dropRef} style={{ ...menuStyle, top: pos.top, left: pos.left }} onClick={e => e.stopPropagation()}>
+          {WORKFLOW_KEYS.map(k => {
+            const o = WORKFLOW_CONFIG[k]
+            return (
+              <button key={k} type="button"
+                onClick={e => { e.stopPropagation(); onChange(k); setOpen(false) }}
+                onPointerDown={e => e.stopPropagation()}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left"
+                style={{ color: k === value ? o.color : 'var(--text)', cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: o.color }} />
+                {o.label}
+              </button>
+            )
+          })}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
+
+function PriorityDropdown({ value, onChange }: { value: 'medium' | 'high' | null; onChange: (v: 'medium' | 'high' | null) => void }) {
+  const { open, setOpen, pos, triggerRef, dropRef, toggle } = usePortalDropdown()
+  const cur = value ? PRIORITY_CONFIG[value] : null
+
+  return (
+    <>
+      {cur ? (
+        <button ref={triggerRef} type="button" onClick={toggle} onPointerDown={e => e.stopPropagation()}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
+          style={{ background: cur.bg, color: cur.color, cursor: 'pointer' }}>
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M4 1v3.5M4 6.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          {cur.label}
+          <svg width="8" height="8" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+            <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      ) : (
+        <button ref={triggerRef} type="button" onClick={toggle} onPointerDown={e => e.stopPropagation()}
+          title="Приоритет"
+          className="flex items-center px-1.5 py-0.5 rounded shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: 'var(--surface)', color: 'var(--text2)', cursor: 'pointer' }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 2h6v4l-3 2-3-2V2z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
+      {open && pos && createPortal(
+        <div ref={dropRef} style={{ ...menuStyle, top: pos.top, left: pos.left }} onClick={e => e.stopPropagation()}>
+          {PRIORITY_OPTIONS.map(o => (
+            <button key={String(o.value)} type="button"
+              onClick={e => { e.stopPropagation(); onChange(o.value); setOpen(false) }}
+              onPointerDown={e => e.stopPropagation()}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left"
+              style={{ color: o.value === value ? o.color : 'var(--text)', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: o.color }} />
+              {o.label}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
 
 type Props = {
   task: SprintTask
   isOverlay?: boolean
+  onWorkflowChange?: (id: string, status: string) => void
+  onPriorityChange?: (id: string, priority: 'medium' | 'high' | null) => void
 }
 
-export default function SprintTaskCard({ task, isOverlay = false }: Props) {
+export default function SprintTaskCard({ task, isOverlay = false, onWorkflowChange, onPriorityChange }: Props) {
   const isEpic = task.type === 'epic'
 
   const now = new Date(); now.setHours(0, 0, 0, 0)
@@ -50,7 +188,7 @@ export default function SprintTaskCard({ task, isOverlay = false }: Props) {
 
   return (
     <div
-      className="rounded-lg p-3 flex flex-col gap-2 select-none"
+      className="group rounded-lg p-3 flex flex-col gap-2 select-none"
       style={{
         background: 'var(--surface2)',
         border: '1px solid var(--border)',
@@ -95,26 +233,30 @@ export default function SprintTaskCard({ task, isOverlay = false }: Props) {
         </p>
       </div>
 
-      {/* Статус + приоритет */}
+      {/* Статус + приоритет (инлайн-редактирование) */}
       <div className="flex items-center gap-1.5">
-        <span
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
-          style={{ background: wf.bg, color: wf.color }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wf.color }} />
-          {wf.label}
-        </span>
-        {priority && (
-          <span
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
-            style={{ background: priority.bg, color: priority.color }}
-          >
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-              <path d="M4 1v3.5M4 6.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-            {priority.label}
-          </span>
-        )}
+        {onWorkflowChange
+          ? <StatusDropdown value={task.workflow_status ?? 'new'} onChange={v => onWorkflowChange(task.id, v)} />
+          : (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
+              style={{ background: wf.bg, color: wf.color }}>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wf.color }} />
+              {wf.label}
+            </span>
+          )
+        }
+        {onPriorityChange
+          ? <PriorityDropdown value={task.priority ?? null} onChange={p => onPriorityChange(task.id, p)} />
+          : priority && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0"
+              style={{ background: priority.bg, color: priority.color }}>
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <path d="M4 1v3.5M4 6.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              {priority.label}
+            </span>
+          )
+        }
       </div>
 
       {/* Мета: дедлайн, время, аватар */}
