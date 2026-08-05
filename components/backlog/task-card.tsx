@@ -845,32 +845,32 @@ export default function TaskCard({
             ? <DeadlinePickerInline deadline={task.deadline} taskId={task.id} onChange={onDeadlineChange} isDone={task.workflow_status === 'done'} />
             : task.deadline && <DeadlineLabel deadline={task.deadline} isDone={task.workflow_status === 'done'} />
           }
-          {avatarMenuInRow2 && task.assignee && (
-            <span className="ml-auto shrink-0">
-              <Avatar name={task.assignee.full_name} login={task.assignee.login} />
-            </span>
-          )}
           {avatarMenuInRow2 && (
-            <button
-              ref={menuBtnRef}
-              type="button"
-              onClick={openMenu}
-              className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md transition-all"
-              style={{
-                color: 'var(--text2)',
-                background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
-                opacity: menuOpen ? 1 : undefined,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
-              onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
-              title="Действия"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                <circle cx="7" cy="3" r="1.2"/>
-                <circle cx="7" cy="7" r="1.2"/>
-                <circle cx="7" cy="11" r="1.2"/>
-              </svg>
-            </button>
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              {task.assignee && (
+                <Avatar name={task.assignee.full_name} login={task.assignee.login} />
+              )}
+              <button
+                ref={menuBtnRef}
+                type="button"
+                onClick={openMenu}
+                className="shrink-0 opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md transition-all"
+                style={{
+                  color: 'var(--text2)',
+                  background: menuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+                  opacity: menuOpen ? 1 : undefined,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
+                onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
+                title="Действия"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                  <circle cx="7" cy="3" r="1.2"/>
+                  <circle cx="7" cy="7" r="1.2"/>
+                  <circle cx="7" cy="11" r="1.2"/>
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </div>
