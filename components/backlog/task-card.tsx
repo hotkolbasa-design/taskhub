@@ -7,19 +7,20 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { deleteTask, moveToSprint } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { minutesToDisplay } from '@/lib/utils/time'
+import { getAvatarColor } from '@/lib/utils/avatar'
 import type { BacklogTask } from '@/types'
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 
 function Avatar({ name, login, size = 24 }: { name: string | null; login: string; size?: number }) {
-  const initial = (name || login)[0].toUpperCase()
+  const label = name || login
   return (
     <span
       className="rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-      style={{ width: size, height: size, background: 'var(--accent)', color: '#fff', fontSize: size * 0.42 }}
+      style={{ width: size, height: size, background: getAvatarColor(label), color: '#fff', fontSize: size * 0.42 }}
     >
-      {initial}
+      {label[0].toUpperCase()}
     </span>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { SprintStat, TaskStat, AnalyticsUser } from '@/lib/queries/analytics'
+import { getAvatarColor } from '@/lib/utils/avatar'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -21,7 +22,7 @@ function UserAvatar({ user, size = 36 }: { user: AnalyticsUser; size?: number })
   const name = user.full_name || user.login
   return (
     <div className="rounded-full flex items-center justify-center shrink-0 font-semibold"
-      style={{ width: size, height: size, background: 'var(--accent)', color: '#fff', fontSize: size * 0.38 }}>
+      style={{ width: size, height: size, background: getAvatarColor(name), color: '#fff', fontSize: size * 0.38 }}>
       {name[0]?.toUpperCase()}
     </div>
   )

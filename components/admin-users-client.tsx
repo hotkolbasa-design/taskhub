@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import AdminUserDrawer, { type DrawerUser } from './admin-user-drawer'
 import AdminInviteModal from './admin-invite-modal'
 import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
+import { getAvatarColor } from '@/lib/utils/avatar'
 
 type UserRow = {
   id: string
@@ -174,7 +175,7 @@ function Row({ user, email, currentUserId, superAdminId, isLast, onClick, onUpda
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0"
-        style={{ background: 'var(--accent)', color: '#fff' }}>
+        style={{ background: getAvatarColor(displayName), color: '#fff' }}>
         {displayName[0].toUpperCase()}
       </div>
 
