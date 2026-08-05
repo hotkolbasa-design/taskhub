@@ -478,9 +478,9 @@ export async function createSprint(projectId: string, dateFrom: string, dateTo: 
   if (error || !sprint) throw new Error(error?.message ?? 'Не удалось создать спринт')
 
   await admin.from('sprint_columns').insert([
-    { sprint_id: sprint.id, name: 'К выполнению', color: '#7C5CF6', order_index: 0 },
-    { sprint_id: sprint.id, name: 'В работе',     color: '#F7C04F', order_index: 1 },
-    { sprint_id: sprint.id, name: 'Готово',        color: '#2DD4A0', order_index: 2 },
+    { sprint_id: sprint.id, name: 'К выполнению', color: '#7C5CF6', order_index: 0, role: 'todo' },
+    { sprint_id: sprint.id, name: 'В работе',     color: '#F7C04F', order_index: 1, role: null },
+    { sprint_id: sprint.id, name: 'Готово',        color: '#2DD4A0', order_index: 2, role: 'done' },
   ])
 
   revalidateTag(`tasks-${projectId}`, "default")
