@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { updateTask, convertTaskType } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { minutesToDisplay } from '@/lib/utils/time'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import CommentsSection from './comments-section'
@@ -347,6 +347,8 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>(task.workflow_status ?? 'new')
+  const [taskType, setTaskType] = useState<'task' | 'epic'>(task.type)
+  const [converting, setConverting] = useState(false)
   const [priority, setPriority] = useState<'medium' | 'high' | null>(task.priority ?? null)
   const [creatorId, setCreatorId] = useState(task.creator_id ?? '')
   const [assigneeId, setAssigneeId] = useState(task.assignee_id ?? '')
@@ -405,6 +407,24 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
     savedDescription.current = description
     onUpdated({ id: task.id, description: val })
     await save({ description: val })
+  }
+
+  async function handleConvertType() {
+    if (readOnly || converting) return
+    const prev = taskType
+    const newType = prev === 'epic' ? 'task' : 'epic'
+    setConverting(true)
+    setTaskType(newType)
+    onUpdated({ id: task.id, type: newType })
+    try {
+      await convertTaskType(task.id, projectId, newType)
+      setActivityRefresh(v => v + 1)
+      router.refresh()
+    } catch {
+      setTaskType(prev)
+    } finally {
+      setConverting(false)
+    }
   }
 
   async function handleWorkflowChange(v: WorkflowStatus) {
@@ -485,9 +505,30 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
         {/* Шапка */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
-              {task.type === 'epic' ? 'Эпик' : 'Задача'}
-            </span>
+            {readOnly ? (
+              <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
+                {taskType === 'epic' ? 'Эпик' : 'Задача'}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConvertType}
+                disabled={converting}
+                title={taskType === 'epic' ? 'Сделать задачей' : 'Сделать эпиком'}
+                className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors"
+                style={{ color: 'var(--text2)', background: 'var(--surface2)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text2)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+              >
+                {converting
+                  ? <span className="w-3 h-3 rounded-full border animate-spin" style={{ borderColor: 'var(--text2)', borderTopColor: 'transparent' }} />
+                  : <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                      <path d="M3 4.5h8M3 4.5l1.8-1.8M3 4.5l1.8 1.8M11 9.5H3M11 9.5L9.2 7.7M11 9.5l-1.8 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                }
+                {taskType === 'epic' ? 'Эпик' : 'Задача'}
+              </button>
+            )}
             <WorkflowDropdown value={workflowStatus} onChange={handleWorkflowChange} readOnly={readOnly} />
             <PriorityDropdown value={priority} onChange={handlePriorityChange} readOnly={readOnly} />
             {readOnly && (
@@ -606,7 +647,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
           </div>
 
           {/* Родительский эпик (только для задач) */}
-          {task.type === 'task' && availableEpics.length > 0 && (
+          {taskType === 'task' && availableEpics.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Эпик</label>
               <select value={parentId} onChange={e => handleParentChange(e.target.value)} disabled={readOnly}

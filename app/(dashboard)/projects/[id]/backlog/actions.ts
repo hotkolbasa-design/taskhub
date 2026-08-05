@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidateTag } from 'next/cache'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
-import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive } from '@/lib/queries/task-archive'
+import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive, nextBacklogOrder } from '@/lib/queries/task-archive'
 
 async function getCurrentUserId() {
   const supabase = await createClient()
@@ -528,6 +528,50 @@ export async function duplicateTask(taskId: string, projectId: string) {
   })
 
   if (error) throw new Error(error.message)
+  revalidateTag(`tasks-${projectId}`, "default")
+  revalidateTag('my-tasks', "default")
+}
+
+export async function convertTaskType(taskId: string, projectId: string, toType: 'task' | 'epic') {
+  const admin = createAdminClient()
+
+  const { data: task } = await admin
+    .from('tasks')
+    .select('id, type, status, parent_task_id')
+    .eq('id', taskId)
+    .maybeSingle()
+
+  if (!task) throw new Error('Задача не найдена')
+  if (task.type === toType) return
+
+  if (toType === 'epic') {
+    // Задача → эпик: эпик не может быть вложенным, поэтому отвязываем от родителя.
+    const patch: Record<string, unknown> = { type: 'epic' }
+    if (task.parent_task_id) {
+      patch.parent_task_id = null
+      if (task.status === 'backlog') patch.backlog_order = await nextBacklogOrder(admin, projectId)
+    }
+    const { error } = await admin.from('tasks').update(patch).eq('id', taskId)
+    if (error) throw new Error(error.message)
+  } else {
+    // Эпик → задача: подзадачи отвязываем (станут самостоятельными), сам эпик — в задачу.
+    const { data: subs } = await admin
+      .from('tasks')
+      .select('id, status')
+      .eq('parent_task_id', taskId)
+
+    let order = await nextBacklogOrder(admin, projectId)
+    for (const s of subs ?? []) {
+      const patch: Record<string, unknown> = { parent_task_id: null }
+      // backlog-подзадачам даём порядок в конец, чтобы держались вместе; спринтовые сохраняют колонку
+      if (s.status === 'backlog') { patch.backlog_order = order; order++ }
+      await admin.from('tasks').update(patch).eq('id', s.id)
+    }
+
+    const { error } = await admin.from('tasks').update({ type: 'task' }).eq('id', taskId)
+    if (error) throw new Error(error.message)
+  }
+
   revalidateTag(`tasks-${projectId}`, "default")
   revalidateTag('my-tasks', "default")
 }
