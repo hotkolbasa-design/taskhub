@@ -121,23 +121,48 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
     }
   }, [selectedTask])
 
-  // Инлайн-смена статуса/приоритета прямо на карточке (без открытия drawer)
-  const handleInlineWorkflow = useCallback(async (taskId: string, status: string) => {
-    handleTaskUpdated({ id: taskId, workflow_status: status as SprintTask['workflow_status'] })
-    await updateTask(taskId, projectId, { workflow_status: status })
-  }, [handleTaskUpdated, projectId])
-
-  const handleInlinePriority = useCallback(async (taskId: string, priority: 'medium' | 'high' | null) => {
-    handleTaskUpdated({ id: taskId, priority })
-    await updateTask(taskId, projectId, { priority })
-  }, [handleTaskUpdated, projectId])
-
   const findTask = useCallback((id: string): SprintTask | undefined => {
     for (const tasks of Object.values(taskMap)) {
       const t = tasks.find(task => task.id === id)
       if (t) return t
     }
   }, [taskMap])
+
+  // Инлайн-смена статуса/приоритета прямо на карточке (без открытия drawer)
+  const handleInlineWorkflow = useCallback(async (taskId: string, status: string) => {
+    const doneCol = cols.find(c => c.role === 'done')
+    const task = findTask(taskId)
+    const currentColId = task?.column_id ?? cols[0]?.id
+
+    // Связка статус ↔ колонка «Готово» (как при перетаскивании)
+    let targetColId = currentColId
+    if (status === 'done' && doneCol && currentColId !== doneCol.id) {
+      targetColId = doneCol.id
+    } else if (status !== 'done' && doneCol && currentColId === doneCol.id) {
+      targetColId = cols.find(c => c.id !== doneCol.id)?.id ?? currentColId
+    }
+
+    if (task && targetColId && targetColId !== currentColId) {
+      // Оптимистично: меняем статус и переносим карточку в целевую колонку (в конец)
+      const newOrder = taskMap[targetColId]?.length ?? 0
+      setTaskMap(prev => {
+        const next: TaskMap = {}
+        for (const cid in prev) next[cid] = prev[cid].filter(t => t.id !== taskId)
+        const moved = { ...task, workflow_status: status as SprintTask['workflow_status'], column_id: targetColId! }
+        next[targetColId!] = [...(next[targetColId!] ?? []), moved]
+        return next
+      })
+      await moveTaskInSprint([{ id: taskId, column_id: targetColId, column_order: newOrder, workflow_status: status }], projectId)
+    } else {
+      handleTaskUpdated({ id: taskId, workflow_status: status as SprintTask['workflow_status'] })
+      await updateTask(taskId, projectId, { workflow_status: status })
+    }
+  }, [cols, taskMap, findTask, handleTaskUpdated, projectId])
+
+  const handleInlinePriority = useCallback(async (taskId: string, priority: 'medium' | 'high' | null) => {
+    handleTaskUpdated({ id: taskId, priority })
+    await updateTask(taskId, projectId, { priority })
+  }, [handleTaskUpdated, projectId])
 
   function applyDragPreview(next: DragPreview) {
     dragPreviewRef.current = next
