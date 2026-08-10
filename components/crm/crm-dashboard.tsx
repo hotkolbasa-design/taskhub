@@ -497,6 +497,118 @@ function SourceCard({ src, data, editable, onSave, overall, hideSpend }: {
   )
 }
 
+// ─── EditGroupModal ───────────────────────────────────────────────────────────
+
+function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
+  group: GroupSourceData
+  ungroupedSources: string[]
+  onSave: (newSources: string[]) => void
+  onClose: () => void
+}) {
+  const [current, setCurrent] = useState<string[]>([...group.sources])
+  const available = ungroupedSources.filter(s => !current.includes(s))
+
+  function remove(src: string) { setCurrent(prev => prev.filter(s => s !== src)) }
+  function add(src: string) { setCurrent(prev => [...prev, src]) }
+
+  function handleSave() {
+    onSave(current)
+    onClose()
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 9999, background: 'rgba(0,0,0,0.6)' }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-md rounded-2xl flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)', maxHeight: '80vh', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+          <div>
+            <p className="text-base font-semibold" style={{ color: 'var(--text)' }}>{group.source}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>Состав группы</p>
+          </div>
+          <button type="button" onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 4 }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-5">
+          {/* Current sources */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>В группе ({current.length})</p>
+            {current.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>Пусто</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {current.map(src => (
+                  <div key={src} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'rgba(124,92,246,0.08)', border: '1px solid rgba(124,92,246,0.2)' }}>
+                    <span className="text-sm" style={{ color: 'var(--text)' }}>{src}</span>
+                    <button type="button" onClick={() => remove(src)} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', borderRadius: 4 }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Available sources */}
+          {available.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>Доступные источники ({available.length})</p>
+              <div className="flex flex-col gap-1">
+                {available.map(src => (
+                  <div key={src} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                    <span className="text-sm" style={{ color: 'var(--text)' }}>{src}</span>
+                    <button type="button" onClick={() => add(src)} style={{ color: 'var(--accent)', cursor: 'pointer', background: 'rgba(124,92,246,0.1)', border: 'none', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>
+                      + Добавить
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {available.length === 0 && current.length > 0 && (
+            <p className="text-xs" style={{ color: 'var(--text2)' }}>Все доступные источники уже в группе</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 px-5 py-4" style={{ borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+          <button type="button" onClick={handleSave}
+            className="flex-1 py-2 rounded-lg text-sm font-medium"
+            style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer', border: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            Сохранить
+          </button>
+          <button type="button" onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm"
+            style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer', border: '1px solid var(--border)' }}
+          >
+            Отмена
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 // ─── MergedSourceCard ─────────────────────────────────────────────────────────
 
 function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungroupedSources, onUpdateGroup }: {
@@ -509,55 +621,17 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
   onUpdateGroup: (groupName: string, newSources: string[]) => void
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [editing, setEditing] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [localSources, setLocalSources] = useState(group.sources)
-  const [addOpen, setAddOpen] = useState(false)
-  const addBtnRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
 
   useEffect(() => { setLocalSources(group.sources) }, [group.sources])
 
-  useEffect(() => {
-    if (editing) setExpanded(true)
-    else setAddOpen(false)
-  }, [editing])
-
-  useEffect(() => {
-    if (!addOpen) return
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
-          addBtnRef.current && !addBtnRef.current.contains(e.target as Node)) {
-        setAddOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [addOpen])
-
-  function openAddDropdown() {
-    if (addBtnRef.current) {
-      const r = addBtnRef.current.getBoundingClientRect()
-      setDropPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 200) })
-    }
-    setAddOpen(o => !o)
-  }
-
-  function handleRemove(src: string) {
-    const next = localSources.filter(s => s !== src)
-    setLocalSources(next)
-    onUpdateGroup(group.source, next)
-  }
-
-  function handleAdd(src: string) {
-    const next = [...localSources, src]
-    setLocalSources(next)
-    setAddOpen(false)
-    onUpdateGroup(group.source, next)
+  function handleSaveEdit(newSources: string[]) {
+    setLocalSources(newSources)
+    onUpdateGroup(group.source, newSources)
   }
 
   const individualSources = allSources.filter(s => localSources.includes(s.source))
-  const availableToAdd = ungroupedSources.filter(s => !localSources.includes(s))
 
   return (
     <div className="mb-5">
@@ -579,11 +653,11 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
           </span>
           <button
             type="button"
-            onClick={() => setEditing(e => !e)}
-            title={editing ? 'Готово' : 'Редактировать состав группы'}
-            style={{ color: editing ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer', background: editing ? 'rgba(124,92,246,0.1)' : 'none', border: 'none', padding: 3, borderRadius: 5, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
-            onMouseEnter={e => { if (!editing) e.currentTarget.style.color = 'var(--text)' }}
-            onMouseLeave={e => { if (!editing) e.currentTarget.style.color = 'var(--text2)' }}
+            onClick={() => setEditOpen(true)}
+            title="Редактировать состав группы"
+            style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 3, borderRadius: 5, display: 'flex', alignItems: 'center' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M9 2.5l1.5 1.5-6 6-2 .5.5-2 6-6z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -619,65 +693,21 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
         )}
       </Card>
 
-      {/* Expanded individual sources */}
       {expanded && (
         <div style={{ marginLeft: 24, marginTop: 8, borderLeft: '2px solid var(--border)', paddingLeft: 16 }}>
           {individualSources.map(src => (
-            <div key={src.source} style={{ position: 'relative' }}>
-              <SourceCard src={src} data={data} editable={false} onSave={onSave} hideSpend />
-              {editing && (
-                <button
-                  type="button"
-                  title="Убрать из группы"
-                  onClick={() => handleRemove(src.source)}
-                  style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: 'var(--red)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 2 }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              )}
-            </div>
+            <SourceCard key={src.source} src={src} data={data} editable={false} onSave={onSave} hideSpend />
           ))}
-
-          {editing && (
-            <div style={{ marginTop: 8, marginBottom: 8 }}>
-              <button
-                ref={addBtnRef}
-                type="button"
-                onClick={openAddDropdown}
-                disabled={availableToAdd.length === 0}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: availableToAdd.length === 0 ? 'var(--text2)' : 'var(--accent)', background: 'none', border: '1px dashed', borderColor: availableToAdd.length === 0 ? 'var(--border)' : 'rgba(124,92,246,0.4)', borderRadius: 6, padding: '6px 12px', cursor: availableToAdd.length === 0 ? 'default' : 'pointer' }}
-              >
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                </svg>
-                {availableToAdd.length === 0 ? 'Нет доступных источников' : 'Добавить источник'}
-              </button>
-
-              {addOpen && availableToAdd.length > 0 && createPortal(
-                <div
-                  ref={dropdownRef}
-                  style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, minWidth: dropPos.width, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 9999, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}
-                >
-                  {availableToAdd.map(src => (
-                    <button
-                      key={src}
-                      type="button"
-                      onClick={() => handleAdd(src)}
-                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--text)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                    >
-                      {src}
-                    </button>
-                  ))}
-                </div>,
-                document.body
-              )}
-            </div>
-          )}
         </div>
+      )}
+
+      {editOpen && (
+        <EditGroupModal
+          group={{ ...group, sources: localSources }}
+          ungroupedSources={ungroupedSources}
+          onSave={handleSaveEdit}
+          onClose={() => setEditOpen(false)}
+        />
       )}
     </div>
   )
