@@ -477,7 +477,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
       </div>
 
       {/* Канбан */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex-1 overflow-auto">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -669,7 +669,6 @@ function KanbanColumn({
           background: 'var(--surface)',
           border: `1px solid ${isOver && isColumnTarget ? 'rgba(124,92,246,0.4)' : 'var(--border)'}`,
           transition: 'border-color 0.15s',
-          maxHeight: 'calc(100vh - 180px)',
         }}
       >
         {/* Заголовок */}
@@ -809,19 +808,8 @@ function KanbanColumn({
           )}
         </div>
 
-        <TaskDropZone
-          columnId={column.id}
-          tasks={tasks}
-          dragPreview={dragPreview}
-          activeTaskId={activeTaskId}
-          isEmptyTarget={isEmptyTarget}
-          onTaskClick={onTaskClick}
-          onWorkflowChange={onWorkflowChange}
-          onPriorityChange={onPriorityChange}
-        />
-
-        {/* Быстрое добавление задачи в колонку */}
-        <div className="p-2 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+        {/* Быстрое добавление задачи в колонку (сверху, под заголовком) */}
+        <div className="p-2 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           {adding ? (
             <div className="flex flex-col gap-1.5">
               <textarea
@@ -885,6 +873,17 @@ function KanbanColumn({
             </button>
           )}
         </div>
+
+        <TaskDropZone
+          columnId={column.id}
+          tasks={tasks}
+          dragPreview={dragPreview}
+          activeTaskId={activeTaskId}
+          isEmptyTarget={isEmptyTarget}
+          onTaskClick={onTaskClick}
+          onWorkflowChange={onWorkflowChange}
+          onPriorityChange={onPriorityChange}
+        />
       </div>
     </div>
   )
@@ -916,7 +915,7 @@ function TaskDropZone({
   return (
     <div
       ref={setNodeRef}
-      className="flex-1 overflow-y-auto p-3 flex flex-col gap-2"
+      className="p-3 flex flex-col gap-2"
       style={{ minHeight: 80 }}
     >
       {tasks.map((task, idx) => {
