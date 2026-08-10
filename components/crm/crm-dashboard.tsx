@@ -548,9 +548,9 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
             ) : (
               <div className="flex flex-col gap-1">
                 {current.map(src => (
-                  <div key={src} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'rgba(124,92,246,0.08)', border: '1px solid rgba(124,92,246,0.2)' }}>
-                    <span className="text-sm" style={{ color: 'var(--text)' }}>{src}</span>
-                    <button type="button" onClick={() => remove(src)} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', borderRadius: 4 }}
+                  <div key={src} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(124,92,246,0.08)', border: '1px solid rgba(124,92,246,0.2)' }}>
+                    <span className="text-sm flex-1 min-w-0 truncate" style={{ color: 'var(--text)' }} title={src}>{src}</span>
+                    <button type="button" onClick={() => remove(src)} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', flexShrink: 0, borderRadius: 4 }}
                       onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                       onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
                     >
@@ -570,9 +570,9 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>Доступные источники ({available.length})</p>
               <div className="flex flex-col gap-1">
                 {available.map(src => (
-                  <div key={src} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-                    <span className="text-sm" style={{ color: 'var(--text)' }}>{src}</span>
-                    <button type="button" onClick={() => add(src)} style={{ color: 'var(--accent)', cursor: 'pointer', background: 'rgba(124,92,246,0.1)', border: 'none', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>
+                  <div key={src} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                    <span className="text-sm flex-1 min-w-0 truncate" style={{ color: 'var(--text)' }} title={src}>{src}</span>
+                    <button type="button" onClick={() => add(src)} style={{ color: 'var(--accent)', cursor: 'pointer', background: 'rgba(124,92,246,0.1)', border: 'none', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
                       + Добавить
                     </button>
                   </div>
