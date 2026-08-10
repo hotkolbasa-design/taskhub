@@ -175,10 +175,17 @@ export function buildMarketingStats(
 ) {
   const sources = collectSources(leadsRows, dealsRows)
 
+  const monthDaySet = new Set(days)
   const totalLeads = leadsRows.filter(r =>
-    (r.stage === 'Новая заявка (WhatsApp)' || r.stage === 'Новая заявка (Instagram)') && !isTestTitle(r.title)
+    monthDaySet.has(r.dateKey) &&
+    (r.stage === 'Новая заявка (WhatsApp)' || r.stage === 'Новая заявка (Instagram)') &&
+    !isTestTitle(r.title)
   ).length
-  const totalSalesRows = dealsRows.filter(r => r.stage === REVENUE_STAGE && !isTestTitle(r.title))
+  const totalSalesRows = dealsRows.filter(r =>
+    monthDaySet.has(r.dateKey) &&
+    r.stage === REVENUE_STAGE &&
+    !isTestTitle(r.title)
+  )
   const totalRevenue = totalSalesRows.reduce((s, r) => s + r.amount, 0)
 
   const overallMilestones = buildMilestones(leadsRows, dealsRows, days, weeks, null, OVERALL_MILESTONES)

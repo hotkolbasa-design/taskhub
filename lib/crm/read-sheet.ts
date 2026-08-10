@@ -13,9 +13,23 @@ export async function readSheetRows(sheetName: string): Promise<SheetRow[]> {
 
   const rows: SheetRow[] = []
   for (const row of values) {
-    const serial = row[0]
-    if (typeof serial !== 'number' || serial < 1) continue
-    const dateKey = serialToDateKey(serial)
+    const raw = row[0]
+    let dateKey = ''
+
+    if (typeof raw === 'number' && raw >= 1) {
+      // Google Sheets date serial (most common from Bitrix24)
+      dateKey = serialToDateKey(raw)
+    } else if (typeof raw === 'string' && raw.trim()) {
+      // Text date: try "DD.MM.YYYY" and "YYYY-MM-DD"
+      const s = raw.trim()
+      const dotMatch = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/)
+      if (dotMatch) {
+        dateKey = `${dotMatch[3]}-${dotMatch[2].padStart(2, '0')}-${dotMatch[1].padStart(2, '0')}`
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        dateKey = s.slice(0, 10)
+      }
+    }
+
     if (!dateKey) continue
     rows.push({
       dateKey,

@@ -3,6 +3,8 @@ import { computeDashboardData, getAvailableMonths } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
 import { saveSpendValue, saveRateValue } from '@/lib/crm/spend'
 import { getExcludedSources, saveExcludedSources, saveMergedGroups, saveMonthPlan } from '@/lib/crm/settings'
+import { readSheetRows } from '@/lib/crm/read-sheet'
+import { getMonthDays, isTestTitle } from '@/lib/crm/utils'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -24,6 +26,30 @@ export async function GET(req: NextRequest) {
 
       const excludedSources = await getExcludedSources()
       return NextResponse.json({ ...data, excludedSources })
+    }
+
+    if (action === 'debug') {
+      const month = searchParams.get('month')
+      if (!month) return NextResponse.json({ error: 'month required' }, { status: 400 })
+      const [yearStr, monthStr] = month.split('-')
+      const days = getMonthDays(parseInt(yearStr), parseInt(monthStr) - 1)
+      const monthDaySet = new Set(days)
+      const [leadsRows, dealsRows] = await Promise.all([readSheetRows('Лиды'), readSheetRows('Сделки')])
+      const monthLeads = leadsRows.filter(r => monthDaySet.has(r.dateKey))
+      const stageCounts: Record<string, number> = {}
+      for (const r of monthLeads) {
+        stageCounts[r.stage] = (stageCounts[r.stage] ?? 0) + 1
+      }
+      const filteredByTest = monthLeads.filter(r => isTestTitle(r.title)).length
+      return NextResponse.json({
+        month,
+        totalLeadsAllTime: leadsRows.length,
+        totalDealsAllTime: dealsRows.length,
+        monthLeadsTotal: monthLeads.length,
+        monthLeadsAfterTestFilter: monthLeads.filter(r => !isTestTitle(r.title)).length,
+        filteredByTest,
+        stageCounts,
+      })
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
