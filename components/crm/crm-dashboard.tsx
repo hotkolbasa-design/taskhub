@@ -1025,6 +1025,59 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
   )
 }
 
+// ─── ConfirmModal ─────────────────────────────────────────────────────────────
+
+type ConfirmConfig = {
+  title: string
+  message: string
+  confirmLabel: string
+  confirmStyle?: React.CSSProperties
+  onConfirm: () => void
+}
+
+function ConfirmModal({ config, onClose }: { config: ConfirmConfig; onClose: () => void }) {
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 10000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="w-full flex flex-col rounded-2xl"
+        style={{ maxWidth: 400, background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}
+      >
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4">
+          <p className="text-base font-semibold mb-1" style={{ color: 'var(--text)' }}>{config.title}</p>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>{config.message}</p>
+        </div>
+        {/* Actions */}
+        <div className="flex gap-2 px-6 pb-6 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 rounded-xl text-sm font-medium"
+            style={{ background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface3, var(--border))')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}
+          >
+            Отмена
+          </button>
+          <button
+            onClick={() => { config.onConfirm(); onClose() }}
+            className="flex-1 py-2 rounded-xl text-sm font-medium"
+            style={{ cursor: 'pointer', ...config.confirmStyle }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            {config.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 // ─── Main CrmDashboard ────────────────────────────────────────────────────────
 
 export default function CrmDashboard() {
@@ -1036,6 +1089,7 @@ export default function CrmDashboard() {
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'obzor' | 'voronki' | 'marketing'>('obzor')
   const [freezing, setFreezing] = useState(false)
+  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null)
 
   // Inject CSS once
   useEffect(() => {
@@ -1083,16 +1137,13 @@ export default function CrmDashboard() {
     }
   }
 
-  const handleFreeze = useCallback(async () => {
-    if (!data || data.frozen) return
-    if (!confirm('Зафиксировать текущие цифры? После этого они не будут меняться при поступлении новых данных.')) return
+  const doFreeze = useCallback(async () => {
     setFreezing(true)
     try {
       const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'freeze', monthKey: selectedMonth }) })
       const result = await res.json()
       if (result?.error) { alert('Ошибка при заморозке: ' + result.error); return }
-      // Optimistically mark as frozen so buttons appear immediately
       setData(prev => prev ? { ...prev, frozen: true } : prev)
       const d = await safeReload(selectedMonth)
       if (d) setData(d)
@@ -1100,11 +1151,9 @@ export default function CrmDashboard() {
       setFreezing(false)
       setLoading(false)
     }
-  }, [data, selectedMonth])
+  }, [selectedMonth])
 
-  const handleUnfreeze = useCallback(async () => {
-    if (!data || !data.frozen) return
-    if (!confirm('Разморозить месяц? Данные снова начнут пересчитываться живьём.')) return
+  const doUnfreeze = useCallback(async () => {
     setFreezing(true)
     try {
       const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1118,24 +1167,40 @@ export default function CrmDashboard() {
       setFreezing(false)
       setLoading(false)
     }
-  }, [data, selectedMonth])
+  }, [selectedMonth])
 
-  const handleRefreeze = useCallback(async () => {
+  const handleFreeze = useCallback(() => {
+    if (!data || data.frozen) return
+    setConfirmConfig({
+      title: 'Зафиксировать месяц?',
+      message: 'Текущие цифры будут сохранены. После этого они не будут меняться при поступлении новых данных из таблицы.',
+      confirmLabel: 'Зафиксировать',
+      confirmStyle: { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' },
+      onConfirm: doFreeze,
+    })
+  }, [data, doFreeze])
+
+  const handleUnfreeze = useCallback(() => {
     if (!data || !data.frozen) return
-    if (!confirm('Пересчитать и обновить снимок? Данные будут заново загружены из таблицы.')) return
-    setFreezing(true)
-    try {
-      const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'freeze', monthKey: selectedMonth }) })
-      const result = await res.json()
-      if (result?.error) { alert('Ошибка при пересчёте: ' + result.error); return }
-      const d = await safeReload(selectedMonth)
-      if (d) setData(d)
-    } finally {
-      setFreezing(false)
-      setLoading(false)
-    }
-  }, [data, selectedMonth])
+    setConfirmConfig({
+      title: 'Разморозить месяц?',
+      message: 'Данные снова начнут пересчитываться живьём при каждом открытии.',
+      confirmLabel: 'Разморозить',
+      confirmStyle: { background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)' },
+      onConfirm: doUnfreeze,
+    })
+  }, [data, doUnfreeze])
+
+  const handleRefreeze = useCallback(() => {
+    if (!data || !data.frozen) return
+    setConfirmConfig({
+      title: 'Пересчитать снимок?',
+      message: 'Данные будут заново загружены из таблицы и снапшот обновится. Это может занять несколько секунд.',
+      confirmLabel: 'Пересчитать',
+      confirmStyle: { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' },
+      onConfirm: doFreeze,
+    })
+  }, [data, doFreeze])
 
   const handleToggleExcluded = useCallback((src: string, checked: boolean) => {
     setExcluded(prev => {
@@ -1205,6 +1270,7 @@ export default function CrmDashboard() {
   }
 
   return (
+    <>
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-5 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -1305,5 +1371,10 @@ export default function CrmDashboard() {
       </div>
 
     </div>
+
+    {confirmConfig && (
+      <ConfirmModal config={confirmConfig} onClose={() => setConfirmConfig(null)} />
+    )}
+    </>
   )
 }
