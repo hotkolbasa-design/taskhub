@@ -1084,23 +1084,57 @@ export default function CrmDashboard() {
   }
 
   const handleFreeze = useCallback(async () => {
-    if (!data) return
-    const isFrozen = data.frozen
-    const msg = isFrozen
-      ? 'Разморозить месяц? Данные снова начнут пересчитываться живьём.'
-      : 'Зафиксировать текущие цифры? После этого они не будут меняться при поступлении новых данных.'
-    if (!confirm(msg)) return
+    if (!data || data.frozen) return
+    if (!confirm('Зафиксировать текущие цифры? После этого они не будут меняться при поступлении новых данных.')) return
     setFreezing(true)
-    await fetch('/api/crm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: isFrozen ? 'unfreeze' : 'freeze', monthKey: selectedMonth }),
-    })
-    setFreezing(false)
-    setLoading(true)
-    const d = await safeReload(selectedMonth)
-    if (d) setData(d)
-    setLoading(false)
+    try {
+      const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'freeze', monthKey: selectedMonth }) })
+      const result = await res.json()
+      if (result?.error) { alert('Ошибка при заморозке: ' + result.error); return }
+      // Optimistically mark as frozen so buttons appear immediately
+      setData(prev => prev ? { ...prev, frozen: true } : prev)
+      const d = await safeReload(selectedMonth)
+      if (d) setData(d)
+    } finally {
+      setFreezing(false)
+      setLoading(false)
+    }
+  }, [data, selectedMonth])
+
+  const handleUnfreeze = useCallback(async () => {
+    if (!data || !data.frozen) return
+    if (!confirm('Разморозить месяц? Данные снова начнут пересчитываться живьём.')) return
+    setFreezing(true)
+    try {
+      const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unfreeze', monthKey: selectedMonth }) })
+      const result = await res.json()
+      if (result?.error) { alert('Ошибка при разморозке: ' + result.error); return }
+      setData(prev => prev ? { ...prev, frozen: false } : prev)
+      const d = await safeReload(selectedMonth)
+      if (d) setData(d)
+    } finally {
+      setFreezing(false)
+      setLoading(false)
+    }
+  }, [data, selectedMonth])
+
+  const handleRefreeze = useCallback(async () => {
+    if (!data || !data.frozen) return
+    if (!confirm('Пересчитать и обновить снимок? Данные будут заново загружены из таблицы.')) return
+    setFreezing(true)
+    try {
+      const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'freeze', monthKey: selectedMonth }) })
+      const result = await res.json()
+      if (result?.error) { alert('Ошибка при пересчёте: ' + result.error); return }
+      const d = await safeReload(selectedMonth)
+      if (d) setData(d)
+    } finally {
+      setFreezing(false)
+      setLoading(false)
+    }
   }, [data, selectedMonth])
 
   const handleToggleExcluded = useCallback((src: string, checked: boolean) => {
@@ -1187,28 +1221,50 @@ export default function CrmDashboard() {
           )}
           {data && (
             <>
-              <button
-                onClick={handleFreeze}
-                disabled={freezing}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-                style={{ background: data.frozen ? 'var(--surface2)' : 'var(--accent)', color: data.frozen ? 'var(--text2)' : '#fff', border: `1px solid ${data.frozen ? 'var(--border)' : 'var(--accent)'}`, cursor: 'pointer' }}
-              >
-                {freezing && <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />}
-                {data.frozen ? (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                      <rect x="2" y="5" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+              {data.frozen ? (
+                <>
+                  {/* Frozen indicator badge */}
+                  <span className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg font-medium"
+                    style={{ background: 'rgba(247,192,79,0.12)', color: 'var(--yellow)', border: '1px solid rgba(247,192,79,0.25)' }}>
+                    <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+                      <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      <rect x="2" y="5" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
                     </svg>
+                    Зафиксировано
+                  </span>
+                  {/* Refreeze button */}
+                  <button
+                    onClick={handleRefreeze}
+                    disabled={freezing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
+                    style={{ background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                  >
+                    {freezing
+                      ? <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
+                      : <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 1 1 9.5 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M9.5 1v2.5H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    }
+                    Пересчитать
+                  </button>
+                  {/* Unfreeze button */}
+                  <button
+                    onClick={handleUnfreeze}
+                    disabled={freezing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
+                    style={{ background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                  >
                     Разморозить
-                  </>
-                ) : 'Зафиксировать'}
-              </button>
-              {data.frozen && (
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                  style={{ background: 'rgba(247,192,79,0.12)', color: 'var(--yellow)', border: '1px solid rgba(247,192,79,0.2)' }}>
-                  Зафиксировано
-                </span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleFreeze}
+                  disabled={freezing}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  style={{ background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)', cursor: 'pointer' }}
+                >
+                  {freezing && <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />}
+                  Зафиксировать
+                </button>
               )}
             </>
           )}
