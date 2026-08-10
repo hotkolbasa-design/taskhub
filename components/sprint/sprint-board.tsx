@@ -30,7 +30,8 @@ import {
   createSprintColumn,
   deleteSprintColumn,
 } from '@/app/(dashboard)/projects/[id]/sprint/actions'
-import { updateTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { updateTask, createSprintTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import CreateTaskModal from '@/components/backlog/create-task-modal'
 import SprintTaskCard from './sprint-task-card'
 import UserFilter from '@/components/common/user-filter'
 
@@ -85,6 +86,7 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
   const [closing, setClosing] = useState(false)
   const [isFixed] = useState(sprint.is_fixed)
   const [selectedTask, setSelectedTask] = useState<SprintTask | null>(null)
+  const [detailsCol, setDetailsCol] = useState<string | null>(null) // колонка для модалки «Подробнее»
 
   // Add column state
   const [addingAfterColId, setAddingAfterColId] = useState<string | 'end' | null>(null)
@@ -163,6 +165,48 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
     handleTaskUpdated({ id: taskId, priority })
     await updateTask(taskId, projectId, { priority })
   }, [handleTaskUpdated, projectId])
+
+  // Создание задачи прямо в колонке спринта (оптимистично + createSprintTask)
+  const createInColumn = useCallback(async (columnId: string, data: {
+    title: string
+    type?: 'task' | 'epic'
+    assignee_id?: string | null
+    assignee?: SprintTask['assignee']
+    deadline?: string | null
+    time_estimate?: number | null
+    description?: string | null
+  }) => {
+    const tempId = crypto.randomUUID()
+    const optimistic = {
+      id: tempId, project_id: projectId, title: data.title, type: data.type ?? 'task',
+      status: 'sprint', workflow_status: 'new', sprint_id: sprint.id, column_id: columnId, column_order: null,
+      assignee_id: data.assignee_id ?? null, creator_id: '', deadline: data.deadline ?? sprint.date_to ?? null,
+      time_estimate: data.time_estimate ?? null, priority: null, parent_task_id: null,
+      description: data.description ?? null, tags: null, is_recurring: false, recurring_config: null,
+      backlog_order: null, closed_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      assignee: data.assignee ?? null, parent_epic: null,
+    } as unknown as SprintTask
+
+    setTaskMap(prev => ({ ...prev, [columnId]: [...(prev[columnId] ?? []), optimistic] }))
+    try {
+      const realId = await createSprintTask(sprint.id, projectId, {
+        title: data.title,
+        type: data.type ?? 'task',
+        description: data.description ?? null,
+        assignee_id: data.assignee_id ?? null,
+        deadline: data.deadline ?? null,
+        time_estimate: data.time_estimate ?? null,
+        column_id: columnId,
+      })
+      setTaskMap(prev => ({ ...prev, [columnId]: (prev[columnId] ?? []).map(t => t.id === tempId ? { ...t, id: realId } : t) }))
+    } catch {
+      setTaskMap(prev => ({ ...prev, [columnId]: (prev[columnId] ?? []).filter(t => t.id !== tempId) }))
+    }
+  }, [projectId, sprint.id, sprint.date_to])
+
+  const handleQuickCreate = useCallback((columnId: string, title: string) => {
+    return createInColumn(columnId, { title })
+  }, [createInColumn])
 
   function applyDragPreview(next: DragPreview) {
     dragPreviewRef.current = next
@@ -458,6 +502,8 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
                     onTaskClick={handleTaskClick}
                     onWorkflowChange={handleInlineWorkflow}
                     onPriorityChange={handleInlinePriority}
+                    onQuickCreate={handleQuickCreate}
+                    onOpenDetails={setDetailsCol}
                   />
                   {draggingType === null && addingAfterColId === col.id && (
                     <AddColumnForm
@@ -508,6 +554,29 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
           onUpdated={handleTaskUpdated}
         />
       )}
+
+      {detailsCol && (
+        <CreateTaskModal
+          projectId={projectId}
+          members={members}
+          epics={[]}
+          defaultAssigneeId=""
+          skipCreate
+          onClose={() => setDetailsCol(null)}
+          onCreated={optimistic => {
+            createInColumn(detailsCol, {
+              title: optimistic.title,
+              type: optimistic.type,
+              assignee_id: optimistic.assignee_id,
+              assignee: optimistic.assignee,
+              deadline: optimistic.deadline,
+              time_estimate: optimistic.time_estimate,
+              description: optimistic.description,
+            })
+            setDetailsCol(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -527,6 +596,8 @@ function KanbanColumn({
   onTaskClick,
   onWorkflowChange,
   onPriorityChange,
+  onQuickCreate,
+  onOpenDetails,
 }: {
   column: SprintColumn
   tasks: SprintTask[]
@@ -540,9 +611,22 @@ function KanbanColumn({
   onTaskClick: (task: SprintTask) => void
   onWorkflowChange: (id: string, status: string) => void
   onPriorityChange: (id: string, priority: 'medium' | 'high' | null) => void
+  onQuickCreate: (columnId: string, title: string) => void | Promise<void>
+  onOpenDetails: (columnId: string) => void
 }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function submitQuick() {
+    const t = newTitle.trim()
+    if (!t || saving) return
+    setSaving(true)
+    try { await onQuickCreate(column.id, t) } finally { setSaving(false) }
+    setNewTitle('') // поле остаётся открытым для быстрого ввода следующей
+  }
 
   const {
     attributes,
@@ -735,6 +819,72 @@ function KanbanColumn({
           onWorkflowChange={onWorkflowChange}
           onPriorityChange={onPriorityChange}
         />
+
+        {/* Быстрое добавление задачи в колонку */}
+        <div className="p-2 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+          {adding ? (
+            <div className="flex flex-col gap-1.5">
+              <textarea
+                autoFocus
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuick() }
+                  if (e.key === 'Escape') { setAdding(false); setNewTitle('') }
+                }}
+                placeholder="Название задачи…"
+                rows={2}
+                className="w-full px-2.5 py-2 rounded-lg text-sm outline-none resize-none"
+                style={{ background: 'var(--surface2)', border: '1px solid var(--accent)', color: 'var(--text)' }}
+              />
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={submitQuick}
+                  disabled={!newTitle.trim() || saving}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium disabled:opacity-40"
+                  style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
+                >
+                  {saving && <span className="w-3 h-3 rounded-full border border-white/40 border-t-white animate-spin" />}
+                  Добавить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setNewTitle(''); onOpenDetails(column.id) }}
+                  className="px-2.5 py-1 rounded-md text-xs"
+                  style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
+                >
+                  Подробнее
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setNewTitle('') }}
+                  title="Отмена"
+                  className="ml-auto p-1 rounded-md"
+                  style={{ color: 'var(--text2)', cursor: 'pointer' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm transition-colors"
+              style={{ color: 'var(--text2)', cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface2)'; e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+              Задача
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
