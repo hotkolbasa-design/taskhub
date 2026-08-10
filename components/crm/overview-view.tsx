@@ -348,6 +348,7 @@ function SpendBarChart({ weekLabels, spendValues, leadValues }: { weekLabels: st
 // ─── 03 · Funnel matrix ───────────────────────────────────────────────────────
 
 function FunnelMatrix({ data }: { data: DashData }) {
+  if (!data.marketing) return null
   const allSources = [
     ...data.marketing.sources.map(s => ({
       name: s.source,

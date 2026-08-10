@@ -852,6 +852,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
   const [sourceModalOpen, setSourceModalOpen] = useState(false)
   const [groupModalOpen, setGroupModalOpen] = useState(false)
 
+  if (!data.marketing) return null
   const allSources = data.marketing.sources.map(s => s.source)
   const groups = data.marketing.groups ?? []
   const groupedSourceNames = new Set(groups.flatMap(g => g.sources))
@@ -1042,6 +1043,16 @@ export default function CrmDashboard() {
       .catch(e => { setError(String(e)); setLoading(false) })
   }, [selectedMonth])
 
+  async function safeReload(month: string): Promise<DashData | null> {
+    try {
+      const d = await fetch(`/api/crm?action=data&month=${month}`).then(r => r.json())
+      if (d?.error || !d?.marketing) return null
+      return d as DashData
+    } catch {
+      return null
+    }
+  }
+
   const handleFreeze = useCallback(async () => {
     if (!data) return
     const isFrozen = data.frozen
@@ -1056,10 +1067,9 @@ export default function CrmDashboard() {
       body: JSON.stringify({ action: isFrozen ? 'unfreeze' : 'freeze', monthKey: selectedMonth }),
     })
     setFreezing(false)
-    // reload
     setLoading(true)
-    const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
-    setData(d)
+    const d = await safeReload(selectedMonth)
+    if (d) setData(d)
     setLoading(false)
   }, [data, selectedMonth])
 
@@ -1079,8 +1089,8 @@ export default function CrmDashboard() {
   const handleReload = useCallback(async () => {
     if (!selectedMonth) return
     setLoading(true)
-    const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
-    setData(d)
+    const d = await safeReload(selectedMonth)
+    if (d) setData(d)
     setLoading(false)
   }, [selectedMonth])
 
@@ -1090,8 +1100,8 @@ export default function CrmDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'saveSpend', dateIso, source, field, value }),
     })
-    const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
-    setData(d)
+    const d = await safeReload(selectedMonth)
+    if (d) setData(d)
   }, [selectedMonth])
 
   const handleSaveRate = useCallback(async (dateIso: string, rate: number) => {
@@ -1100,8 +1110,8 @@ export default function CrmDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'saveRate', dateIso, rate }),
     })
-    const d = await fetch(`/api/crm?action=data&month=${selectedMonth}`).then(r => r.json())
-    setData(d)
+    const d = await safeReload(selectedMonth)
+    if (d) setData(d)
   }, [selectedMonth])
 
   const handleSavePlan = useCallback(async (plan: number) => {
