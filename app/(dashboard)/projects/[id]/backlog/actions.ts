@@ -609,6 +609,7 @@ export async function createSprintTask(
     deadline?: string | null
     time_estimate?: number | null
     parent_task_id?: string | null
+    column_id?: string | null
   }
 ): Promise<string> {
   const userId = await getCurrentUserId()
@@ -616,20 +617,24 @@ export async function createSprintTask(
 
   const admin = createAdminClient()
 
-  const [{ data: col }, { data: sprint }] = await Promise.all([
-    admin
+  const { data: sprint } = await admin
+    .from('sprints')
+    .select('date_to')
+    .eq('id', sprintId)
+    .single()
+
+  // Колонка: заданная явно (добавление в конкретную колонку на доске) или первая по порядку
+  let columnId = data.column_id ?? null
+  if (!columnId) {
+    const { data: col } = await admin
       .from('sprint_columns')
       .select('id')
       .eq('sprint_id', sprintId)
       .order('order_index', { ascending: true })
       .limit(1)
-      .maybeSingle(),
-    admin
-      .from('sprints')
-      .select('date_to')
-      .eq('id', sprintId)
-      .single(),
-  ])
+      .maybeSingle()
+    columnId = col?.id ?? null
+  }
 
   const deadline = data.deadline ?? sprint?.date_to ?? null
 
@@ -640,7 +645,7 @@ export async function createSprintTask(
     status: 'sprint',
     workflow_status: 'new',
     sprint_id: sprintId,
-    column_id: col?.id ?? null,
+    column_id: columnId,
     assignee_id: data.assignee_id ?? null,
     creator_id: userId,
     deadline,
