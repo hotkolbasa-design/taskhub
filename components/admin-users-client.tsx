@@ -158,8 +158,11 @@ function Row({ user, email, currentUserId, superAdminId, isLast, onClick, onUpda
   }
 
   async function handleStatusChange(next: string) {
+    const wasPending = user.status === 'pending'
     onUpdated({ status: next })
     await setStatus(user.id, next as 'active' | 'inactive')
+    // Обновляем бейдж «ожидают подтверждения» в сайдбаре
+    if (wasPending) window.dispatchEvent(new Event('pending-users-changed'))
   }
 
   const selectableStatuses = user.status === 'pending'

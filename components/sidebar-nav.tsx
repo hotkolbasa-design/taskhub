@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
 import { getNotifications, markAsRead, markAllAsRead, type AppNotification } from '@/app/(dashboard)/notifications/actions'
+import { getPendingUsersCount } from '@/app/(dashboard)/admin/actions'
 import ProfileModal from '@/components/profile-modal'
 
 type Profile = {
@@ -127,6 +128,26 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
 
   const unreadCount = notifications.filter(n => !n.is_read).length
 
+  const isAdmin = profile?.role === 'admin'
+  const [pendingCount, setPendingCount] = useState(0)
+
+  const loadPending = useCallback(async () => {
+    if (!isAdmin) return
+    try { setPendingCount(await getPendingUsersCount()) } catch { /* ignore */ }
+  }, [isAdmin])
+
+  // Счётчик «ожидают подтверждения»: опрос + мгновенно после подтверждения (событие) + при навигации
+  useEffect(() => {
+    if (!isAdmin) return
+    loadPending()
+    const interval = setInterval(loadPending, 30000)
+    const onChanged = () => loadPending()
+    window.addEventListener('pending-users-changed', onChanged)
+    return () => { clearInterval(interval); window.removeEventListener('pending-users-changed', onChanged) }
+  }, [isAdmin, loadPending])
+
+  useEffect(() => { loadPending() }, [pathname, loadPending])
+
   const loadNotifications = useCallback(async () => {
     try {
       const data = await getNotifications()
@@ -227,6 +248,15 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
             >
               {icon}
               {label}
+              {href === '/admin' && pendingCount > 0 && (
+                <span
+                  className="ml-auto flex items-center justify-center rounded-full text-white font-bold"
+                  style={{ background: 'var(--accent)', fontSize: 10, minWidth: 18, height: 18, padding: '0 5px', lineHeight: '18px' }}
+                  title={`Ожидают подтверждения: ${pendingCount}`}
+                >
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
             </Link>
           )
         })}

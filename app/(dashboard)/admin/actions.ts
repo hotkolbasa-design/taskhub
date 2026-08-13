@@ -35,6 +35,21 @@ async function guardTarget(userId: string, callerId: string) {
   if (!(await isSuperAdmin(callerId))) throw new Error('Only superadmin can modify admins')
 }
 
+export async function getPendingUsersCount(): Promise<number> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return 0
+
+  const admin = createAdminClient()
+  const { count } = await admin
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+  return count ?? 0
+}
+
 export async function approveUser(userId: string) {
   const caller = await requireAdmin()
   await guardTarget(userId, caller.id)
