@@ -374,3 +374,6 @@ async function handleRemove(id) {
 ```tsx
 <span style={{ width: 28 }}>{isSelf ? 'вы' : ''}</span>
 ```
+
+### Бейдж «ожидают подтверждения»
+- В сайдбаре у пункта «Пользователи» (админ) — счётчик profiles со `status='pending'` (`getPendingUsersCount`, админ-гейт). Обновление: опрос 30с + событие `window 'pending-users-changed'` (шлёт `admin-users-client` после смены статуса pending-юзера) + при навигации. Пропадает при 0.
