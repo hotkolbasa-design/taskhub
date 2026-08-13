@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import BacklogBoard from './backlog-board'
 import UserFilter from '@/components/common/user-filter'
+import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import type { BacklogTask, Sprint, SprintTask } from '@/types'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
@@ -28,7 +28,9 @@ const navLink = {
 }
 
 export default function BacklogView({ project, members, ...board }: Props) {
-  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([])
+  const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string[]>(
+    `taskhub:flt:backlog:${board.currentUserId}:${project.id}`, [],
+  )
 
   return (
     <>
