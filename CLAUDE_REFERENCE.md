@@ -377,3 +377,6 @@ async function handleRemove(id) {
 
 ### Бейдж «ожидают подтверждения»
 - В сайдбаре у пункта «Пользователи» (админ) — счётчик profiles со `status='pending'` (`getPendingUsersCount`, админ-гейт). Обновление: опрос 30с + событие `window 'pending-users-changed'` (шлёт `admin-users-client` после смены статуса pending-юзера) + при навигации. Пропадает при 0.
+
+### Персист фильтров
+- Фильтры по людям приватны (клиентский стейт, не шарятся) и ЗАПОМИНАЮТСЯ между заходами через `usePersistedFilter` (`lib/hooks/use-persisted-filter.ts`) — localStorage, ключ содержит `userId` (+`projectId` для бэклога/спринта). Применяется: бэклог (`BacklogView`), спринт-борд (`SprintBoard`, добавлен проп `currentUserId`), «Мои задачи» (roleFilter + selectedUsers). SSR/первый рендер = дефолт, затем подтягивается сохранённое (краткий флеш допустим). Персист per-browser.

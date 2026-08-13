@@ -32,6 +32,7 @@ import {
 } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import { updateTask, createSprintTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import CreateTaskModal from '@/components/backlog/create-task-modal'
+import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import SprintTaskCard from './sprint-task-card'
 import UserFilter from '@/components/common/user-filter'
 
@@ -46,6 +47,7 @@ type Member = { id: string; full_name: string | null; login: string; avatar_url:
 
 type Props = {
   projectId: string
+  currentUserId: string
   sprint: Sprint
   columns: SprintColumn[]
   initialTasks: SprintTask[]
@@ -58,7 +60,7 @@ const COLUMN_COLORS = [
   '#A78BFA', '#FB923C', '#60C0E8', '#8892A4',
 ]
 
-export default function SprintBoard({ projectId, sprint, columns: initialColumns, initialTasks, canManage, members }: Props) {
+export default function SprintBoard({ projectId, currentUserId, sprint, columns: initialColumns, initialTasks, canManage, members }: Props) {
   const router = useRouter()
 
   const [cols, setCols] = useState<SprintColumn[]>(() =>
@@ -93,7 +95,9 @@ export default function SprintBoard({ projectId, sprint, columns: initialColumns
 
   // Фильтр по исполнителю. При активном фильтре DnD отключаем, чтобы не
   // переупорядочивать/перемещать отфильтрованное подмножество и не сломать column_order.
-  const [assigneeFilter, setAssigneeFilter] = useState<string[]>([])
+  const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string[]>(
+    `taskhub:flt:sprint:${currentUserId}:${projectId}`, [],
+  )
   const filterActive = assigneeFilter.length > 0
   const filterSet = new Set(assigneeFilter)
   const visibleColTasks = (colId: string) => {

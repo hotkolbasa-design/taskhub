@@ -7,6 +7,7 @@ import type { MyTask } from '@/lib/queries/my-tasks'
 import MyTaskCard from './my-task-card'
 import TaskDrawer from '@/components/backlog/task-drawer'
 import UserFilter from '@/components/common/user-filter'
+import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import { getTaskForDrawer, fetchTasksForUsers, updateTaskWorkflowStatus, updateTaskPriority } from '@/app/(dashboard)/my-tasks/actions'
 import type { BacklogTask, WorkflowStatus } from '@/types'
 
@@ -171,12 +172,16 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
   const router = useRouter()
   const [tasks, setTasks] = useState<MyTask[]>(initialTasks)
   // Все видят и свои задачи (исполнитель), и те, что поставили сами (постановщик) —
-  // сотрудники тоже раздают задачи друг другу. Сузить можно кнопками.
-  const [roleFilter, setRoleFilter] = useState<RoleFilter[]>(['assignee', 'creator'])
+  // сотрудники тоже раздают задачи друг другу. Сузить можно кнопками. Персист на пользователя.
+  const [roleFilter, setRoleFilter] = usePersistedFilter<RoleFilter[]>(
+    `taskhub:flt:mytasks-roles:${currentUserId}`, ['assignee', 'creator'],
+  )
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
   // Кого показывать (по исполнителю/постановщику). По умолчанию — текущий пользователь.
   // Мультивыбор чужих сотрудников доступен только админу.
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([currentUserId])
+  const [selectedUsers, setSelectedUsers] = usePersistedFilter<string[]>(
+    `taskhub:flt:mytasks-users:${currentUserId}`, [currentUserId],
+  )
   const [loadingTarget, setLoadingTarget] = useState(false)
 
   // Drawer state

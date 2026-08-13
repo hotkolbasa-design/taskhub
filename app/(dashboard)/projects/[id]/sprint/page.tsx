@@ -92,6 +92,7 @@ export default async function SprintPage({ params }: { params: Promise<{ id: str
       {sprintData ? (
         <SprintBoard
           projectId={id}
+          currentUserId={session.user.id}
           sprint={sprintData.sprint}
           columns={sprintData.columns}
           initialTasks={sprintData.tasks}
