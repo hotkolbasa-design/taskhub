@@ -411,30 +411,47 @@ function RateSection({ data, onSaveRate }: {
 function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
+  /*
+   * Why this structure works for sticky:
+   * CSS sticky requires element_width < scroll_container_viewport_width.
+   * colSpan=all makes th as wide as the table (~3000px) — sticky becomes no-op.
+   * A plain <div> inside a minWidth:max-content card is also full-width — same problem.
+   *
+   * Fix: the header <th> has NO colSpan (single column, ~240px).
+   * 240px << viewport_width → sticky works, same as td.crm-lbl.
+   * A separate filler <th colSpan=rest> provides surface2 background for the full row.
+   */
+  const fillerColSpan = data.days.length + data.weeks.length + 1
   return (
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
-      {/*
-        Sticky card header as a plain <div>, NOT a <th colSpan=N>.
-        Browsers have a known bug: position:sticky on colspan>1 cells doesn't work.
-        A <div> inside the shared overflow-x:auto container sticks correctly.
-      */}
-      <div style={{
-        position: 'sticky',
-        left: 0,
-        zIndex: 4,
-        background: 'var(--surface2)',
-        borderBottom: '1px solid var(--border)',
-        padding: '10px 20px',
-        fontSize: 14,
-        fontWeight: 600,
-        textAlign: 'left',
-        whiteSpace: 'nowrap',
-        borderRadius: '11px 11px 0 0',
-      }}>
-        {header}
-      </div>
       <table className="crm-table">
         <thead>
+          <tr>
+            {/* Single-column sticky header — narrow enough for sticky to activate */}
+            <th
+              className="crm-lbl"
+              style={{
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: 600,
+                textAlign: 'left',
+                background: 'var(--surface2)',
+                borderBottom: '1px solid var(--border)',
+                zIndex: 4,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {header}
+            </th>
+            {/* Filler: fills rest of header row with matching background (not sticky) */}
+            <th
+              colSpan={fillerColSpan}
+              style={{
+                background: 'var(--surface2)',
+                borderBottom: '1px solid var(--border)',
+              }}
+            />
+          </tr>
           <HeadRow data={data} />
         </thead>
         <tbody>
