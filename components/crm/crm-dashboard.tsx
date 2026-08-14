@@ -411,31 +411,30 @@ function RateSection({ data, onSaveRate }: {
 function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
-  // +2 = label column + total column
-  const colSpan = data.days.length + data.weeks.length + 2
   return (
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
+      {/*
+        Sticky card header as a plain <div>, NOT a <th colSpan=N>.
+        Browsers have a known bug: position:sticky on colspan>1 cells doesn't work.
+        A <div> inside the shared overflow-x:auto container sticks correctly.
+      */}
+      <div style={{
+        position: 'sticky',
+        left: 0,
+        zIndex: 4,
+        background: 'var(--surface2)',
+        borderBottom: '1px solid var(--border)',
+        padding: '10px 20px',
+        fontSize: 14,
+        fontWeight: 600,
+        textAlign: 'left',
+        whiteSpace: 'nowrap',
+        borderRadius: '11px 11px 0 0',
+      }}>
+        {header}
+      </div>
       <table className="crm-table">
         <thead>
-          {/* Header row: single full-width sticky th — works like td.crm-lbl */}
-          <tr>
-            <th
-              colSpan={colSpan}
-              className="crm-lbl"
-              style={{
-                padding: '10px 20px',
-                fontSize: 14,
-                fontWeight: 600,
-                textAlign: 'left',
-                background: 'var(--surface2)',
-                borderBottom: '1px solid var(--border)',
-                zIndex: 4,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {header}
-            </th>
-          </tr>
           <HeadRow data={data} />
         </thead>
         <tbody>
