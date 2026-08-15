@@ -412,23 +412,19 @@ function Card({ header, data, children }: {
   header: React.ReactNode; data: DashData; children: React.ReactNode
 }) {
   /*
-   * Why this structure works for sticky:
-   * CSS sticky requires element_width < scroll_container_viewport_width.
-   * colSpan=all makes th as wide as the table (~3000px) — sticky becomes no-op.
-   * A plain <div> inside a minWidth:max-content card is also full-width — same problem.
-   *
-   * Fix: the header <th> has NO colSpan (single column, ~240px).
-   * 240px << viewport_width → sticky works, same as td.crm-lbl.
-   * A separate filler <th colSpan=rest> provides surface2 background for the full row.
+   * Sticky works on <td> in <tbody> (proven — all td.crm-lbl row labels stick).
+   * It does NOT work on <th> in <thead> in browsers — thead has special layout.
+   * Fix: no <thead> at all. Card title = first <td> row in <tbody>.
+   * Same mechanism as every other sticky label cell in the table.
    */
   const fillerColSpan = data.days.length + data.weeks.length + 1
   return (
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
       <table className="crm-table">
-        <thead>
+        <tbody>
+          {/* Card title: <td class="crm-lbl"> in <tbody> — same sticky mechanism as row labels */}
           <tr>
-            {/* Single-column sticky header — narrow enough for sticky to activate */}
-            <th
+            <td
               className="crm-lbl"
               style={{
                 padding: '10px 20px',
@@ -442,9 +438,8 @@ function Card({ header, data, children }: {
               }}
             >
               {header}
-            </th>
-            {/* Filler: fills rest of header row with matching background (not sticky) */}
-            <th
+            </td>
+            <td
               colSpan={fillerColSpan}
               style={{
                 background: 'var(--surface2)',
@@ -452,9 +447,8 @@ function Card({ header, data, children }: {
               }}
             />
           </tr>
+          {/* Column headers (dates / weeks) — also in tbody, order preserved */}
           <HeadRow data={data} />
-        </thead>
-        <tbody>
           {children}
         </tbody>
       </table>
