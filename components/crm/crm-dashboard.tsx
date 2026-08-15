@@ -422,22 +422,33 @@ function Card({ header, data, children }: {
     <div className="rounded-xl mb-5" style={{ border: '1px solid var(--border)', background: 'var(--surface)', minWidth: 'max-content' }}>
       <table className="crm-table">
         <tbody>
-          {/* Card title: <td class="crm-lbl"> in <tbody> — same sticky mechanism as row labels */}
+          {/* Card title: sticky td stays 240px wide (doesn't expand column).
+              Content in absolute div so column widths stay uniform across all cards. */}
           <tr>
             <td
               className="crm-lbl"
               style={{
-                padding: '10px 20px',
-                fontSize: 14,
-                fontWeight: 600,
-                textAlign: 'left',
+                height: 44,
                 background: 'var(--surface2)',
                 borderBottom: '1px solid var(--border)',
                 zIndex: 4,
-                whiteSpace: 'nowrap',
               }}
             >
-              {header}
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 20px',
+                fontSize: 14,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                background: 'var(--surface2)',
+              }}>
+                {header}
+              </div>
             </td>
             <td
               colSpan={fillerColSpan}
