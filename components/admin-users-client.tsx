@@ -43,6 +43,10 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
   const pending = users.filter(u => u.status === 'pending')
   const rest    = users.filter(u => u.status !== 'pending')
 
+  // Список отделов = уникальные значения по всем пользователям (для дропдауна в профиле)
+  const departments = [...new Set(users.map(u => u.department).filter((d): d is string => !!d && d.trim() !== ''))]
+    .sort((a, b) => a.localeCompare(b))
+
   function openDrawer(u: UserRow) {
     setDrawerUser({
       id:         u.id,
@@ -122,6 +126,7 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
           user={drawerUser}
           isSelf={drawerUser.id === currentUserId}
           isProtected={drawerUser.id === superAdminId}
+          departments={departments}
           onClose={() => setDrawerUser(null)}
           onUpdated={handleUpdated}
         />

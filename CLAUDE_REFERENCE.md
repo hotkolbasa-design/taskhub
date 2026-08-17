@@ -380,3 +380,6 @@ async function handleRemove(id) {
 
 ### Персист фильтров
 - Фильтры по людям приватны (клиентский стейт, не шарятся) и ЗАПОМИНАЮТСЯ между заходами через `usePersistedFilter` (`lib/hooks/use-persisted-filter.ts`) — localStorage, ключ содержит `userId` (+`projectId` для бэклога/спринта). Применяется: бэклог (`BacklogView`), спринт-борд (`SprintBoard`, добавлен проп `currentUserId`), «Мои задачи» (roleFilter + selectedUsers). SSR/первый рендер = дефолт, затем подтягивается сохранённое (краткий флеш допустим). Персист per-browser.
+
+### Отдел — combobox с добавлением
+- В профиле пользователя (`admin-user-drawer`) поле «Отдел» — кастомный combobox (`DepartmentCombobox`): список существующих отделов (distinct из `profiles.department`, передаётся пропом `departments` из `admin-users-client`) + поиск + «Добавить «X»» (вписать новый). Новый отдел сохраняется при сохранении профиля и появляется в списке. Отдельной таблицы отделов нет.

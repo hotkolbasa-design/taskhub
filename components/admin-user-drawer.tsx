@@ -46,15 +46,134 @@ function buildCalendar(year: number, month: number) {
   return cells
 }
 
+// Кастомный combobox отдела: выбрать существующий или вписать новый («Добавить …»)
+function DepartmentCombobox({ value, options, disabled, onChange }: {
+  value: string
+  options: string[]
+  disabled: boolean
+  onChange: (v: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    const onScroll = () => setOpen(false)
+    document.addEventListener('mousedown', onOut)
+    window.addEventListener('scroll', onScroll, true)
+    return () => { document.removeEventListener('mousedown', onOut); window.removeEventListener('scroll', onScroll, true) }
+  }, [open])
+
+  function openMenu() {
+    if (disabled) return
+    const r = triggerRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom + 4, left: r.left, width: r.width })
+    setQuery('')
+    setOpen(true)
+  }
+
+  function select(v: string) { onChange(v); setOpen(false) }
+
+  const q = query.trim()
+  const filtered = options.filter(o => o.toLowerCase().includes(q.toLowerCase()))
+  const canAdd = q.length > 0 && !options.some(o => o.toLowerCase() === q.toLowerCase())
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm disabled:opacity-50"
+        style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: value ? 'var(--text)' : 'var(--text2)', cursor: disabled ? 'default' : 'pointer' }}
+      >
+        <span className="truncate">{value || 'Не указан'}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && pos && createPortal(
+        <div
+          ref={dropRef}
+          className="rounded-xl py-1"
+          style={{
+            position: 'fixed', top: pos.top, left: pos.left, width: pos.width, maxHeight: 280, overflowY: 'auto', zIndex: 10000,
+            background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out',
+          }}
+        >
+          <div className="px-2 pt-1 pb-2">
+            <input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); select(q) } }}
+              placeholder="Поиск или новый отдел…"
+              className="w-full px-2.5 py-1.5 rounded-md text-sm outline-none"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            />
+          </div>
+
+          <button type="button" onClick={() => select('')}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
+            style={{ color: 'var(--text2)', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            Не указан
+            {!value && <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          </button>
+
+          {filtered.map(o => (
+            <button key={o} type="button" onClick={() => select(o)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
+              style={{ color: o === value ? 'var(--accent)' : 'var(--text)', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <span className="truncate">{o}</span>
+              {o === value && <svg className="ml-auto shrink-0" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            </button>
+          ))}
+
+          {canAdd && (
+            <button type="button" onClick={() => select(q)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
+              style={{ color: 'var(--accent)', cursor: 'pointer', borderTop: filtered.length > 0 ? '1px solid var(--border)' : undefined }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+              Добавить «{q}»
+            </button>
+          )}
+
+          {filtered.length === 0 && !canAdd && (
+            <div className="px-3 py-2 text-sm" style={{ color: 'var(--text2)' }}>Ничего не найдено</div>
+          )}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
+
 type Props = {
   user: DrawerUser
   isSelf: boolean
   isProtected: boolean
+  departments: string[]
   onClose: () => void
   onUpdated: (userId: string, patch: Partial<DrawerUser>) => void
 }
 
-export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, onUpdated }: Props) {
+export default function AdminUserDrawer({ user, isSelf, isProtected, departments, onClose, onUpdated }: Props) {
   const canEditRoleStatus = !isSelf && !isProtected
   const canEditProfile    = !isProtected || isSelf
 
@@ -196,12 +315,11 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, onClose, on
 
           {/* Отдел */}
           <Field label="Отдел">
-            <input value={department} onChange={e => setDepartment(e.target.value)} disabled={!canEditProfile}
-              placeholder="Маркетинг"
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              onFocus={e => { if (canEditProfile) e.currentTarget.style.borderColor = 'var(--accent)' }}
-              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+            <DepartmentCombobox
+              value={department}
+              options={departments}
+              disabled={!canEditProfile}
+              onChange={setDepartment}
             />
           </Field>
 
