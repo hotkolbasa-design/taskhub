@@ -65,7 +65,11 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
       if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
       setOpen(false)
     }
-    const onScroll = () => setOpen(false)
+    const onScroll = (e: Event) => {
+      // скролл внутри самого меню не закрывает его — только скролл страницы/панели
+      if (dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onOut)
     window.addEventListener('scroll', onScroll, true)
     return () => { document.removeEventListener('mousedown', onOut); window.removeEventListener('scroll', onScroll, true) }
