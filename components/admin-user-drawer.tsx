@@ -55,7 +55,7 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxH: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -74,7 +74,17 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
   function openMenu() {
     if (disabled) return
     const r = triggerRef.current?.getBoundingClientRect()
-    if (r) setPos({ top: r.bottom + 4, left: r.left, width: r.width })
+    if (r) {
+      const margin = 12
+      const spaceBelow = window.innerHeight - r.bottom - margin
+      const spaceAbove = r.top - margin
+      // Открываем вниз, если снизу достаточно места; иначе вверх. Высоту подгоняем под экран.
+      if (spaceBelow >= 220 || spaceBelow >= spaceAbove) {
+        setPos({ top: r.bottom + 4, left: r.left, width: r.width, maxH: Math.min(360, spaceBelow) })
+      } else {
+        setPos({ bottom: window.innerHeight - r.top + 4, left: r.left, width: r.width, maxH: Math.min(360, spaceAbove) })
+      }
+    }
     setQuery('')
     setOpen(true)
   }
@@ -106,7 +116,8 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
           ref={dropRef}
           className="rounded-xl py-1"
           style={{
-            position: 'fixed', top: pos.top, left: pos.left, width: pos.width, maxHeight: 280, overflowY: 'auto', zIndex: 10000,
+            position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width,
+            maxHeight: pos.maxH, overflowY: 'auto', zIndex: 10000,
             background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'dropdownIn 0.12s ease-out',
           }}
