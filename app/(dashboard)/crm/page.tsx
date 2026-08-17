@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CrmDashboard from '@/components/crm/crm-dashboard'
+import { canAccessCrm } from '@/lib/utils/crm-access'
 
 export default async function CrmPage() {
   const supabase = await createClient()
@@ -9,13 +10,11 @@ export default async function CrmPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, position')
+    .select('role, position, department')
     .eq('id', session.user.id)
     .maybeSingle()
 
-  const isAdmin = profile?.role === 'admin'
-  const isMarketer = profile?.position?.toLowerCase() === 'маркетолог'
-  if (!isAdmin && !isMarketer) redirect('/dashboard')
+  if (!canAccessCrm(profile ?? {})) redirect('/dashboard')
 
   return (
     <div className="h-full overflow-hidden">

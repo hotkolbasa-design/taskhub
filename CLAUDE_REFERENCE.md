@@ -383,3 +383,6 @@ async function handleRemove(id) {
 
 ### Отдел — combobox с добавлением
 - В профиле пользователя (`admin-user-drawer`) поле «Отдел» — кастомный combobox (`DepartmentCombobox`): список существующих отделов (distinct из `profiles.department`, передаётся пропом `departments` из `admin-users-client`) + поиск + «Добавить «X»» (вписать новый). Новый отдел сохраняется при сохранении профиля и появляется в списке. Отдельной таблицы отделов нет.
+
+### Доступ к CRM
+- `lib/utils/crm-access.ts` (`canAccessCrm`): CRM видят админы, должность «маркетолог» И отделы `Маркетинг`/`Отдел продаж` (`CRM_DEPARTMENTS`, сравнение lowercase+trim). Используется в сайдбаре (`sidebar-nav`) и гарде страницы (`crm/page`). В layout в профиль добавлен `department`.

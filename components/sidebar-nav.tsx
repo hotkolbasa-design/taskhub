@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
 import { getNotifications, markAsRead, markAllAsRead, type AppNotification } from '@/app/(dashboard)/notifications/actions'
 import { getPendingUsersCount } from '@/app/(dashboard)/admin/actions'
+import { canAccessCrm } from '@/lib/utils/crm-access'
 import ProfileModal from '@/components/profile-modal'
 
 type Profile = {
@@ -14,6 +15,7 @@ type Profile = {
   login: string | null
   role: string | null
   position: string | null
+  department: string | null
 }
 
 const adminItem = {
@@ -231,8 +233,10 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
         {(() => {
           const isAdmin = profile?.role === 'admin'
-          const isMarketer = profile?.position?.toLowerCase() === 'маркетолог'
-          const extra = isAdmin ? [crmItem, adminItem] : isMarketer ? [crmItem] : []
+          const extra = [
+            ...(canAccessCrm(profile ?? {}) ? [crmItem] : []),
+            ...(isAdmin ? [adminItem] : []),
+          ]
           return [...navItems, ...extra]
         })().map(({ href, label, icon }) => {
           const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
