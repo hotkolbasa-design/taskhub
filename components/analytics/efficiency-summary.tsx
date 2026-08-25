@@ -5,26 +5,8 @@ import type { SprintStat, AnalyticsUser } from '@/lib/queries/analytics'
 import { computeEfficiency, efficiencyColor } from '@/lib/utils/efficiency'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
+import { mondayOf, addDays, todayYmd, fmtDay, fmtWeekRange } from '@/lib/utils/week'
 import UserFilter from '@/components/common/user-filter'
-
-// ——— Работа с неделями (понедельник ISO-недели как ключ) ———
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function mondayOf(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  const shift = (d.getDay() + 6) % 7 // 0 = понедельник
-  d.setDate(d.getDate() - shift)
-  return ymd(d)
-}
-function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  d.setDate(d.getDate() + n)
-  return ymd(d)
-}
-function fmtDay(dateStr: string): string {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-}
 
 type Cell = { eff: number; active: boolean; tasks: number } | null
 
@@ -93,7 +75,7 @@ export default function EfficiencySummary({
 
   const shownUsers = selected.length ? users.filter(u => selected.includes(u.id)) : users
 
-  const currentMon = useMemo(() => mondayOf(ymd(new Date())), [])
+  const currentMon = useMemo(() => mondayOf(todayYmd()), [])
 
   // Непрерывная ось недель: от самой ранней недели с данными до текущей, обрезанная до weeksCount.
   const pastWeeks = useMemo(() => {
@@ -166,7 +148,7 @@ export default function EfficiencySummary({
   const filterUsers = users.map(u => ({ id: u.id, full_name: u.full_name, login: u.login }))
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4">
       {/* Панель управления */}
       <div className="flex items-center gap-3 flex-wrap shrink-0">
         <UserFilter users={filterUsers} selected={selected} onChange={setSelected} placeholder="Все сотрудники" />
@@ -205,7 +187,7 @@ export default function EfficiencySummary({
       </div>
 
       {/* Матрица — единый горизонтальный скролл, крайние колонки липкие */}
-      <div ref={scrollRef} className="flex-1 overflow-auto rounded-xl" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
+      <div ref={scrollRef} className="overflow-auto rounded-xl" style={{ border: '1px solid var(--border)', background: 'var(--surface)', maxHeight: '56vh' }}>
         <div style={{ minWidth: 'fit-content' }}>
           {/* Заголовок */}
           <div className="flex items-stretch sticky top-0 z-30"
@@ -227,7 +209,7 @@ export default function EfficiencySummary({
             <div className="flex flex-col items-center justify-center py-2 sticky right-0 z-10"
               style={{ width: CUR_W, flexShrink: 0, background: 'color-mix(in srgb, var(--accent) 16%, var(--surface2))', borderLeft: '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' }}>
               <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>Текущая</span>
-              <span className="font-mono" style={{ fontSize: 10, color: 'var(--text2)' }}>{fmtDay(currentMon)}</span>
+              <span className="font-mono" style={{ fontSize: 10, color: 'var(--text2)' }}>{fmtWeekRange(currentMon)}</span>
             </div>
           </div>
 

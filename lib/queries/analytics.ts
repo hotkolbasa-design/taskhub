@@ -191,6 +191,123 @@ export function getUserSprintHistory(userId: string): Promise<SprintStat[]> {
   )()
 }
 
+// ——— Проектная аналитика ———
+// Права: админ («я») видит все проекты; остальные — только проекты, где они участники.
+
+export type WeekPoint = {
+  date_from: string
+  date_to: string
+  sprint_status: 'active' | 'closed'
+  efficiency: number
+  total_tasks: number
+}
+
+export type ProjectAnalytics = {
+  project_id: string
+  project_name: string
+  users: AnalyticsUser[]
+  sprintsByUser: Record<string, SprintStat[]> // понедельные данные каждого участника В ЭТОМ проекте
+  weekly: WeekPoint[] // эффективность проекта в целом по неделям (по возрастанию даты)
+}
+
+const TASK_COLS = 'id, title, type, parent_task_id, workflow_status, status, deadline, time_estimate, closed_at, assignee_id'
+
+function mapTask(t: any): TaskStat {
+  return {
+    id: t.id, title: t.title, type: t.type,
+    parent_task_id: t.parent_task_id ?? null,
+    workflow_status: t.workflow_status, task_status: t.status,
+    deadline: t.deadline, time_estimate: t.time_estimate, closed_at: t.closed_at,
+  }
+}
+
+/** Список проектов, доступных пользователю для аналитики. */
+export function getAnalyticsProjects(userId: string, isAdmin: boolean): Promise<{ id: string; name: string }[]> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient()
+      if (isAdmin) {
+        const { data } = await admin.from('projects').select('id, name').order('created_at', { ascending: false })
+        return (data ?? []) as { id: string; name: string }[]
+      }
+      const { data: memberships } = await admin
+        .from('project_members').select('project_id').eq('user_id', userId)
+      const ids = [...new Set((memberships ?? []).map((m: any) => m.project_id))]
+      if (!ids.length) return []
+      const { data } = await admin.from('projects').select('id, name').in('id', ids).order('created_at', { ascending: false })
+      return (data ?? []) as { id: string; name: string }[]
+    },
+    [`analytics-projects-${userId}-${isAdmin}`],
+    { tags: ['projects'] },
+  )()
+}
+
+/** Полная аналитика одного проекта: участники, понедельные данные каждого и проекта в целом. */
+export function getProjectAnalytics(projectId: string): Promise<ProjectAnalytics> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient()
+
+      const [{ data: project }, { data: memberRows }, { data: sprints }] = await Promise.all([
+        admin.from('projects').select('name').eq('id', projectId).maybeSingle(),
+        admin.from('project_members')
+          .select('profile:profiles!project_members_user_id_fkey(id, full_name, login, avatar_url, role, status)')
+          .eq('project_id', projectId),
+        admin.from('sprints').select('*').eq('project_id', projectId).order('date_from', { ascending: true }),
+      ])
+
+      const projectName = project?.name ?? ''
+      const users: AnalyticsUser[] = (memberRows ?? [])
+        .map((m: any) => m.profile)
+        .filter((p: any) => p && p.status === 'active')
+        .map((p: any) => ({ id: p.id, full_name: p.full_name, login: p.login, avatar_url: p.avatar_url, role: p.role }))
+
+      const sprintsByUser: Record<string, SprintStat[]> = {}
+      const weekly: WeekPoint[] = []
+
+      for (const sprint of sprints ?? []) {
+        let rawTasks: any[] = []
+        if (sprint.fixed_task_ids?.length) {
+          const { data } = await admin.from('tasks').select(TASK_COLS).in('id', sprint.fixed_task_ids)
+          rawTasks = data ?? []
+        } else {
+          const { data } = await admin.from('tasks').select(TASK_COLS).eq('sprint_id', sprint.id)
+          rawTasks = data ?? []
+        }
+
+        // Проект в целом
+        const allTasks = rawTasks.map(mapTask)
+        const projStats = calcStats(allTasks)
+        weekly.push({
+          date_from: sprint.date_from, date_to: sprint.date_to,
+          sprint_status: sprint.status, efficiency: projStats.efficiency, total_tasks: projStats.total_tasks,
+        })
+
+        // По каждому участнику
+        const byUser: Record<string, any[]> = {}
+        for (const t of rawTasks) if (t.assignee_id) (byUser[t.assignee_id] ??= []).push(t)
+        for (const [uid, tks] of Object.entries(byUser)) {
+          const tasks = tks.map(mapTask)
+          ;(sprintsByUser[uid] ??= []).push({
+            sprint_id: sprint.id, sprint_name: sprint.name,
+            project_id: projectId, project_name: projectName,
+            date_from: sprint.date_from, date_to: sprint.date_to,
+            sprint_status: sprint.status, is_fixed: sprint.is_fixed, fixed_at: sprint.fixed_at,
+            tasks, ...calcStats(tasks),
+          })
+        }
+      }
+
+      // Детальный вид ждёт историю от новых к старым
+      for (const uid of Object.keys(sprintsByUser)) sprintsByUser[uid].reverse()
+
+      return { project_id: projectId, project_name: projectName, users, sprintsByUser, weekly }
+    },
+    [`project-analytics-${projectId}`],
+    { tags: [`sprints-${projectId}`, `members-${projectId}`, 'profiles'] },
+  )()
+}
+
 export function getVisibleUsers(currentUserId: string, currentUserRole: string): Promise<AnalyticsUser[]> {
   return unstable_cache(
     async () => {
