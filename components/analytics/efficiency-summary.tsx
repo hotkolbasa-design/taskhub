@@ -1,28 +1,34 @@
 'use client'
 
 import { useMemo, useRef, useEffect } from 'react'
-import type { SprintStat, AnalyticsUser } from '@/lib/queries/analytics'
-import { computeEfficiency, efficiencyColor } from '@/lib/utils/efficiency'
-import { getAvatarColor } from '@/lib/utils/avatar'
-import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
+import { efficiencyColor } from '@/lib/utils/efficiency'
 import { mondayOf, addDays, todayYmd, fmtDay, fmtWeekRange } from '@/lib/utils/week'
-import UserFilter from '@/components/common/user-filter'
 
-type Cell = { eff: number; active: boolean; tasks: number } | null
+// Универсальная строка сводки — может быть проектом или сотрудником.
+export type SummaryRow = {
+  id: string
+  name: string
+  subtitle?: string
+  color: string
+  avatarText: string
+  isProject: boolean
+  cells: Record<string, { eff: number; active: boolean } | undefined> // ключ = понедельник
+  ongoingFrom?: string // понедельник активного спринта с прошлых недель («идёт с»)
+}
 
 const WEEK_W = 60
-const CUR_W = 100
+const CUR_W = 116
 const NAME_W = 244
 
-function EffPill({ eff, dim = false }: { eff: number; dim?: boolean }) {
+function EffPill({ eff }: { eff: number }) {
   const color = efficiencyColor(eff)
   return (
     <span
       className="inline-flex items-center justify-center font-mono font-semibold rounded-md"
       style={{
         fontSize: 12, minWidth: 40, padding: '3px 7px',
-        color, background: dim ? 'transparent' : `color-mix(in srgb, ${color} 15%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} ${dim ? 22 : 35}%, transparent)`,
+        color, background: `color-mix(in srgb, ${color} 15%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
       }}
     >
       {eff}%
@@ -31,111 +37,74 @@ function EffPill({ eff, dim = false }: { eff: number; dim?: boolean }) {
 }
 
 function Sparkline({ values }: { values: (number | null)[] }) {
-  if (!values.some(v => v != null)) {
-    return <div style={{ height: 22 }} />
-  }
+  if (!values.some(v => v != null)) return <div style={{ height: 22 }} />
   return (
     <div className="flex items-end gap-[2px]" style={{ height: 22 }}>
-      {values.map((v, i) => {
-        if (v == null) {
-          return <div key={i} style={{ width: 4, height: 3, borderRadius: 2, background: 'var(--surface2)' }} />
-        }
-        return (
-          <div key={i} title={`${v}%`}
-            style={{ width: 4, height: Math.max(3, Math.round((v / 100) * 22)), borderRadius: 2, background: efficiencyColor(v) }} />
-        )
-      })}
+      {values.map((v, i) =>
+        v == null
+          ? <div key={i} style={{ width: 4, height: 3, borderRadius: 2, background: 'var(--surface2)' }} />
+          : <div key={i} title={`${v}%`} style={{ width: 4, height: Math.max(3, Math.round((v / 100) * 22)), borderRadius: 2, background: efficiencyColor(v) }} />
+      )}
     </div>
   )
 }
 
-function Avatar({ user, size = 32 }: { user: AnalyticsUser; size?: number }) {
-  const name = user.full_name || user.login
+function RowAvatar({ row, started }: { row: SummaryRow; started: boolean }) {
   return (
-    <div className="rounded-full flex items-center justify-center shrink-0 font-semibold"
-      style={{ width: size, height: size, background: getAvatarColor(user.id), color: '#fff', fontSize: size * 0.4 }}>
-      {name[0]?.toUpperCase()}
+    <div className="relative shrink-0">
+      <div className="flex items-center justify-center font-semibold"
+        style={{
+          width: 32, height: 32,
+          borderRadius: row.isProject ? 8 : '9999px',
+          background: row.color, color: '#fff', fontSize: 13,
+        }}>
+        {row.isProject
+          ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h3l1.2 1.5H12.5A1.5 1.5 0 0 1 14 7v4.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5v-6Z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" /></svg>
+          : row.avatarText}
+      </div>
+      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full"
+        title={started ? 'Начал спринт на этой неделе' : row.ongoingFrom ? 'Спринт с прошлой недели' : 'Спринт не начат'}
+        style={{ background: started ? 'var(--green)' : row.ongoingFrom ? 'var(--yellow)' : 'var(--text2)', border: '2px solid var(--surface)' }} />
     </div>
   )
 }
 
 export default function EfficiencySummary({
-  users,
-  sprintsByUser,
-  currentUserId,
-  onOpenUser,
+  rows,
+  weeksCount,
+  entityLabel,
+  onOpenRow,
 }: {
-  users: AnalyticsUser[]
-  sprintsByUser: Record<string, SprintStat[]>
-  currentUserId: string
-  onOpenUser: (id: string) => void
+  rows: SummaryRow[]
+  weeksCount: number
+  entityLabel: string
+  onOpenRow: (id: string, isProject: boolean) => void
 }) {
-  const [selected, setSelected] = usePersistedFilter<string[]>(`analytics-summary-users-${currentUserId}`, [])
-  const [weeksCount, setWeeksCount] = usePersistedFilter<number>(`analytics-summary-weeks-${currentUserId}`, 8)
-
-  const shownUsers = selected.length ? users.filter(u => selected.includes(u.id)) : users
-
   const currentMon = useMemo(() => mondayOf(todayYmd()), [])
 
-  // Непрерывная ось недель: от самой ранней недели с данными до текущей, обрезанная до weeksCount.
+  // Непрерывная ось прошлых недель.
   const pastWeeks = useMemo(() => {
     let earliest = currentMon
-    for (const u of shownUsers) {
-      for (const s of sprintsByUser[u.id] ?? []) {
-        const m = mondayOf(s.date_from)
-        if (m < earliest) earliest = m
-      }
-    }
+    for (const r of rows) for (const k of Object.keys(r.cells)) if (k < earliest) earliest = k
     const weeks: string[] = []
     let cur = earliest
     while (cur < currentMon) { weeks.push(cur); cur = addDays(cur, 7) }
-    // Последние (weeksCount - 1) прошлых недель — текущая идёт отдельной липкой колонкой.
     return weeks.slice(Math.max(0, weeks.length - (weeksCount - 1)))
-  }, [shownUsers, sprintsByUser, currentMon, weeksCount])
+  }, [rows, currentMon, weeksCount])
 
-  // Матрица: userId -> (monday -> Cell)
-  const matrix = useMemo(() => {
-    const map: Record<string, Record<string, Cell>> = {}
-    for (const u of shownUsers) {
-      const byWeek: Record<string, Cell> = {}
-      const grouped: Record<string, SprintStat[]> = {}
-      for (const s of sprintsByUser[u.id] ?? []) {
-        const m = mondayOf(s.date_from)
-        ;(grouped[m] ??= []).push(s)
-      }
-      for (const [m, sprints] of Object.entries(grouped)) {
-        const tasks = sprints.flatMap(s => s.tasks)
-        byWeek[m] = {
-          eff: computeEfficiency(tasks.map(t => ({
-            type: t.type, workflow_status: t.workflow_status,
-            time_estimate: t.time_estimate, task_status: t.task_status,
-          }))),
-          active: sprints.some(s => s.sprint_status === 'active'),
-          tasks: sprints.reduce((n, s) => n + s.total_tasks, 0),
-        }
-      }
-      map[u.id] = byWeek
-    }
-    return map
-  }, [shownUsers, sprintsByUser])
-
-  // Сводка по «начал спринт на этой неделе».
-  const rows = shownUsers.map(u => {
-    const cells = matrix[u.id] ?? {}
-    const current = cells[currentMon] ?? null
+  const computed = rows.map(r => {
+    const current = r.cells[currentMon]
     const started = !!current
-    // Активный спринт, оставшийся с прошлых недель (не начал новый на этой неделе).
-    const ongoing = !started && (sprintsByUser[u.id] ?? []).find(s => s.sprint_status === 'active')
-    const past = pastWeeks.map(w => cells[w]?.eff ?? null)
+    const past = pastWeeks.map(w => r.cells[w]?.eff ?? null)
     const withCur = [...past, current?.eff ?? null]
     const vals = withCur.filter((v): v is number => v != null)
     const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null
-    return { user: u, cells, current, started, ongoing, past, avg }
+    return { row: r, current, started, past, avg }
   })
 
-  const startedCount = rows.filter(r => r.started).length
+  const startedCount = computed.filter(c => c.started).length
   const teamAvg = (() => {
-    const vals = rows.map(r => r.avg).filter((v): v is number => v != null)
+    const vals = computed.map(c => c.avg).filter((v): v is number => v != null)
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null
   })()
 
@@ -143,39 +112,17 @@ export default function EfficiencySummary({
   const scrollRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth
-  }, [pastWeeks.length, shownUsers.length])
-
-  const filterUsers = users.map(u => ({ id: u.id, full_name: u.full_name, login: u.login }))
+  }, [pastWeeks.length, rows.length])
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Панель управления */}
-      <div className="flex items-center gap-3 flex-wrap shrink-0">
-        <UserFilter users={filterUsers} selected={selected} onChange={setSelected} placeholder="Все сотрудники" />
-
-        <div className="flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          {[8, 12, 999].map((n, i) => (
-            <button key={n} onClick={() => setWeeksCount(n)}
-              className="px-3 py-1.5 text-xs font-medium"
-              style={{
-                background: weeksCount === n ? 'var(--accent)' : 'transparent',
-                color: weeksCount === n ? '#fff' : 'var(--text2)',
-                borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
-                cursor: 'pointer',
-              }}>
-              {n === 999 ? 'Всё' : `${n} нед.`}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Чипы-сводка */}
+    <div className="flex flex-col gap-3">
+      {/* Чипы-сводка */}
+      <div className="flex items-center gap-2 flex-wrap shrink-0">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
           style={{ background: 'color-mix(in srgb, var(--green) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--green) 30%, transparent)' }}>
           <span className="w-2 h-2 rounded-full" style={{ background: 'var(--green)' }} />
           <span style={{ color: 'var(--text2)' }}>Начали спринт:</span>
-          <span className="font-semibold font-mono" style={{ color: 'var(--green)' }}>{startedCount}/{shownUsers.length}</span>
+          <span className="font-semibold font-mono" style={{ color: 'var(--green)' }}>{startedCount}/{rows.length}</span>
         </div>
         {teamAvg != null && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
@@ -194,7 +141,7 @@ export default function EfficiencySummary({
             style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
             <div className="flex items-center px-4 py-2.5 sticky left-0 z-10"
               style={{ width: NAME_W, flexShrink: 0, background: 'var(--surface2)', borderRight: '1px solid var(--border)' }}>
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text2)' }}>Сотрудник</span>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{entityLabel}</span>
               <span className="text-xs ml-2" style={{ color: 'var(--text2)', opacity: 0.6 }}>· тренд</span>
             </div>
             {pastWeeks.length === 0 ? (
@@ -214,23 +161,17 @@ export default function EfficiencySummary({
           </div>
 
           {/* Строки */}
-          {rows.map(({ user, current, started, ongoing, past, avg }) => (
-            <div key={user.id} className="flex items-stretch"
-              style={{ borderBottom: '1px solid var(--border)' }}>
-              {/* Сотрудник + спарклайн + среднее (липкая колонка) */}
-              <button onClick={() => onOpenUser(user.id)}
+          {computed.map(({ row, current, started, past, avg }) => (
+            <div key={row.id} className="flex items-stretch" style={{ borderBottom: '1px solid var(--border)' }}>
+              {/* Название + спарклайн + среднее (липкая колонка) */}
+              <button onClick={() => onOpenRow(row.id, row.isProject)}
                 className="flex items-center gap-3 px-4 py-2.5 sticky left-0 z-10 text-left"
                 style={{ width: NAME_W, flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', cursor: 'pointer' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.05)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}>
-                <div className="relative shrink-0">
-                  <Avatar user={user} size={32} />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full"
-                    title={started ? 'Начал спринт на этой неделе' : ongoing ? 'Спринт с прошлой недели' : 'Спринт не начат'}
-                    style={{ background: started ? 'var(--green)' : ongoing ? 'var(--yellow)' : 'var(--text2)', border: '2px solid var(--surface)' }} />
-                </div>
+                <RowAvatar row={row} started={started} />
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{user.full_name || user.login}</span>
+                  <span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{row.name}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <Sparkline values={[...past, current?.eff ?? null]} />
                     <span className="font-mono text-xs shrink-0" style={{ color: avg != null ? efficiencyColor(avg) : 'var(--text2)' }}>
@@ -238,6 +179,11 @@ export default function EfficiencySummary({
                     </span>
                   </div>
                 </div>
+                {row.isProject && (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--text2)', opacity: 0.5, flexShrink: 0 }}>
+                    <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
               </button>
 
               {/* Прошлые недели */}
@@ -254,10 +200,10 @@ export default function EfficiencySummary({
                 style={{ width: CUR_W, flexShrink: 0, background: started ? 'color-mix(in srgb, var(--green) 8%, var(--surface))' : 'var(--surface)', borderLeft: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)' }}>
                 {started && current ? (
                   <EffPill eff={current.eff} />
-                ) : ongoing ? (
+                ) : row.ongoingFrom ? (
                   <span className="text-xs px-2 py-1 rounded-md whitespace-nowrap"
                     style={{ color: 'var(--yellow)', background: 'color-mix(in srgb, var(--yellow) 12%, transparent)' }}>
-                    идёт с {fmtDay(mondayOf(ongoing.date_from))}
+                    идёт с {fmtDay(row.ongoingFrom)}
                   </span>
                 ) : (
                   <span className="text-xs px-2 py-1 rounded-md whitespace-nowrap"
@@ -271,7 +217,7 @@ export default function EfficiencySummary({
 
           {rows.length === 0 && (
             <div className="flex items-center justify-center py-16">
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>Нет сотрудников для отображения</p>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>Нет данных для отображения</p>
             </div>
           )}
         </div>
