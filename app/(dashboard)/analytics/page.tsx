@@ -47,6 +47,7 @@ export default async function AnalyticsPage() {
         <AnalyticsView
           users={users}
           initialUserId={defaultUserId}
+          currentUserId={session.user.id}
           sprintsByUser={sprintsByUser}
         />
       </div>
