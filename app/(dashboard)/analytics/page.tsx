@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getVisibleUsers, getUserSprintHistory } from '@/lib/queries/analytics'
+import { getAnalyticsProjects, getProjectAnalytics, type ProjectAnalytics } from '@/lib/queries/analytics'
 import AnalyticsView from '@/components/analytics/analytics-view'
 
 export default async function AnalyticsPage() {
@@ -17,20 +17,18 @@ export default async function AnalyticsPage() {
     .eq('id', session.user.id)
     .maybeSingle()
 
-  const users = await getVisibleUsers(session.user.id, profile?.role ?? 'employee').catch(() => [])
+  const isAdmin = profile?.role === 'admin'
 
-  if (!users.length) redirect('/dashboard')
+  // Доступные проекты: админ («я») — все; остальные — только свои.
+  const projectList = await getAnalyticsProjects(session.user.id, isAdmin).catch(() => [])
+  if (!projectList.length) redirect('/dashboard')
 
-  // Загружаем данные для всех видимых пользователей
-  const sprintsByUser: Record<string, Awaited<ReturnType<typeof getUserSprintHistory>>> = {}
-  await Promise.all(
-    users.map(async user => {
-      sprintsByUser[user.id] = await getUserSprintHistory(user.id).catch(() => [])
-    })
+  const loaded = await Promise.all(
+    projectList.map(p => getProjectAnalytics(p.id).catch(() => null))
   )
+  const projects = loaded.filter((p): p is ProjectAnalytics => !!p && p.users.length > 0)
 
-  // По умолчанию — текущий пользователь или первый в списке
-  const defaultUserId = users.find(u => u.id === session.user.id)?.id ?? users[0].id
+  if (!projects.length) redirect('/dashboard')
 
   return (
     <div className="flex flex-col gap-6 p-6 h-full">
@@ -45,10 +43,9 @@ export default async function AnalyticsPage() {
 
       <div className="flex-1 overflow-hidden">
         <AnalyticsView
-          users={users}
-          initialUserId={defaultUserId}
+          projects={projects}
+          isAdmin={isAdmin}
           currentUserId={session.user.id}
-          sprintsByUser={sprintsByUser}
         />
       </div>
     </div>

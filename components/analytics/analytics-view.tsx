@@ -1,9 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import type { SprintStat, TaskStat, AnalyticsUser } from '@/lib/queries/analytics'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import type { SprintStat, TaskStat, AnalyticsUser, ProjectAnalytics } from '@/lib/queries/analytics'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
+import { mondayOf, todayYmd, fmtWeekRange } from '@/lib/utils/week'
 import EfficiencySummary from './efficiency-summary'
+import AnalyticsCharts from './analytics-charts'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -250,21 +254,108 @@ function UserCard({ sprint, missingTimeCount }: { sprint: SprintStat; missingTim
   )
 }
 
+function ProjectSelect({ projects, value, allowAll, onChange }: {
+  projects: ProjectAnalytics[]; value: string; allowAll: boolean; onChange: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 220 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onOut = (e: MouseEvent) => {
+      if (triggerRef.current?.contains(e.target as Node) || dropRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  const options = [
+    ...(allowAll ? [{ id: 'all', name: 'Все проекты' }] : []),
+    ...projects.map(p => ({ id: p.project_id, name: p.project_name || 'Без названия' })),
+  ]
+  const current = options.find(o => o.id === value) ?? options[0]
+
+  function handleOpen() {
+    const r = triggerRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom + 4, left: r.left, width: Math.max(220, r.width) })
+    setOpen(o => !o)
+  }
+
+  return (
+    <>
+      <button ref={triggerRef} onClick={handleOpen}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+        style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: 'var(--text)', cursor: 'pointer' }}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.7 }}>
+          <rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M2 6h12" stroke="currentColor" strokeWidth="1.3" />
+        </svg>
+        <span className="font-medium truncate" style={{ maxWidth: 200 }}>{current?.name}</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.5 }}>
+          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={dropRef} className="rounded-xl py-1"
+          style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: pos.width, maxHeight: 320, overflowY: 'auto', zIndex: 9999, background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          {options.map(o => {
+            const active = o.id === value
+            return (
+              <button key={o.id} onClick={() => { onChange(o.id); setOpen(false) }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
+                style={{ color: active ? 'var(--accent)' : 'var(--text)', background: active ? 'rgba(124,92,246,0.1)' : 'transparent', cursor: 'pointer' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
+                <span className="flex-1 truncate">{o.name}</span>
+                {active && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9L9.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+              </button>
+            )
+          })}
+        </div>, document.body)}
+    </>
+  )
+}
+
 export default function AnalyticsView({
-  users,
-  initialUserId,
+  projects,
   currentUserId,
-  sprintsByUser,
 }: {
-  users: AnalyticsUser[]
-  initialUserId: string
+  projects: ProjectAnalytics[]
+  isAdmin: boolean
   currentUserId: string
-  sprintsByUser: Record<string, SprintStat[]>
 }) {
   const [mode, setMode] = useState<'summary' | 'detail'>('summary')
+  const allowAll = projects.length > 1
+  const [projectSel, setProjectSel] = usePersistedFilter<string>(
+    `analytics-project-${currentUserId}`,
+    allowAll ? 'all' : projects[0].project_id,
+  )
+  // Валидация сохранённого выбора (проект мог исчезнуть)
+  const projectId = projectSel === 'all'
+    ? (allowAll ? 'all' : projects[0].project_id)
+    : (projects.some(p => p.project_id === projectSel) ? projectSel : (allowAll ? 'all' : projects[0].project_id))
+
+  const selectedProjects = projectId === 'all' ? projects : projects.filter(p => p.project_id === projectId)
+
+  const { users, sprintsByUser } = useMemo(() => {
+    const uMap = new Map<string, AnalyticsUser>()
+    const sMap: Record<string, SprintStat[]> = {}
+    for (const p of selectedProjects) {
+      for (const u of p.users) if (!uMap.has(u.id)) uMap.set(u.id, u)
+      for (const [uid, arr] of Object.entries(p.sprintsByUser)) (sMap[uid] ??= []).push(...arr)
+    }
+    const list = [...uMap.values()].sort((a, b) => (a.full_name || a.login).localeCompare(b.full_name || b.login))
+    return { users: list, sprintsByUser: sMap }
+  }, [selectedProjects])
+
+  const initialUserId = users.find(u => u.id === currentUserId)?.id ?? users[0]?.id ?? ''
   const [selectedId, setSelectedId] = useState(initialUserId)
-  const selectedUser = users.find(u => u.id === selectedId) ?? users[0]
-  const sprints = sprintsByUser[selectedId] ?? []
+  const effectiveId = users.some(u => u.id === selectedId) ? selectedId : initialUserId
+  const selectedUser = users.find(u => u.id === effectiveId) ?? users[0]
+  const sprints = sprintsByUser[effectiveId] ?? []
 
   const activeSprint = sprints.find(s => s.sprint_status === 'active')
   const history = sprints.filter(s => s.sprint_status === 'closed')
@@ -274,32 +365,52 @@ export default function AnalyticsView({
   const missingTimeCount = activeSprint?.tasks.filter(t => !t.time_estimate && t.task_status !== 'deleted').length ?? 0
   const multiProject = sprints.length > 0 && new Set(sprints.map(s => s.project_id)).size > 1
 
+  const currentWeek = mondayOf(todayYmd())
+
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Переключатель режимов */}
-      <div className="flex items-center rounded-lg overflow-hidden shrink-0 self-start" style={{ border: '1px solid var(--border)' }}>
-        {([['summary', 'Сводка'], ['detail', 'По сотруднику']] as const).map(([m, label], i) => (
-          <button key={m} onClick={() => setMode(m)}
-            className="px-4 py-1.5 text-sm font-medium"
-            style={{
-              background: mode === m ? 'var(--accent)' : 'transparent',
-              color: mode === m ? '#fff' : 'var(--text2)',
-              borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
-              cursor: 'pointer',
-            }}>
-            {label}
-          </button>
-        ))}
+      {/* Верхняя панель: режим, проект, период недели */}
+      <div className="flex items-center gap-3 flex-wrap shrink-0">
+        <div className="flex items-center rounded-lg overflow-hidden self-start" style={{ border: '1px solid var(--border)' }}>
+          {([['summary', 'Сводка'], ['detail', 'По сотруднику']] as const).map(([m, label], i) => (
+            <button key={m} onClick={() => setMode(m)}
+              className="px-4 py-1.5 text-sm font-medium"
+              style={{
+                background: mode === m ? 'var(--accent)' : 'transparent',
+                color: mode === m ? '#fff' : 'var(--text2)',
+                borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
+                cursor: 'pointer',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <ProjectSelect projects={projects} value={projectId} allowAll={allowAll} onChange={setProjectSel} />
+
+        <div className="flex-1" />
+
+        {/* Период текущей недели */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+          style={{ background: 'color-mix(in srgb, var(--accent) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
+            <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.3" />
+            <path d="M2 6h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+          <span style={{ color: 'var(--text2)' }}>Текущая неделя:</span>
+          <span className="font-mono font-semibold" style={{ color: 'var(--text)' }}>{fmtWeekRange(currentWeek)}</span>
+        </div>
       </div>
 
       {mode === 'summary' ? (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-4">
           <EfficiencySummary
             users={users}
             sprintsByUser={sprintsByUser}
             currentUserId={currentUserId}
             onOpenUser={id => { setSelectedId(id); setMode('detail') }}
           />
+          <AnalyticsCharts projects={selectedProjects} users={users} sprintsByUser={sprintsByUser} />
         </div>
       ) : (
     <div className="flex gap-6 flex-1 overflow-hidden">
@@ -307,7 +418,7 @@ export default function AnalyticsView({
       <div className="flex flex-col gap-1 shrink-0 overflow-y-auto" style={{ width: 220 }}>
         {users.map(user => {
           const name = user.full_name || user.login
-          const isSelected = user.id === selectedId
+          const isSelected = user.id === effectiveId
           return (
             <button
               key={user.id}
