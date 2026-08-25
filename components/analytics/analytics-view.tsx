@@ -4,10 +4,12 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { SprintStat, TaskStat, AnalyticsUser, ProjectAnalytics } from '@/lib/queries/analytics'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { computeEfficiency } from '@/lib/utils/efficiency'
 import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import { mondayOf, todayYmd, fmtWeekRange } from '@/lib/utils/week'
-import EfficiencySummary from './efficiency-summary'
+import EfficiencySummary, { type SummaryRow } from './efficiency-summary'
 import AnalyticsCharts from './analytics-charts'
+import UserFilter from '@/components/common/user-filter'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -367,6 +369,66 @@ export default function AnalyticsView({
 
   const currentWeek = mondayOf(todayYmd())
 
+  const [weeksCount, setWeeksCount] = usePersistedFilter<number>(`analytics-weeks-${currentUserId}`, 8)
+  const [employeeFilter, setEmployeeFilter] = usePersistedFilter<string[]>(`analytics-emp-${currentUserId}`, [])
+
+  // «Все проекты» → строки-проекты; конкретный проект → строки-сотрудники этого проекта.
+  const showProjects = projectId === 'all'
+
+  const summaryRows: SummaryRow[] = useMemo(() => {
+    if (showProjects) {
+      return projects.map(p => {
+        const grouped: Record<string, typeof p.weekly> = {}
+        for (const w of p.weekly) (grouped[mondayOf(w.date_from)] ??= []).push(w)
+        const cells: SummaryRow['cells'] = {}
+        for (const [m, ws] of Object.entries(grouped)) {
+          const tasks = ws.reduce((n, w) => n + w.total_tasks, 0)
+          const eff = tasks > 0
+            ? Math.round(ws.reduce((s, w) => s + w.efficiency * w.total_tasks, 0) / tasks)
+            : Math.round(ws.reduce((s, w) => s + w.efficiency, 0) / ws.length)
+          cells[m] = { eff, active: ws.some(w => w.sprint_status === 'active') }
+        }
+        const ongoing = p.weekly.find(w => w.sprint_status === 'active' && mondayOf(w.date_from) !== currentWeek)
+        const nm = p.project_name || 'Без названия'
+        return {
+          id: p.project_id, name: nm, color: getAvatarColor(p.project_id),
+          avatarText: nm[0]?.toUpperCase() ?? '?', isProject: true, cells,
+          ongoingFrom: ongoing ? mondayOf(ongoing.date_from) : undefined,
+        }
+      })
+    }
+    const shown = employeeFilter.length ? users.filter(u => employeeFilter.includes(u.id)) : users
+    return shown.map(u => {
+      const grouped: Record<string, SprintStat[]> = {}
+      for (const s of sprintsByUser[u.id] ?? []) (grouped[mondayOf(s.date_from)] ??= []).push(s)
+      const cells: SummaryRow['cells'] = {}
+      for (const [m, ss] of Object.entries(grouped)) {
+        const tasks = ss.flatMap(s => s.tasks)
+        cells[m] = {
+          eff: computeEfficiency(tasks.map(t => ({
+            type: t.type, workflow_status: t.workflow_status,
+            time_estimate: t.time_estimate, task_status: t.task_status,
+          }))),
+          active: ss.some(s => s.sprint_status === 'active'),
+        }
+      }
+      const ongoing = (sprintsByUser[u.id] ?? []).find(s => s.sprint_status === 'active' && mondayOf(s.date_from) !== currentWeek)
+      const nm = u.full_name || u.login
+      return {
+        id: u.id, name: nm, subtitle: u.full_name ? `@${u.login}` : undefined,
+        color: getAvatarColor(u.id), avatarText: nm[0]?.toUpperCase() ?? '?', isProject: false, cells,
+        ongoingFrom: ongoing ? mondayOf(ongoing.date_from) : undefined,
+      }
+    })
+  }, [showProjects, projects, users, sprintsByUser, employeeFilter, currentWeek])
+
+  const onOpenRow = (id: string, isProject: boolean) => {
+    if (isProject) setProjectSel(id)
+    else { setSelectedId(id); setMode('detail') }
+  }
+
+  const filterUsers = users.map(u => ({ id: u.id, full_name: u.full_name, login: u.login }))
+
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Верхняя панель: режим, проект, период недели */}
@@ -388,6 +450,27 @@ export default function AnalyticsView({
 
         <ProjectSelect projects={projects} value={projectId} allowAll={allowAll} onChange={setProjectSel} />
 
+        {mode === 'summary' && !showProjects && (
+          <UserFilter users={filterUsers} selected={employeeFilter} onChange={setEmployeeFilter} placeholder="Все сотрудники" />
+        )}
+
+        {mode === 'summary' && (
+          <div className="flex items-center rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+            {[8, 12, 999].map((n, i) => (
+              <button key={n} onClick={() => setWeeksCount(n)}
+                className="px-3 py-1.5 text-xs font-medium"
+                style={{
+                  background: weeksCount === n ? 'var(--accent)' : 'transparent',
+                  color: weeksCount === n ? '#fff' : 'var(--text2)',
+                  borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
+                  cursor: 'pointer',
+                }}>
+                {n === 999 ? 'Всё' : `${n} нед.`}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex-1" />
 
         {/* Период текущей недели */}
@@ -405,10 +488,10 @@ export default function AnalyticsView({
       {mode === 'summary' ? (
         <div className="flex-1 overflow-y-auto flex flex-col gap-6 pb-4">
           <EfficiencySummary
-            users={users}
-            sprintsByUser={sprintsByUser}
-            currentUserId={currentUserId}
-            onOpenUser={id => { setSelectedId(id); setMode('detail') }}
+            rows={summaryRows}
+            weeksCount={weeksCount}
+            entityLabel={showProjects ? 'Проект' : 'Сотрудник'}
+            onOpenRow={onOpenRow}
           />
           <AnalyticsCharts projects={selectedProjects} users={users} sprintsByUser={sprintsByUser} />
         </div>
