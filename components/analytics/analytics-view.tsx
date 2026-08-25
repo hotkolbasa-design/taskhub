@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { SprintStat, TaskStat, AnalyticsUser } from '@/lib/queries/analytics'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import EfficiencySummary from './efficiency-summary'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -252,12 +253,15 @@ function UserCard({ sprint, missingTimeCount }: { sprint: SprintStat; missingTim
 export default function AnalyticsView({
   users,
   initialUserId,
+  currentUserId,
   sprintsByUser,
 }: {
   users: AnalyticsUser[]
   initialUserId: string
+  currentUserId: string
   sprintsByUser: Record<string, SprintStat[]>
 }) {
+  const [mode, setMode] = useState<'summary' | 'detail'>('summary')
   const [selectedId, setSelectedId] = useState(initialUserId)
   const selectedUser = users.find(u => u.id === selectedId) ?? users[0]
   const sprints = sprintsByUser[selectedId] ?? []
@@ -271,7 +275,34 @@ export default function AnalyticsView({
   const multiProject = sprints.length > 0 && new Set(sprints.map(s => s.project_id)).size > 1
 
   return (
-    <div className="flex gap-6 h-full">
+    <div className="flex flex-col gap-4 h-full">
+      {/* Переключатель режимов */}
+      <div className="flex items-center rounded-lg overflow-hidden shrink-0 self-start" style={{ border: '1px solid var(--border)' }}>
+        {([['summary', 'Сводка'], ['detail', 'По сотруднику']] as const).map(([m, label], i) => (
+          <button key={m} onClick={() => setMode(m)}
+            className="px-4 py-1.5 text-sm font-medium"
+            style={{
+              background: mode === m ? 'var(--accent)' : 'transparent',
+              color: mode === m ? '#fff' : 'var(--text2)',
+              borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
+              cursor: 'pointer',
+            }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'summary' ? (
+        <div className="flex-1 overflow-hidden">
+          <EfficiencySummary
+            users={users}
+            sprintsByUser={sprintsByUser}
+            currentUserId={currentUserId}
+            onOpenUser={id => { setSelectedId(id); setMode('detail') }}
+          />
+        </div>
+      ) : (
+    <div className="flex gap-6 flex-1 overflow-hidden">
       {/* Левая панель: список сотрудников */}
       <div className="flex flex-col gap-1 shrink-0 overflow-y-auto" style={{ width: 220 }}>
         {users.map(user => {
@@ -398,6 +429,8 @@ export default function AnalyticsView({
           </>
         )}
       </div>
+    </div>
+      )}
     </div>
   )
 }
