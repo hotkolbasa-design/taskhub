@@ -1,5 +1,6 @@
 'use server'
 
+import { randomBytes } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -101,6 +102,27 @@ export async function updateUserProfile(
   const admin = createAdminClient()
   await admin.from('profiles').update(updates).eq('id', userId)
   revalidateTag('profiles', "default")
+}
+
+// Символы без пар, которые путают при диктовке: 0/O, 1/l/I
+const PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+
+function generatePassword(length = 12) {
+  return Array.from(randomBytes(length), (b) => PASSWORD_CHARS[b % PASSWORD_CHARS.length]).join('')
+}
+
+/** Запасной путь, когда человек не получает письма: админ выдаёт временный пароль. */
+export async function resetUserPassword(userId: string): Promise<string> {
+  const caller = await requireAdmin()
+  await guardTarget(userId, caller.id)
+  if (userId === caller.id) throw new Error('Свой пароль меняйте через восстановление по почте')
+
+  const password = generatePassword()
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(userId, { password })
+  if (error) throw new Error(error.message)
+
+  return password
 }
 
 export async function inviteUser(data: {

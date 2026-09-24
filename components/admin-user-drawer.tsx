@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { setRole, setStatus, updateUserProfile } from '@/app/(dashboard)/admin/actions'
+import { setRole, setStatus, updateUserProfile, resetUserPassword } from '@/app/(dashboard)/admin/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
 
 const ROLES = [
@@ -200,6 +200,10 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
   const [currentStatus, setCurrentStatus] = useState(user.status)
   const [saving, setSaving] = useState(false)
   const [calOpen, setCalOpen] = useState(false)
+  const [pwStage, setPwStage] = useState<'idle' | 'confirm' | 'loading' | 'done'>('idle')
+  const [newPassword, setNewPassword] = useState('')
+  const [pwError, setPwError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const initYear  = birthDate ? parseInt(birthDate.slice(0, 4)) : new Date().getFullYear() - 25
   const initMonth = birthDate ? parseInt(birthDate.slice(5, 7)) - 1 : 5
@@ -241,6 +245,29 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
     setCurrentStatus(next)
     onUpdated(user.id, { status: next })
     await setStatus(user.id, next as 'active' | 'inactive')
+  }
+
+  async function handleResetPassword() {
+    setPwStage('loading')
+    setPwError(null)
+    try {
+      const password = await resetUserPassword(user.id)
+      setNewPassword(password)
+      setPwStage('done')
+    } catch (e) {
+      setPwError(e instanceof Error ? e.message : 'Не удалось сбросить пароль')
+      setPwStage('idle')
+    }
+  }
+
+  async function copyPassword() {
+    try {
+      await navigator.clipboard.writeText(newPassword)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setPwError('Скопируйте пароль вручную')
+    }
   }
 
   const cells = buildCalendar(calYear, calMonth)
@@ -408,6 +435,56 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
               )}
             </div>
           </Field>
+
+          {/* Пароль — запасной путь, когда человек не получает письма */}
+          {canEditRoleStatus && (
+            <Field label="Пароль">
+              {pwStage === 'done' ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex-1 px-3 py-2 rounded-lg text-sm select-all"
+                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
+                      {newPassword}
+                    </span>
+                    <button type="button" onClick={copyPassword}
+                      className="px-3 py-2 rounded-lg text-xs shrink-0"
+                      style={{ background: copied ? 'rgba(45,212,160,0.15)' : 'var(--surface2)', border: '1px solid var(--border)', color: copied ? 'var(--green)' : 'var(--text2)', cursor: 'pointer' }}>
+                      {copied ? 'Скопировано' : 'Копировать'}
+                    </button>
+                  </div>
+                  <span className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
+                    Передайте пароль лично — второй раз он не покажется. Войдя, человек сменит его на свой через «Забыли пароль?».
+                  </span>
+                </div>
+              ) : pwStage === 'confirm' ? (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
+                    Старый пароль перестанет работать. Сбросить?
+                  </span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleResetPassword}
+                      className="flex-1 py-2 rounded-lg text-sm"
+                      style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
+                      Да, сбросить
+                    </button>
+                    <button type="button" onClick={() => setPwStage('idle')}
+                      className="flex-1 py-2 rounded-lg text-sm"
+                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setPwStage('confirm')} disabled={pwStage === 'loading'}
+                  className="w-full py-2 rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}>
+                  {pwStage === 'loading' && <span className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'var(--accent)' }} />}
+                  {pwStage === 'loading' ? 'Сброс…' : 'Сбросить пароль'}
+                </button>
+              )}
+              {pwError && <span className="text-xs" style={{ color: 'var(--red)' }}>{pwError}</span>}
+            </Field>
+          )}
         </div>
 
         {/* Footer */}
