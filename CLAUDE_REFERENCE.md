@@ -17,7 +17,8 @@
 
 ## Структура файлов
 ```
-app/(auth)/login · register
+app/(auth)/login · register · forgot-password · reset-password
+app/auth/confirm/route.ts  ← приём ссылок из писем Supabase (recovery, invite)
 app/(dashboard)/dashboard · projects · projects/[id]/backlog|sprint|settings · my-tasks · admin
 lib/supabase/client.ts · server.ts · admin.ts
 lib/queries/projects.ts · tasks.ts · sprints.ts · comments.ts
@@ -56,6 +57,24 @@ types/index.ts · proxy.ts
 Регистрация: `pending` → admin подтверждает → `active`. До подтверждения вход заблокирован.
 
 `owner` — тот кто создал проект (не admin автоматически).
+
+---
+
+## Восстановление пароля
+
+Пароли лежат в Supabase Auth как bcrypt-хэш — прочитать нельзя, только перезаписать.
+
+**Путь пользователя:** `/login` → «Забыли пароль?» → `/forgot-password` (`resetPasswordForEmail` с `redirectTo` на `/auth/confirm?next=/reset-password`) → письмо → `/auth/confirm` → `/reset-password` (`updateUser({ password })`).
+
+`app/auth/confirm/route.ts` принимает оба формата ссылки: `token_hash` + `type` (`verifyOtp` — работает в любом браузере) и `code` (`exchangeCodeForSession` — PKCE, только в том браузере, где запрашивали). Без параметров — пропускает на `next`, чтобы клиент разобрал токены из хэша. Битая или просроченная ссылка → `/forgot-password?error=link|expired`.
+
+`publicRoutes` в `proxy.ts`: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth`. Новый маршрут без авторизации → добавлять сюда, иначе proxy отправит на `/login`.
+
+**Настройки на стороне Supabase** (Dashboard, не в коде):
+- Redirect URLs должны включать `https://taskhub-ecru.vercel.app/**` и `http://localhost:3001/**` — иначе `redirectTo` игнорируется и ссылка ведёт на Site URL.
+- Шаблон письма Reset Password — вариант с `{{ .TokenHash }}`, иначе ссылка не откроется на другом устройстве.
+
+**Сброс силами админа** (человек не получает письма): Admin API `PUT /auth/v1/admin/users/{id}` с `SUPABASE_SERVICE_ROLE_KEY`, тело `{ "password": "..." }`.
 
 ---
 
@@ -199,7 +218,7 @@ id · user_id · type (assigned|commented|sprint_fixed|mentioned) · task_id · 
 
 ### ✅ Сделано
 - Supabase: все таблицы, RLS политики, триггеры (updated_at, auto-profile)
-- Auth: login, register, pending/active flow
+- Auth: login, register, pending/active flow, восстановление пароля по письму
 - Dashboard layout: sidebar + main
 - Страница проектов (список + создание)
 - Настройки проекта (участники, основные данные)

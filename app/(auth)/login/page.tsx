@@ -68,7 +68,14 @@ function LoginForm() {
           />
         </Field>
 
-        <Field label="Пароль">
+        <Field
+          label="Пароль"
+          action={
+            <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-[#7C5CF6] transition-colors">
+              Забыли пароль?
+            </Link>
+          }
+        >
           <input
             id="password"
             type="password"
@@ -108,10 +115,13 @@ function LoginForm() {
 const inputCls =
   'w-full rounded-lg px-3 py-2.5 bg-[#16132A] border border-[#2D2550] text-white text-sm outline-none focus:border-[#7C5CF6] transition-colors placeholder-gray-600'
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, action }: { label: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm text-gray-400">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-sm text-gray-400">{label}</label>
+        {action}
+      </div>
       {children}
     </div>
   )
