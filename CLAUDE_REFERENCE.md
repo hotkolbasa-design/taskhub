@@ -70,11 +70,15 @@ types/index.ts · proxy.ts
 
 `publicRoutes` в `proxy.ts`: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth`. Новый маршрут без авторизации → добавлять сюда, иначе proxy отправит на `/login`.
 
-**Настройки на стороне Supabase** (Dashboard, не в коде):
-- Redirect URLs должны включать `https://taskhub-ecru.vercel.app/**` и `http://localhost:3001/**` — иначе `redirectTo` игнорируется и ссылка ведёт на Site URL.
-- Шаблон письма Reset Password — вариант с `{{ .TokenHash }}`, иначе ссылка не откроется на другом устройстве.
+**Сброс силами админа** — основной рабочий путь. Карточка пользователя в админке → «Сбросить пароль» → временный пароль на экране (`resetUserPassword` в `app/(dashboard)/admin/actions.ts`, Admin API, без писем и лимитов). Показывается один раз, себе сбросить нельзя, суперадмина трогает только суперадмин (`guardTarget`).
 
-**Сброс силами админа** (человек не получает письма): Admin API `PUT /auth/v1/admin/users/{id}` с `SUPABASE_SERVICE_ROLE_KEY`, тело `{ "password": "..." }`.
+**Ограничения почты Supabase (free + встроенный провайдер)** — почему письмо не запасной вариант, а предмет отдельной настройки:
+- `rate_limit_email_sent` = **2 письма в час на весь проект**. Меняется только после подключения своего SMTP.
+- Шаблоны писем редактировать **запрещено**: Management API отвечает `Email template modification is not available for free tier projects using the default email provider`. Поэтому в письме дефолтный `{{ .ConfirmationURL }}` → PKCE-код → ссылка срабатывает только в том браузере, где её запросили.
+- `smtp_max_frequency` = 60 с одному адресу, `mailer_otp_exp` = 3600 с, `password_min_length` = 6 (в UI требуем 8).
+- Свой SMTP (Resend / Brevo / SES) снимает и лимит, и запрет на шаблон. Тогда шаблон recovery стоит перевести на `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password` — `route.ts` это уже понимает, и ссылка начнёт открываться на любом устройстве.
+
+**URL Configuration** (Dashboard): Site URL `https://taskhub-ecru.vercel.app`, Redirect URLs — `https://taskhub-ecru.vercel.app/**` и `http://localhost:3001/**`. Без них `redirectTo` игнорируется и ссылка ведёт на Site URL.
 
 ---
 
