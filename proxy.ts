@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/middleware'
 
-const publicRoutes = ['/login', '/register']
+const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth']
 
 export async function proxy(request: NextRequest) {
   const { supabase, response } = await createClient(request)
