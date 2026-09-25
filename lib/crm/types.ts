@@ -1,5 +1,7 @@
 export type SheetRow = {
   dateKey: string  // "YYYY-MM-DD" in Asia/Almaty timezone
+  id: string       // ID лида/сделки из ссылки на Битрикс — один и тот же у всех событий карточки
+  ts: number       // время события (serial) — по нему восстанавливается порядок внутри дня
   title: string
   stage: string
   pipeline: string

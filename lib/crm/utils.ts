@@ -21,6 +21,19 @@ export function serialToDateKey(serial: number): string {
   return `${y}-${m}-${day}`
 }
 
+// "YYYY-MM-DD" → Google Sheets serial (00:00 того дня)
+export function dateKeyToSerial(dateKey: string): number {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  if (!y || !m || !d) return 0
+  return Date.UTC(y, m - 1, d) / 86400000 + 25569
+}
+
+// "…/crm/lead/details/50962/" → "lead-50962"; одна и та же карточка во всех своих событиях
+export function entityIdFromLink(link: string): string {
+  const m = link.match(/\/crm\/(lead|deal)\/details\/(\d+)/)
+  return m ? `${m[1]}-${m[2]}` : ''
+}
+
 // Returns ["YYYY-MM-DD", ...] for every day in the given month
 export function getMonthDays(year: number, month: number): string[] {
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()

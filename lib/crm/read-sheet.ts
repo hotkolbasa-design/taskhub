@@ -1,5 +1,5 @@
 import { sheetValues } from './sheets'
-import { serialToDateKey, stripPipeline } from './utils'
+import { serialToDateKey, dateKeyToSerial, entityIdFromLink, stripPipeline } from './utils'
 import type { SheetRow } from './types'
 
 // Columns: A=Date, B=Link, C=Title, D=Stage, E=Pipeline, ..., H=Amount, ..., L=Source, ..., N=Tags
@@ -15,10 +15,12 @@ export async function readSheetRows(sheetName: string): Promise<SheetRow[]> {
   for (const row of values) {
     const raw = row[0]
     let dateKey = ''
+    let ts = 0
 
     if (typeof raw === 'number' && raw >= 1) {
       // Google Sheets date serial (most common from Bitrix24)
       dateKey = serialToDateKey(raw)
+      ts = raw
     } else if (typeof raw === 'string' && raw.trim()) {
       // Text date: try "DD.MM.YYYY" and "YYYY-MM-DD"
       const s = raw.trim()
@@ -31,8 +33,12 @@ export async function readSheetRows(sheetName: string): Promise<SheetRow[]> {
     }
 
     if (!dateKey) continue
+    // Текстовая дата → время внутри дня неизвестно, берём начало суток, чтобы порядок событий не поехал
+    if (!ts) ts = dateKeyToSerial(dateKey)
     rows.push({
       dateKey,
+      id: entityIdFromLink(String(row[1] ?? '')),
+      ts,
       title: String(row[2] ?? ''),
       stage: String(row[3] ?? ''),
       // Strip "(воронка)" suffix from pipeline name for consistent comparison
