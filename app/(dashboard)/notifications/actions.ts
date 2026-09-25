@@ -9,6 +9,7 @@ export type AppNotification = {
   is_read: boolean
   created_at: string
   task_id: string | null
+  expense_request_id: string | null
   data: Record<string, unknown> | null
   actor: { full_name: string | null; login: string | null } | null
   task: { title: string; project_id: string; status: string } | null
@@ -23,7 +24,7 @@ export async function getNotifications(): Promise<AppNotification[]> {
   const { data } = await admin
     .from('notifications')
     .select(`
-      id, type, is_read, created_at, task_id, data,
+      id, type, is_read, created_at, task_id, expense_request_id, data,
       actor:profiles!notifications_actor_id_fkey(full_name, login),
       task:tasks!notifications_task_id_fkey(title, project_id, status)
     `)

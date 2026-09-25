@@ -87,6 +87,23 @@ export async function setRole(userId: string, role: 'admin' | 'employee') {
   revalidateTag('profiles', "default")
 }
 
+/**
+ * Право решать по заявкам на расходы, не открывая остальную админку —
+ * так учредитель получает раздел «Расходы» и ничего сверх него.
+ * Выдаёт только суперадмин: это доступ к деньгам.
+ */
+export async function setCanApproveExpenses(userId: string, value: boolean) {
+  const caller = await requireAdmin()
+  if (!(await isSuperAdmin(caller.id))) {
+    throw new Error('Только суперадмин может выдавать право утверждать расходы')
+  }
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update({ can_approve_expenses: value }).eq('id', userId)
+  if (error) throw new Error(error.message)
+  revalidateTag('profiles', "default")
+  revalidateTag('expenses', "default")
+}
+
 export async function updateUserName(userId: string, fullName: string) {
   await requireAdmin()
   const admin = createAdminClient()

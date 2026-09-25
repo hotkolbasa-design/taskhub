@@ -20,7 +20,7 @@ export default async function AdminPage() {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, full_name, login, role, status, position, department, birth_date, created_at')
+    .select('id, full_name, login, role, status, position, department, birth_date, can_approve_expenses, created_at')
     .order('created_at', { ascending: false })
 
   const listResult = await admin.auth.admin.listUsers().catch(() => ({ data: { users: [] } }))

@@ -83,6 +83,17 @@ const navItems = [
     ),
   },
   {
+    href: '/expenses',
+    label: 'Расходы',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1.5" y="3.5" width="13" height="9" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M1.5 6.5h13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M4 10h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
     href: '/trash',
     label: 'Корзина',
     icon: (
@@ -112,6 +123,10 @@ const TYPE_LABEL: Record<string, string> = {
   comment_added:    'Новый комментарий',
   deadline_soon:    'Дедлайн завтра',
   deadline_overdue: 'Дедлайн просрочен',
+  expense_submitted: 'Новая заявка на расход',
+  expense_decided:   'Решение по заявке',
+  expense_comment:   'Комментарий к заявке',
+  expense_paid:      'Заявка оплачена',
 }
 
 export default function SidebarNav({ profile }: { profile: Profile | null }) {
@@ -192,6 +207,10 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
     }
     setNotifOpen(false)
+    if (n.expense_request_id) {
+      router.push('/expenses')
+      return
+    }
     if (n.task && n.task_id) {
       const page = n.task.status === 'sprint' ? 'sprint' : 'backlog'
       router.push(`/projects/${n.task.project_id}/${page}`)
