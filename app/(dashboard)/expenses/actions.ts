@@ -169,6 +169,10 @@ export async function updateExpenseRequest(requestId: string, input: {
     throw new Error('Заявку уже нельзя менять')
   }
 
+  // Заявку вернули на доработку, автор её поправил — она снова просится на рассмотрение,
+  // иначе так и висела бы с пометкой «доработать», хотя работа уже сделана
+  const backToPending = isOwner && current.status === 'needs_info'
+
   const { error } = await admin
     .from('expense_requests')
     .update({
@@ -178,9 +182,14 @@ export async function updateExpenseRequest(requestId: string, input: {
       amount: input.amount,
       needed_by: input.needed_by,
       attachments: input.attachments,
+      ...(backToPending ? { status: 'pending' } : {}),
     })
     .eq('id', requestId)
   if (error) throw new Error(error.message)
+
+  if (backToPending) {
+    await logActivity(requestId, caller.id, 'status_changed', 'needs_info', 'pending')
+  }
 
   const oldAmount = Number(current.amount)
   if (oldAmount !== input.amount) {
