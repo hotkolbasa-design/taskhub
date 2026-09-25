@@ -154,19 +154,49 @@ function buildCalendar(year: number, month: number) {
   return cells
 }
 
-/** input type="date" в проекте запрещён — свой календарь. */
+/**
+ * input type="date" в проекте запрещён — свой календарь.
+ * Рендерится порталом с position: fixed, иначе его срезает край модалки с overflow.
+ */
 export function DatePicker({ value, onChange, placeholder = 'Не указана' }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
 }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popRef = useRef<HTMLDivElement>(null)
   const today = new Date()
   const [calYear, setCalYear] = useState(value ? parseInt(value.slice(0, 4)) : today.getFullYear())
   const [calMonth, setCalMonth] = useState(value ? parseInt(value.slice(5, 7)) - 1 : today.getMonth())
 
   const cells = buildCalendar(calYear, calMonth)
   const selected = value ? (() => { const d = new Date(value); d.setHours(0, 0, 0, 0); return d })() : null
+
+  useEffect(() => {
+    if (!open) return
+    function onOut(e: MouseEvent) {
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t) || popRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  function toggle() {
+    if (open) { setOpen(false); return }
+    const r = triggerRef.current?.getBoundingClientRect()
+    if (r) {
+      const CAL_HEIGHT = 330  // высота с кнопкой «Очистить» ≈305, берём с запасом
+      const spaceBelow = window.innerHeight - r.bottom - 12
+      // Не хватает места снизу — раскрываем вверх, чтобы календарь не уезжал за экран
+      if (spaceBelow >= CAL_HEIGHT) setPos({ top: r.bottom + 4, left: r.left, width: r.width })
+      else setPos({ bottom: window.innerHeight - r.top + 4, left: r.left, width: r.width })
+    }
+    setOpen(true)
+  }
 
   function pick(day: number, month: number, year: number) {
     onChange(`${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`)
@@ -176,8 +206,8 @@ export function DatePicker({ value, onChange, placeholder = 'Не указана
   const display = value ? `${value.slice(8, 10)}.${value.slice(5, 7)}.${value.slice(0, 4)}` : placeholder
 
   return (
-    <div className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)}
+    <>
+      <button ref={triggerRef} type="button" onClick={toggle}
         className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm"
         style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: value ? 'var(--text)' : 'var(--text2)', cursor: 'pointer' }}>
         {display}
@@ -187,9 +217,13 @@ export function DatePicker({ value, onChange, placeholder = 'Не указана
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-1 rounded-xl p-3 z-20"
-          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', width: '100%', minWidth: 240 }}>
+      {open && pos && createPortal(
+        <div ref={popRef} className="rounded-xl p-3"
+          style={{
+            position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left,
+            minWidth: Math.max(pos.width, 250), zIndex: 10001,
+            background: 'var(--surface2)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          }}>
           <div className="flex items-center justify-between mb-3">
             <button type="button" onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) } else setCalMonth(m => m - 1) }}
               className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
@@ -226,9 +260,10 @@ export function DatePicker({ value, onChange, placeholder = 'Не указана
               Очистить
             </button>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   )
 }
 

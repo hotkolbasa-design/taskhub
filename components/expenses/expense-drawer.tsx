@@ -18,6 +18,7 @@ const ACTIVITY_TEXT: Record<string, string> = {
   status_changed: 'изменил статус',
   edited: 'отредактировал заявку',
   paid: 'отметил оплату',
+  payment_undone: 'снял отметку об оплате',
 }
 
 const STATUS_WORD: Record<string, string> = {
@@ -28,10 +29,11 @@ const STATUS_WORD: Record<string, string> = {
   cancelled: 'Отозвано',
 }
 
-export default function ExpenseDrawer({ request, canApprove, currentUserId, onClose, onChanged, onEdit }: {
+export default function ExpenseDrawer({ request, canApprove, currentUserId, refreshing, onClose, onChanged, onEdit }: {
   request: ExpenseRequest
   canApprove: boolean
   currentUserId: string
+  refreshing: boolean
   onClose: () => void
   onChanged: () => void
   onEdit: () => void
@@ -50,10 +52,9 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, onCl
   const decided = request.status === 'approved' || request.status === 'rejected'
   const canEdit = isOwner && (request.status === 'pending' || request.status === 'needs_info')
 
-  // Спиннер показываем только при перезагрузке после действия: на первом заходе
-  // состояние уже loading, а setState синхронно внутри эффекта дёргает лишний рендер
-  const loadFeed = useCallback(async (showSpinner = false) => {
-    if (showSpinner) setLoadingFeed(true)
+  // Спиннер только на первом заходе (loadingFeed уже true): при обновлении
+  // после действия лента остаётся на экране и тихо перерисовывается, а не мигает пустотой
+  const loadFeed = useCallback(async () => {
     try {
       const { comments, activities } = await fetchExpenseFeed(request.id)
       const items: FeedItem[] = [
@@ -82,7 +83,7 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, onCl
     setError(null)
     try {
       await fn()
-      await loadFeed(true)
+      await loadFeed()
       onChanged()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не получилось')
@@ -96,7 +97,7 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, onCl
     try {
       await createExpenseComment(request.id, comment, [])
       setComment('')
-      await loadFeed(true)
+      await loadFeed()
       onChanged()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Комментарий не отправился')
@@ -121,6 +122,13 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, onCl
             </svg>
           </button>
         </div>
+
+        {refreshing && (
+          <div className="flex items-center gap-2 px-5 py-2 text-xs"
+            style={{ background: 'rgba(124,92,246,0.08)', color: 'var(--text2)' }}>
+            <Spinner size={12} /> Обновляем данные…
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
           <div>
@@ -252,8 +260,10 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, onCl
           {error && <p className="text-sm" style={{ color: 'var(--red)' }}>{error}</p>}
 
           <Block label="Обсуждение">
-            {loadingFeed ? (
-              <div className="flex justify-center py-4"><Spinner size={18} /></div>
+            {loadingFeed && feed.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 py-4 text-sm" style={{ color: 'var(--text2)' }}>
+                <Spinner size={16} /> Загружаем обсуждение…
+              </div>
             ) : feed.length === 0 ? (
               <p className="text-sm" style={{ color: 'var(--text2)' }}>Пока пусто</p>
             ) : (
@@ -319,15 +329,16 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ActionButton({ children, onClick, color, outline, busy }: {
+function ActionButton({ children, onClick, color, outline, busy, disabled }: {
   children: React.ReactNode
   onClick: () => void
   color: string
   outline?: boolean
   busy?: boolean
+  disabled?: boolean
 }) {
   return (
-    <button type="button" onClick={onClick} disabled={busy}
+    <button type="button" onClick={onClick} disabled={busy || disabled}
       className="px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-60"
       style={{
         background: outline ? 'transparent' : color,
