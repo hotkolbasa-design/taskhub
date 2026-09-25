@@ -226,6 +226,21 @@ function DataRow({ name, dayValues, weekValues, total, extra }: {
   )
 }
 
+// Строки из журнала лидов считаются не так, как показывает Битрикс, — поясняем прямо в таблице
+const LEAD_ROW_HINTS: Record<string, string> = {
+  'Новая заявка (WhatsApp)': 'Уникальные лиды, а не события: повторный заход одного лида не удваивает цифру. Не считаются лиды, которых после заявки увели в «Перенести в зачисление» — они уже учатся у нас.',
+  'Новая заявка (Instagram)': 'Уникальные лиды, а не события: повторный заход одного лида не удваивает цифру. Не считаются лиды, которых после заявки увели в «Перенести в зачисление» — они уже учатся у нас.',
+  'Собеседование назначено': 'Уникальные лиды, а не события: повторный заход одного лида не удваивает цифру.',
+}
+
+function MilestoneLabel({ name }: { name: string }) {
+  const hint = LEAD_ROW_HINTS[name]
+  if (!hint) return <>{name}</>
+  return (
+    <span title={hint} style={{ borderBottom: '1px dotted var(--text2)', cursor: 'help' }}>{name}</span>
+  )
+}
+
 function CvRow({ a, b }: { a: Milestone; b: Milestone }) {
   return (
     <tr>
@@ -502,7 +517,7 @@ function SourceCard({ src, data, editable, onSave, overall, hideSpend }: {
     }>
       {src.milestones.map((m, i) => (
         <>
-          <DataRow key={m.name} name={m.name} dayValues={m.dayValues} weekValues={m.weekValues} total={m.total} />
+          <DataRow key={m.name} name={<MilestoneLabel name={m.name} />} dayValues={m.dayValues} weekValues={m.weekValues} total={m.total} />
           {i < src.milestones.length - 1 && (
             <CvRow key={`cv-${i}`} a={m} b={src.milestones[i + 1]} />
           )}
@@ -702,7 +717,7 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
       }>
         {group.milestones.map((m, i) => (
           <>
-            <DataRow key={m.name} name={m.name} dayValues={m.dayValues} weekValues={m.weekValues} total={m.total} />
+            <DataRow key={m.name} name={<MilestoneLabel name={m.name} />} dayValues={m.dayValues} weekValues={m.weekValues} total={m.total} />
             {i < group.milestones.length - 1 && (
               <CvRow key={`cv-${i}`} a={m} b={group.milestones[i + 1]} />
             )}

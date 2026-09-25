@@ -22,6 +22,49 @@ const OVERALL_MILESTONES: MilestoneDef[] = [
 const REVENUE_STAGE = 'Полная оплата есть'
 const REVENUE_PIPELINE = 'Продажи'
 
+const NEW_REQUEST_STAGES = ['Новая заявка (WhatsApp)', 'Новая заявка (Instagram)']
+const TO_SCHOOL_STAGE = 'Перенести в зачисление'
+
+// Последняя отметка «Перенести в зачисление» по каждому лиду.
+// Туда колл-центр уводит тех, кто после звонка оказался нашим же учеником.
+function buildToSchoolMap(leadsRows: SheetRow[]): Map<string, number> {
+  const latest = new Map<string, number>()
+  for (const r of leadsRows) {
+    if (r.stage !== TO_SCHOOL_STAGE || !r.id) continue
+    const prev = latest.get(r.id)
+    if (prev === undefined || r.ts > prev) latest.set(r.id, r.ts)
+  }
+  return latest
+}
+
+/**
+ * Лист «Лиды» — журнал событий, одна карточка проходит стадию по несколько раз
+ * (из «Новое обращение» лид уезжает в «Новая заявка» автоматически, и так по кругу).
+ * Оставляем одно событие на карточку — самое раннее, за его днём лид и числится.
+ * Для «Новой заявки» вдобавок убираем тех, кого ПОСЛЕ неё увели в «Перенести в зачисление»:
+ * заявка засчиталась авансом, а звонок показал, что клиент уже учится у нас.
+ * Отметка до заявки не в счёт — такого лида вернули в работу, и он честно новый.
+ */
+function uniqueLeads(rows: SheetRow[], toSchool: Map<string, number>, dropMovedToSchool: boolean): SheetRow[] {
+  const firstByLead = new Map<string, SheetRow>()
+  const withoutId: SheetRow[] = []
+
+  for (const r of rows) {
+    if (!r.id) { withoutId.push(r); continue }  // без ссылки карточку не опознать — считаем как есть
+    const prev = firstByLead.get(r.id)
+    if (!prev || r.ts < prev.ts) firstByLead.set(r.id, r)
+  }
+
+  const kept = dropMovedToSchool
+    ? [...firstByLead.values()].filter(r => {
+        const movedAt = toSchool.get(r.id)
+        return movedAt === undefined || movedAt < r.ts
+      })
+    : [...firstByLead.values()]
+
+  return [...kept, ...withoutId]
+}
+
 function getMilestonesForSource(src: string): MilestoneDef[] {
   if (src === 'Instagram') {
     return [
@@ -61,16 +104,27 @@ function buildMilestones(
   days: string[],
   weeks: string[][],
   sourceFilter: ((r: SheetRow) => boolean) | null,
-  list: MilestoneDef[]
+  list: MilestoneDef[],
+  toSchool: Map<string, number>
 ): MilestoneStat[] {
+  const daySet = new Set(days)
   return list.map(m => {
     const rows = m.source === 'leads' ? leadsRows : dealsRows
     const names = Array.isArray(m.name) ? m.name : [m.name]
-    const matching = rows.filter(r => {
+    let matching = rows.filter(r => {
       const pipelineOk = m.pipeline ? r.pipeline === m.pipeline : true
       const sourceOk = m.noSourceFilter ? true : (sourceFilter ? sourceFilter(r) : true)
       return names.includes(r.stage) && pipelineOk && sourceOk && !isTestTitle(r.title)
     })
+    if (m.source === 'leads') {
+      // Уникальность считаем внутри месяца: иначе лид, заходивший в прошлом месяце,
+      // выпал бы из текущего, а цифры месяца зависели бы от соседнего
+      matching = uniqueLeads(
+        matching.filter(r => daySet.has(r.dateKey)),
+        toSchool,
+        names.some(n => NEW_REQUEST_STAGES.includes(n)),
+      )
+    }
     const dayValues = days.map(d => countOnDay(matching, d))
     const weekValues = weeks.map(w => sumForWeek(matching, w))
     const total = dayValues.reduce((a, b) => a + b, 0)
@@ -175,11 +229,17 @@ export function buildMarketingStats(
 ) {
   const sources = collectSources(leadsRows, dealsRows)
 
+  const toSchool = buildToSchoolMap(leadsRows)
+
   const monthDaySet = new Set(days)
-  const totalLeads = leadsRows.filter(r =>
-    monthDaySet.has(r.dateKey) &&
-    (r.stage === 'Новая заявка (WhatsApp)' || r.stage === 'Новая заявка (Instagram)') &&
-    !isTestTitle(r.title)
+  const totalLeads = uniqueLeads(
+    leadsRows.filter(r =>
+      monthDaySet.has(r.dateKey) &&
+      NEW_REQUEST_STAGES.includes(r.stage) &&
+      !isTestTitle(r.title)
+    ),
+    toSchool,
+    true,
   ).length
   const totalSalesRows = dealsRows.filter(r =>
     monthDaySet.has(r.dateKey) &&
@@ -188,14 +248,14 @@ export function buildMarketingStats(
   )
   const totalRevenue = totalSalesRows.reduce((s, r) => s + r.amount, 0)
 
-  const overallMilestones = buildMilestones(leadsRows, dealsRows, days, weeks, null, OVERALL_MILESTONES)
+  const overallMilestones = buildMilestones(leadsRows, dealsRows, days, weeks, null, OVERALL_MILESTONES, toSchool)
   const overallRevenue = buildRevenue(dealsRows, days, weeks, null)
   const overallSpend = buildSpend(null, days, weeks, spendMap, rateMap, overallMilestones[0], overallMilestones[overallMilestones.length - 1], overallRevenue)
 
   const sourceStats: SourceData[] = sources.map(src => {
     const filter = makeSourceFilter(src)
     const list = getMilestonesForSource(src)
-    const milestones = buildMilestones(leadsRows, dealsRows, days, weeks, filter, list)
+    const milestones = buildMilestones(leadsRows, dealsRows, days, weeks, filter, list, toSchool)
     const revenue = buildRevenue(dealsRows, days, weeks, filter)
     const spend = buildSpend(src, days, weeks, spendMap, rateMap, milestones[0], milestones[milestones.length - 1], revenue)
     return { source: src, milestones, revenue, spend }
