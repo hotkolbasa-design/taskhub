@@ -16,6 +16,7 @@ type UserRow = {
   position: string | null
   department: string | null
   birth_date: string | null
+  can_approve_expenses: boolean
 }
 
 type Props = {
@@ -58,6 +59,7 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
       position:   u.position,
       department: u.department,
       birth_date: u.birth_date,
+      can_approve_expenses: u.can_approve_expenses ?? false,
     })
   }
 

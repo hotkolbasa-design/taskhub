@@ -100,3 +100,66 @@ export type BacklogTask = Task & {
   subtask_total: number
   subtask_done: number
 }
+
+// ─── Заявки на расходы ───────────────────────────────────────────────────────
+
+export type ExpenseStatus = 'pending' | 'approved' | 'rejected' | 'needs_info' | 'cancelled'
+export type ExpenseCategory = 'equipment' | 'software' | 'services' | 'office' | 'marketing' | 'other'
+
+export type ExpensePerson = {
+  id: string
+  full_name: string | null
+  login: string
+  avatar_url: string | null
+}
+
+export type ExpenseAttachment = { url: string; name: string; size: number }
+
+export type ExpenseRequest = {
+  id: string
+  number: string
+  requester_id: string
+  title: string
+  justification: string | null
+  category: ExpenseCategory
+  amount: number
+  currency: string
+  department: string | null
+  needed_by: string | null
+  attachments: ExpenseAttachment[]
+  status: ExpenseStatus
+  decided_by: string | null
+  decided_at: string | null
+  decision_note: string | null
+  paid_at: string | null
+  paid_by: string | null
+  paid_amount: number | null
+  paid_note: string | null
+  created_at: string
+  updated_at: string
+  requester: ExpensePerson | null
+  decider: ExpensePerson | null
+  payer: ExpensePerson | null
+  comment_count: number
+}
+
+export type ExpenseComment = {
+  id: string
+  request_id: string
+  author_id: string
+  text: string
+  attachments: ExpenseAttachment[]
+  created_at: string
+  author: ExpensePerson | null
+}
+
+export type ExpenseActivity = {
+  id: string
+  request_id: string
+  actor_id: string | null
+  type: 'created' | 'status_changed' | 'edited' | 'paid'
+  old_value: string | null
+  new_value: string | null
+  created_at: string
+  actor: ExpensePerson | null
+}

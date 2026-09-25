@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { setRole, setStatus, updateUserProfile, resetUserPassword } from '@/app/(dashboard)/admin/actions'
+import { setRole, setStatus, updateUserProfile, resetUserPassword, setCanApproveExpenses } from '@/app/(dashboard)/admin/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
 
 const ROLES = [
@@ -27,6 +27,7 @@ export type DrawerUser = {
   position: string | null
   department: string | null
   birth_date: string | null
+  can_approve_expenses: boolean
 }
 
 function buildCalendar(year: number, month: number) {
@@ -200,6 +201,9 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
   const [currentStatus, setCurrentStatus] = useState(user.status)
   const [saving, setSaving] = useState(false)
   const [calOpen, setCalOpen] = useState(false)
+  const [canApprove, setCanApprove] = useState(user.can_approve_expenses)
+  const [approveSaving, setApproveSaving] = useState(false)
+  const [approveError, setApproveError] = useState<string | null>(null)
   const [pwStage, setPwStage] = useState<'idle' | 'confirm' | 'loading' | 'done'>('idle')
   const [newPassword, setNewPassword] = useState('')
   const [pwError, setPwError] = useState<string | null>(null)
@@ -245,6 +249,20 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
     setCurrentStatus(next)
     onUpdated(user.id, { status: next })
     await setStatus(user.id, next as 'active' | 'inactive')
+  }
+
+  async function handleApproveToggle(next: boolean) {
+    setCanApprove(next)
+    setApproveSaving(true)
+    setApproveError(null)
+    try {
+      await setCanApproveExpenses(user.id, next)
+      onUpdated(user.id, { can_approve_expenses: next })
+    } catch (e) {
+      setCanApprove(!next)
+      setApproveError(e instanceof Error ? e.message : 'Не удалось изменить право')
+    }
+    setApproveSaving(false)
   }
 
   async function handleResetPassword() {
@@ -434,6 +452,21 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                 </div>
               )}
             </div>
+          </Field>
+
+          {/* Право решать по расходам — отдельно от роли: учредителю нужен только этот раздел */}
+          <Field label="Заявки на расходы">
+            <button type="button" onClick={() => handleApproveToggle(!canApprove)} disabled={approveSaving}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm disabled:opacity-60"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}>
+              <span>Может одобрять расходы</span>
+              <span className="flex items-center rounded-full transition-colors"
+                style={{ width: 34, height: 20, padding: 2, background: canApprove ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}>
+                <span className="rounded-full bg-white transition-transform"
+                  style={{ width: 16, height: 16, transform: canApprove ? 'translateX(14px)' : 'translateX(0)' }} />
+              </span>
+            </button>
+            {approveError && <span className="text-xs" style={{ color: 'var(--red)' }}>{approveError}</span>}
           </Field>
 
           {/* Пароль — запасной путь, когда человек не получает письма */}
