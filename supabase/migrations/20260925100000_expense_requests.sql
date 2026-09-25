@@ -63,7 +63,7 @@ create table if not exists expense_request_activities (
   request_id uuid not null references expense_requests(id) on delete cascade,
   actor_id uuid references auth.users(id) on delete set null,
   type text not null,
-  -- created | status_changed | edited | paid
+  -- created | status_changed | edited | paid | payment_undone
   old_value text,
   new_value text,
   created_at timestamptz not null default now()

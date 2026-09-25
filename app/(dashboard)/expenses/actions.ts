@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidateTag } from 'next/cache'
+import { revalidateTag, revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getExpenseFeed } from '@/lib/queries/expenses'
@@ -15,13 +15,15 @@ type Caller = {
 
 async function getCaller(): Promise<Caller | null> {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return null
+  // Именно getUser(), а не getSession(): здесь решается доступ к деньгам,
+  // и личность должен подтвердить Auth-сервер, а не кука
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, role, department, can_approve_expenses')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .maybeSingle()
 
   if (!profile) return null
@@ -49,7 +51,7 @@ async function requireApprover(): Promise<Caller> {
 async function logActivity(
   requestId: string,
   actorId: string | null,
-  type: 'created' | 'status_changed' | 'edited' | 'paid',
+  type: 'created' | 'status_changed' | 'edited' | 'paid' | 'payment_undone',
   oldValue: string | null,
   newValue: string | null,
 ) {
@@ -139,6 +141,7 @@ export async function createExpenseRequest(input: {
   await logActivity(data.id, caller.id, 'created', null, null)
   await notifyApprovers(data.id, caller.id, title)
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
   return data.number as string
 }
 
@@ -186,6 +189,7 @@ export async function updateExpenseRequest(requestId: string, input: {
     await logActivity(requestId, caller.id, 'edited', null, null)
   }
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
 }
 
 /** Решение по заявке. Принимает любой из утверждающих в одиночку. */
@@ -222,6 +226,7 @@ export async function decideExpenseRequest(
     status,
   })
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
 }
 
 /** Решение сразу по нескольким заявкам — для еженедельного разбора накопившегося. */
@@ -260,6 +265,7 @@ export async function cancelExpenseRequest(requestId: string) {
 
   await logActivity(requestId, caller.id, 'status_changed', current.status, 'cancelled')
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
 }
 
 /** Отметка об оплате — следующий шаг после одобрения, поэтому статус не меняется. */
@@ -294,6 +300,7 @@ export async function markExpensePaid(requestId: string, paidAmount: number, not
     amount,
   })
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
 }
 
 export async function undoExpensePaid(requestId: string) {
@@ -304,8 +311,9 @@ export async function undoExpensePaid(requestId: string) {
     .update({ paid_at: null, paid_by: null, paid_amount: null, paid_note: null })
     .eq('id', requestId)
   if (error) throw new Error(error.message)
-  await logActivity(requestId, caller.id, 'paid', 'paid', null)
+  await logActivity(requestId, caller.id, 'payment_undone', null, null)
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
 }
 
 export async function fetchExpenseFeed(requestId: string) {
@@ -366,6 +374,7 @@ export async function createExpenseComment(requestId: string, text: string, atta
   }
 
   revalidateTag('expenses', 'default')
+  revalidatePath('/expenses')
 }
 
 export async function uploadExpenseAttachment(formData: FormData): Promise<ExpenseAttachment> {

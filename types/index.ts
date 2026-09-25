@@ -157,7 +157,7 @@ export type ExpenseActivity = {
   id: string
   request_id: string
   actor_id: string | null
-  type: 'created' | 'status_changed' | 'edited' | 'paid'
+  type: 'created' | 'status_changed' | 'edited' | 'paid' | 'payment_undone'
   old_value: string | null
   new_value: string | null
   created_at: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { decideExpenseRequests } from '@/app/(dashboard)/expenses/actions'
 import ExpenseFormModal from './expense-form-modal'
@@ -31,6 +31,9 @@ export default function ExpensesClient({ requests, currentUserId, canApprove }: 
   department: string | null
 }) {
   const router = useRouter()
+  // Обновление данных после действия — через transition: пока оно идёт, карточка
+  // показывает индикатор, иначе экран несколько секунд выглядит так, будто ничего не произошло
+  const [refreshing, startRefresh] = useTransition()
   const [tab, setTab] = useState<Tab>('pending')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ExpenseRequest | null>(null)
@@ -71,14 +74,14 @@ export default function ExpensesClient({ requests, currentUserId, canApprove }: 
     try {
       await decideExpenseRequests([...selected], status, '')
       setSelected(new Set())
-      router.refresh()
+      refresh()
     } finally {
       setBulkBusy(null)
     }
   }
 
   function refresh() {
-    router.refresh()
+    startRefresh(() => router.refresh())
   }
 
   return (
@@ -219,6 +222,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove }: 
           request={openRequest}
           canApprove={canApprove}
           currentUserId={currentUserId}
+          refreshing={refreshing}
           onClose={() => setOpenId(null)}
           onChanged={refresh}
           onEdit={() => { setEditing(openRequest); setOpenId(null); setFormOpen(true) }}
