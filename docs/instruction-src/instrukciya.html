@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Заявка на расход — инструкция</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 14mm 14mm; }
+
+  :root {
+    --accent: #7C5CF6;
+    --ink: #1A1D28;
+    --muted: #5E6478;
+    --line: #E2E4EC;
+    --soft: #F6F5FD;
+    --green: #17A97C;
+    --yellow: #C98A00;
+    --red: #D94356;
+    --blue: #3D74D6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 23pt;
+    line-height: 1.15;
+    margin: 0 0 6px;
+    letter-spacing: -0.4px;
+  }
+
+  .lead {
+    font-size: 11pt;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+
+  .rule { height: 3px; background: var(--accent); width: 54px; border-radius: 2px; margin-bottom: 16px; }
+
+  h2 {
+    font-size: 13pt;
+    margin: 0 0 10px;
+    letter-spacing: -0.2px;
+  }
+
+  .flow {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 20px;
+  }
+  .flow div {
+    flex: 1;
+    background: var(--soft);
+    border-radius: 7px;
+    padding: 9px 10px;
+    font-size: 8.8pt;
+    line-height: 1.35;
+  }
+  .flow b { display: block; font-size: 9.5pt; margin-bottom: 2px; }
+  .flow span { color: var(--muted); }
+
+  .step { margin-bottom: 20px; break-inside: avoid; }
+
+  .step-head {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin-bottom: 7px;
+  }
+  .num {
+    background: var(--accent);
+    color: #fff;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    font-size: 10pt;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 21px;
+    transform: translateY(2px);
+  }
+  .step-head h3 { font-size: 12.5pt; margin: 0; font-weight: 600; }
+
+  .step p { margin: 0 0 8px; }
+  .step p.after { margin-top: 8px; }
+
+  figure { margin: 7px 0 0; }
+  figure img {
+    width: 92%;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    display: block;
+  }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 5px; }
+
+  .fields { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }
+  .fields td { padding: 6px 0; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .fields tr:last-child td { border-bottom: none; }
+  .fields td:first-child { width: 33%; font-weight: 600; padding-right: 14px; }
+  .fields .hint { color: var(--muted); font-size: 9.5pt; display: block; margin-top: 1px; }
+
+  .statuses { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .statuses td { padding: 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .statuses tr:last-child td { border-bottom: none; }
+  .statuses td:first-child { width: 36%; padding-right: 14px; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 5px;
+    font-size: 9pt;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .b-pending { background: rgba(201,138,0,0.12); color: var(--yellow); }
+  .b-approved { background: rgba(23,169,124,0.12); color: var(--green); }
+  .b-paid { background: rgba(124,92,246,0.12); color: var(--accent); }
+  .b-info { background: rgba(61,116,214,0.12); color: var(--blue); }
+  .b-rejected { background: rgba(217,67,86,0.12); color: var(--red); }
+
+  .note {
+    background: var(--soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 7px 7px 0;
+    padding: 10px 13px;
+    margin: 14px 0;
+    font-size: 10pt;
+  }
+  .note b { display: block; margin-bottom: 2px; }
+
+  .tips li { margin-bottom: 6px; }
+  .tips b { font-weight: 600; }
+
+  .qa { break-inside: avoid; margin-bottom: 11px; }
+  .qa b { display: block; margin-bottom: 1px; }
+  .qa span { color: var(--muted); }
+
+  footer {
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 8.5pt;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .page-break { break-before: page; }
+</style>
+</head>
+<body>
+
+<h1>Как попросить купить что-то для работы</h1>
+<p class="lead">Раздел «Расходы» в TaskHub — Globalos</p>
+<div class="rule"></div>
+
+<p>Нужен ноутбук, программа, мебель или услуга для работы — не пишите в личные сообщения и не ловите руководителя в коридоре. Подайте заявку в TaskHub: она не потеряется, вы будете видеть, на каком она этапе, а решение останется в системе.</p>
+
+<div class="flow">
+  <div><b>Вы подаёте</b><span>заполняете форму за пару минут</span></div>
+  <div><b>Мы рассматриваем</b><span>раз в неделю, все накопившиеся</span></div>
+  <div><b>Решение</b><span>одобрено или отклонено, с комментарием</span></div>
+  <div><b>Покупка</b><span>после оплаты статус меняется</span></div>
+</div>
+
+<div class="note">
+  <b>Заявки разбираются раз в неделю</b>
+  Подавайте заранее — если вещь нужна к конкретной дате, закладывайте минимум неделю. Срочное всё равно отметьте в поле «зачем это нужно».
+</div>
+
+<div class="step">
+  <div class="step-head"><span class="num">1</span><h3>Откройте раздел «Расходы»</h3></div>
+  <p>Пункт в левом меню, между «Аналитикой» и «Корзиной». Вы видите только свои заявки — чужие вам не показываются.</p>
+  <figure><img src="doc-1-menu.png"><figcaption>Раздел «Расходы» в левом меню</figcaption></figure>
+</div>
+
+<div class="step">
+  <div class="step-head"><span class="num">2</span><h3>Нажмите «Новая заявка» и заполните поля</h3></div>
+  <p>Кнопка справа сверху. Откроется форма из четырёх полей:</p>
+  <table class="fields">
+    <tr>
+      <td>Что нужно купить</td>
+      <td>Конкретно, с количеством.<span class="hint">«Два монитора для дизайнера», а не «техника в отдел».</span></td>
+    </tr>
+    <tr>
+      <td>Зачем это нужно</td>
+      <td>Главное поле — по нему принимается решение.<span class="hint">Объясните, что не получается делать сейчас и что изменится после покупки. «Выходит новый сотрудник 1 октября, свободных ноутбуков нет» — понятно. «Надо для работы» — нет.</span></td>
+    </tr>
+    <tr>
+      <td>Категория</td>
+      <td>Оборудование, ПО и подписки, услуги, хознужды, маркетинг или прочее.</td>
+    </tr>
+    <tr>
+      <td>Сумма</td>
+      <td>В тенге, можно примерную.<span class="hint">Под полем сразу показывается, как сумма прочиталась — проверьте, что не ошиблись на разряд.</span></td>
+    </tr>
+  </table>
+  <figure><img src="doc-3-form-filled.png"><figcaption>Так выглядит заполненная заявка</figcaption></figure>
+</div>
+
+<div class="step">
+  <div class="step-head"><span class="num">3</span><h3>Укажите дату и приложите файлы</h3></div>
+  <p>«К какой дате нужно» — выберите в календаре. Если жёсткого срока нет, поле можно не трогать, но с датой заявку проще оценить.</p>
+  <figure><img src="doc-4-calendar.png"><figcaption>Выбор даты</figcaption></figure>
+  <p class="after"><b>Счёт или коммерческое предложение сильно ускоряют решение.</b> Нажмите «Прикрепить файл» и добавьте всё, что есть: счёт от поставщика, ссылку на товар, скриншот цены. Без этого мы можем вернуть заявку с просьбой уточнить цену — и вы потеряете неделю до следующего разбора.</p>
+</div>
+
+<div class="step">
+  <div class="step-head"><span class="num">4</span><h3>Отправьте</h3></div>
+  <p>Кнопка «Отправить на рассмотрение». Заявка появится в списке с номером вида <b>ЗР-0042</b> — по нему удобно ссылаться в разговоре.</p>
+  <figure><img src="doc-5-list.png"><figcaption>Заявка подана и ждёт решения</figcaption></figure>
+</div>
+
+<div class="page-break"></div>
+
+<h2>Что означают статусы</h2>
+<table class="statuses">
+  <tr>
+    <td><span class="badge b-pending">На рассмотрении</span></td>
+    <td>Заявка в очереди. Пока она в этом статусе, вы можете её поправить или отозвать.</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-info">На доработку</span></td>
+    <td>Нужны уточнения — что именно, написано в комментарии к решению. Исправьте заявку, и она автоматически вернётся на рассмотрение.</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-approved">Одобрено</span></td>
+    <td>Покупку согласовали. Дальше её оплачивают — ждите смены статуса.</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-paid">Оплачено</span></td>
+    <td>Деньги перечислены. В карточке видно, сколько потратили по факту.</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-rejected">Отклонено</span></td>
+    <td>Отказ. Причина — в комментарии к решению. Это не запрет спрашивать: если обстоятельства изменились, подайте новую заявку с новыми доводами.</td>
+  </tr>
+</table>
+
+<div class="step" style="margin-top:20px">
+  <h2>Карточка заявки</h2>
+  <p>Нажмите на строку в списке — справа откроется карточка. В ней вся история: кто подал, что решили и когда, переписка.</p>
+  <figure><img src="doc-6-card.png"><figcaption>Карточка заявки</figcaption></figure>
+</div>
+
+<div class="step">
+  <h2>Задать вопрос по заявке</h2>
+  <p>Внизу карточки есть поле для комментария. Пишите туда — не в личные сообщения: переписка останется вместе с заявкой, и её увидит тот, кто будет принимать решение. Ответ придёт вам уведомлением — колокольчик в левом меню.</p>
+  <figure><img src="doc-7-comment.png"><figcaption>Комментарии видны и вам, и тем, кто рассматривает заявку</figcaption></figure>
+</div>
+
+<div class="page-break"></div>
+
+<h2>Как повысить шансы</h2>
+<ul class="tips">
+  <li><b>Пишите цифрами, а не ощущениями.</b> «Менеджер теряет по 40 минут в день на зависаниях» весомее, чем «компьютер тормозит».</li>
+  <li><b>Приложите счёт.</b> Заявка с ценой от поставщика решается сразу, без уточнений.</li>
+  <li><b>Одна покупка — одна заявка.</b> Не смешивайте ноутбук и подписку на сервис: по ним могут быть разные решения.</li>
+  <li><b>Не завышайте сумму «с запасом».</b> Если купили дешевле — это нормально, фактическая сумма проставляется отдельно.</li>
+  <li><b>Подавайте заранее.</b> Разбор раз в неделю, плюс время на оплату и доставку.</li>
+</ul>
+
+<h2 style="margin-top:20px">Частые вопросы</h2>
+
+<div class="qa">
+  <b>Видят ли мои заявки коллеги?</b>
+  <span>Нет. Свои заявки видите только вы. Полный список видят руководитель и учредитель — те, кто принимает решение.</span>
+</div>
+
+<div class="qa">
+  <b>Ошибся в сумме, заявку уже отправил</b>
+  <span>Пока статус «На рассмотрении», откройте карточку и нажмите «Редактировать». После решения изменить нельзя.</span>
+</div>
+
+<div class="qa">
+  <b>Передумал покупать</b>
+  <span>Откройте карточку и нажмите «Отозвать». Это возможно, пока по заявке нет решения.</span>
+</div>
+
+<div class="qa">
+  <b>Сколько ждать ответа?</b>
+  <span>Заявки разбираются раз в неделю, поэтому до недели. Если вопрос горит — напишите об этом в поле «зачем это нужно» и предупредите руководителя отдельно.</span>
+</div>
+
+<div class="qa">
+  <b>Заявку одобрили — мне идти покупать?</b>
+  <span>Нет, если вам прямо не сказали обратное. Одобрение означает, что расход согласован; оплату проводят те, кто ей занимается. Когда оплатят, статус сменится на «Оплачено».</span>
+</div>
+
+<div class="qa">
+  <b>Не помню пароль от TaskHub</b>
+  <span>На странице входа нажмите «Забыли пароль?» — придёт письмо со ссылкой. Если письмо не приходит, попросите администратора выдать новый пароль.</span>
+</div>
+
+<footer>
+  <span>TaskHub — Globalos</span>
+  <span>Инструкция для сотрудников</span>
+</footer>
+
+</body>
+</html>
