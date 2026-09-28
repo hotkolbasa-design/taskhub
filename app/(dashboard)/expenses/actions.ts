@@ -4,6 +4,7 @@ import { revalidateTag, revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getExpenseFeed } from '@/lib/queries/expenses'
+import { createNotifications } from '@/lib/notifications'
 import type { ExpenseAttachment, ExpenseCategory, ExpenseStatus } from '@/types'
 
 type Caller = {
@@ -76,15 +77,13 @@ async function notifyApprovers(requestId: string, actorId: string, title: string
   const recipients = (approvers ?? []).map((p: { id: string }) => p.id).filter(id => id !== actorId)
   if (recipients.length === 0) return
 
-  await admin.from('notifications').insert(
-    recipients.map(userId => ({
-      user_id: userId,
-      actor_id: actorId,
-      expense_request_id: requestId,
-      type: 'expense_submitted',
-      data: { title },
-    })),
-  )
+  await createNotifications(recipients.map(userId => ({
+    user_id: userId,
+    actor_id: actorId,
+    expense_request_id: requestId,
+    type: 'expense_submitted' as const,
+    data: { title },
+  })))
 }
 
 async function notifyUser(
@@ -95,14 +94,7 @@ async function notifyUser(
   data: Record<string, unknown>,
 ) {
   if (userId === actorId) return
-  const admin = createAdminClient()
-  await admin.from('notifications').insert({
-    user_id: userId,
-    actor_id: actorId,
-    expense_request_id: requestId,
-    type,
-    data,
-  })
+  await createNotifications([{ user_id: userId, actor_id: actorId, expense_request_id: requestId, type, data }])
 }
 
 export async function createExpenseRequest(input: {
