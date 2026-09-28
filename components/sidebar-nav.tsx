@@ -212,8 +212,10 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       return
     }
     if (n.task && n.task_id) {
+      // ?task= открывает саму карточку, иначе человек попадал просто в бэклог
+      // и должен был искать задачу глазами
       const page = n.task.status === 'sprint' ? 'sprint' : 'backlog'
-      router.push(`/projects/${n.task.project_id}/${page}`)
+      router.push(`/projects/${n.task.project_id}/${page}?task=${n.task_id}`)
     }
   }
 
