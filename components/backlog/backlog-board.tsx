@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   DndContext,
   DragEndEvent,
@@ -588,6 +588,20 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
       setEditingTaskComments(fresh)
     } catch { /* игнорируем */ }
   }, [])
+
+  // Уведомление ведёт прямо в задачу: /projects/<id>/backlog?task=<taskId>.
+  // Открываем её карточку один раз — дальше пользователь распоряжается сам
+  const searchParams = useSearchParams()
+  const requestedTaskId = searchParams.get('task')
+  const openedFromUrl = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!requestedTaskId || openedFromUrl.current === requestedTaskId) return
+    const found = findTaskDeep(tasks, requestedTaskId)
+    if (!found) return
+    openedFromUrl.current = requestedTaskId
+    void handleEdit(found)
+  }, [requestedTaskId, tasks, handleEdit])
 
   const handleUpdated = useCallback((updated: Partial<BacklogTask> & { id: string }) => {
     setTasks(prev => {
