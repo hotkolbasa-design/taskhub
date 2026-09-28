@@ -139,8 +139,26 @@ id · user_id · visible_user_ids (uuid[])
 
 ### notifications
 ```
-id · user_id · type (assigned|commented|sprint_fixed|mentioned) · task_id · is_read · created_at
+id · user_id · actor_id (FK profiles) · type · task_id · expense_request_id
+data (jsonb) · is_read · created_at
 ```
+Типы (CHECK на колонке, расширять вместе с `NotificationType` в `lib/notifications.ts`):
+`task_assigned` · `assignee_changed` · `creator_changed` · `status_changed` · `comment_added`
+`deadline_soon` · `deadline_overdue` · `expense_submitted` · `expense_decided` · `expense_comment` · `expense_paid`
+
+**`actor_id` ссылается на `profiles`, а не на `auth.users`** — колокольчик подтягивает имя автора
+через `profiles!notifications_actor_id_fkey`, и на `auth.users` PostgREST связь не находит (PGRST200).
+
+**Исторический урок (28 сентября 2026).** Уведомления не создавались НИ РАЗУ с момента появления
+функции: таблицу завели вручную, и она разошлась с кодом по трём пунктам — не было колонок
+`actor_id` и `data` (PGRST204), CHECK разрешал только старые имена `assigned|commented|sprint_fixed|mentioned`
+(23514), а `actor_id` ссылался на `auth.users` (PGRST200 при чтении). Сбой был невидим, потому что
+результат `insert` не проверялся. Теперь `createNotifications` пишет ошибку в лог — **не убирать
+эту проверку**, иначе следующее расхождение схемы снова будет молчать месяцами. Миграция
+`20260928100000_notifications_missing_columns.sql`.
+
+Клик по уведомлению о задаче ведёт на `/projects/<id>/backlog?task=<taskId>` — `BacklogBoard`
+читает `?task=` и открывает карточку (иначе человек попадал в бэклог и искал задачу глазами).
 
 ---
 
