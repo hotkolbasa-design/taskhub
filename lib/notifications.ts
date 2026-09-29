@@ -12,12 +12,15 @@ export type NotificationType =
   | 'expense_decided'
   | 'expense_comment'
   | 'expense_paid'
+  | 'article_published'
+  | 'article_updated'
 
 export interface NotificationPayload {
   user_id: string
   actor_id?: string | null
   task_id?: string | null
   expense_request_id?: string | null
+  article_id?: string | null
   type: NotificationType
   data?: Record<string, unknown>
 }
@@ -37,6 +40,7 @@ export async function createNotifications(items: NotificationPayload[]) {
       actor_id: n.actor_id ?? null,
       task_id: n.task_id ?? null,
       expense_request_id: n.expense_request_id ?? null,
+      article_id: n.article_id ?? null,
       type: n.type,
       data: n.data ?? null,
     }))

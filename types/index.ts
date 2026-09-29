@@ -163,3 +163,39 @@ export type ExpenseActivity = {
   created_at: string
   actor: ExpensePerson | null
 }
+
+// ─── Инструкции ──────────────────────────────────────────────────────────────
+
+export type ArticleStatus = 'draft' | 'review' | 'published'
+export type ArticleCategory = 'taskhub' | 'processes' | 'hr' | 'sales' | 'other'
+
+export type Article = {
+  id: string
+  title: string
+  summary: string | null
+  content: string
+  category: ArticleCategory
+  status: ArticleStatus
+  is_required: boolean
+  departments: string[]
+  version: number
+  author_id: string | null
+  published_by: string | null
+  published_at: string | null
+  attachments: ExpenseAttachment[]
+  created_at: string
+  updated_at: string
+  author: ExpensePerson | null
+  /** Прочитал ли текущий пользователь ИМЕННО эту версию */
+  is_read: boolean
+  /** Сколько человек ознакомились с текущей версией — видно админам */
+  read_count: number
+}
+
+export type ArticleReader = {
+  user_id: string
+  full_name: string | null
+  login: string
+  department: string | null
+  read_at: string | null
+}

@@ -83,6 +83,16 @@ const navItems = [
     ),
   },
   {
+    href: '/articles',
+    label: 'Инструкции',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 2.5h6.5L13 6v7.5a1 1 0 01-1 1H3a1 1 0 01-1-1v-10a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+        <path d="M9 2.5V6h4M4.5 9h6M4.5 11.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
     href: '/expenses',
     label: 'Расходы',
     icon: (
@@ -127,6 +137,8 @@ const TYPE_LABEL: Record<string, string> = {
   expense_decided:   'Решение по заявке',
   expense_comment:   'Комментарий к заявке',
   expense_paid:      'Заявка оплачена',
+  article_published: 'Новая инструкция',
+  article_updated:   'Инструкция обновилась',
 }
 
 export default function SidebarNav({ profile }: { profile: Profile | null }) {
@@ -207,6 +219,10 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x))
     }
     setNotifOpen(false)
+    if (n.article_id) {
+      router.push(`/articles/${n.article_id}`)
+      return
+    }
     if (n.expense_request_id) {
       router.push('/expenses')
       return
