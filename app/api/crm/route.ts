@@ -5,6 +5,7 @@ import { saveSpendValue, saveRateValue } from '@/lib/crm/spend'
 import { getExcludedSources, saveExcludedSources, saveMergedGroups, saveMonthPlan } from '@/lib/crm/settings'
 import { readSheetRows } from '@/lib/crm/read-sheet'
 import { getMonthDays, isTestTitle } from '@/lib/crm/utils'
+import { getStudentStats, syncStudentMoves } from '@/lib/crm/students'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -26,6 +27,16 @@ export async function GET(req: NextRequest) {
 
       const excludedSources = await getExcludedSources()
       return NextResponse.json({ ...data, excludedSources })
+    }
+
+    if (action === 'students') {
+      const month = searchParams.get('month') ?? new Date().toISOString().slice(0, 7)
+      // Свежие движения подтягиваем при открытии вкладки: ночного прогона мало,
+      // если ученика зачислили час назад и это уже хотят видеть
+      if (searchParams.get('sync') !== '0') {
+        await syncStudentMoves().catch(e => console.error('[students] синхронизация:', e.message))
+      }
+      return NextResponse.json(await getStudentStats(month))
     }
 
     if (action === 'debug') {
