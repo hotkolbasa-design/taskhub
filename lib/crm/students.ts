@@ -67,6 +67,11 @@ async function dealsByIds(ids: string[]): Promise<Map<string, BitrixDeal>> {
   return map
 }
 
+/** Сравниваем ФИО без учёта регистра и лишних пробелов — в Битриксе их пишут по-разному. */
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
 function studentsOf(deal: BitrixDeal | undefined): string[] {
   if (!deal) return []
   return FIO_FIELDS
@@ -109,19 +114,65 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
 
     const deals = await dealsByIds([...new Set(fresh.map(i => String(i.OWNER_ID)))])
 
-    const rows = fresh.map(i => {
-      const deal = deals.get(String(i.OWNER_ID))
-      const names = studentsOf(deal)
-      return {
-        history_id: i.ID,
-        deal_id: i.OWNER_ID,
-        kind,
-        happened_at: i.CREATED_TIME,
-        students: names.length,
-        student_names: names,
-        deal_title: deal?.TITLE ?? null,
+    // Кто уже числится зачисленным: по этим именам повторный приход — дубль сделки,
+    // а не второй ученик. В Битриксе дубли создаются и объединяются постоянно
+    const { data: prior } = await admin
+      .from('student_moves')
+      .select('kind, happened_at, student_names')
+      .eq('counted', true)
+      .order('happened_at', { ascending: true })
+
+    const active = new Set<string>()
+    for (const m of (prior ?? []) as { kind: string; student_names: string[] }[]) {
+      for (const name of m.student_names ?? []) {
+        if (m.kind === 'enroll') active.add(normalizeName(name))
+        else active.delete(normalizeName(name))
       }
-    })
+    }
+
+    const rows = fresh
+      .sort((a, b) => a.CREATED_TIME.localeCompare(b.CREATED_TIME))
+      .map(i => {
+        const deal = deals.get(String(i.OWNER_ID))
+        const names = studentsOf(deal)
+
+        let counted = true
+        let skipReason: string | null = null
+
+        if (!deal) {
+          // Сделку удалили или объединили с другой, пока событие шло к нам
+          counted = false
+          skipReason = 'сделка удалена'
+        } else if (names.length === 0) {
+          counted = false
+          skipReason = 'в сделке не заполнено ни одного ФИО ученика'
+        } else if (kind === 'enroll' && names.every(n => active.has(normalizeName(n)))) {
+          counted = false
+          skipReason = 'эти ученики уже числятся — похоже, дубль сделки'
+        } else if (kind === 'expel' && names.every(n => !active.has(normalizeName(n)))) {
+          counted = false
+          skipReason = 'эти ученики уже не числятся'
+        }
+
+        if (counted) {
+          for (const n of names) {
+            if (kind === 'enroll') active.add(normalizeName(n))
+            else active.delete(normalizeName(n))
+          }
+        }
+
+        return {
+          history_id: i.ID,
+          deal_id: i.OWNER_ID,
+          kind,
+          happened_at: i.CREATED_TIME,
+          students: counted ? names.length : 0,
+          student_names: names,
+          deal_title: deal?.TITLE ?? null,
+          counted,
+          skip_reason: skipReason,
+        }
+      })
 
     const { error } = await admin.from('student_moves').upsert(rows, { onConflict: 'history_id' })
     if (error) throw new Error(error.message)
@@ -130,7 +181,42 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
     else result.expel += rows.reduce((s, r) => s + r.students, 0)
   }
 
+  await reviewRecentMoves()
+
   return result
+}
+
+/**
+ * Перепроверяет недавние движения: сделку могли удалить или объединить уже ПОСЛЕ того,
+ * как мы записали её переход. Такое движение перестаёт идти в счёт, но остаётся в истории.
+ */
+async function reviewRecentMoves(days = 45): Promise<void> {
+  const admin = createAdminClient()
+  const since = new Date(Date.now() - days * 86400_000).toISOString()
+
+  const { data: recent } = await admin
+    .from('student_moves')
+    .select('history_id, deal_id, kind, counted, student_names')
+    .gte('happened_at', since)
+  if (!recent || recent.length === 0) return
+
+  const rows = recent as { history_id: number; deal_id: number; kind: string; counted: boolean; student_names: string[] }[]
+  const alive = await dealsByIds([...new Set(rows.map(r => String(r.deal_id)))])
+
+  for (const r of rows) {
+    const deal = alive.get(String(r.deal_id))
+    const shouldCount = !!deal && studentsOf(deal).length > 0
+    if (r.counted && !shouldCount) {
+      await admin
+        .from('student_moves')
+        .update({
+          counted: false,
+          students: 0,
+          skip_reason: deal ? 'в сделке не заполнено ни одного ФИО ученика' : 'сделка удалена или объединена',
+        })
+        .eq('history_id', r.history_id)
+    }
+  }
 }
 
 export type StudentMove = {
@@ -141,6 +227,8 @@ export type StudentMove = {
   students: number
   student_names: string[]
   deal_title: string | null
+  counted: boolean
+  skip_reason: string | null
 }
 
 export type StudentStats = {
@@ -174,7 +262,7 @@ export async function getStudentStats(monthKey: string): Promise<StudentStats> {
 
   const { data: all } = await admin
     .from('student_moves')
-    .select('id, deal_id, kind, happened_at, students, student_names, deal_title')
+    .select('id, deal_id, kind, happened_at, students, student_names, deal_title, counted, skip_reason')
     .order('happened_at', { ascending: false })
 
   const moves = (all ?? []) as StudentMove[]
