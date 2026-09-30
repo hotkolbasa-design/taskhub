@@ -3,9 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { OverviewView } from './overview-view'
+import { PlanView } from './plan-view'
 import StudentsView from './students-view'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+import type { MonthPlan } from '@/lib/crm/types'
 
 type MonthOption = { key: string; label: string }
 type ValuesSet = { dayValues: number[]; weekValues: number[]; total: number }
@@ -31,7 +34,7 @@ type DashData = {
     groups: GroupSourceData[]
   }
   rateMap: Record<string, number>
-  plan: number
+  plan: MonthPlan
 }
 
 // ─── CSS classes injected once on mount ──────────────────────────────────────
@@ -1124,7 +1127,7 @@ export default function CrmDashboard() {
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'obzor' | 'voronki' | 'marketing' | 'ucheniki'>('obzor')
+  const [tab, setTab] = useState<'obzor' | 'plan' | 'voronki' | 'marketing' | 'ucheniki'>('obzor')
   const [freezing, setFreezing] = useState(false)
   const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null)
 
@@ -1280,7 +1283,7 @@ export default function CrmDashboard() {
     if (d) setData(d)
   }, [selectedMonth])
 
-  const handleSavePlan = useCallback(async (plan: number) => {
+  const handleSavePlan = useCallback(async (plan: MonthPlan) => {
     setData(prev => prev ? { ...prev, plan } : prev)
     await fetch('/api/crm', {
       method: 'POST',
@@ -1376,7 +1379,7 @@ export default function CrmDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-2 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        {(['obzor', 'voronki', 'marketing', 'ucheniki'] as const).map(t => (
+        {(['obzor', 'plan', 'voronki', 'marketing', 'ucheniki'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className="px-3 py-1.5 rounded-lg text-sm font-medium"
             style={{
@@ -1386,7 +1389,7 @@ export default function CrmDashboard() {
               cursor: 'pointer',
             }}
           >
-            {t === 'obzor' ? 'Обзор' : t === 'voronki' ? 'Воронки' : t === 'marketing' ? 'Маркетинг' : 'Ученики'}
+            {t === 'obzor' ? 'Обзор' : t === 'plan' ? 'План' : t === 'voronki' ? 'Воронки' : t === 'marketing' ? 'Маркетинг' : 'Ученики'}
           </button>
         ))}
       </div>
@@ -1400,7 +1403,8 @@ export default function CrmDashboard() {
           </div>
         ) : data ? (
           <>
-            {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} onSavePlan={handleSavePlan} />}
+            {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} onGoPlan={() => setTab('plan')} />}
+            {tab === 'plan' && <PlanView data={data} onSavePlan={handleSavePlan} />}
             {tab === 'voronki' && <VoronkiView data={data} />}
             {tab === 'ucheniki' && <StudentsView monthKey={selectedMonth} />}
             {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onSaveRate={handleSaveRate} onReload={handleReload} />}

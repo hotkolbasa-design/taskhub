@@ -3,6 +3,7 @@ import { loadPipelineDefinitions, buildPipelineStats } from './pipelines'
 import { buildMarketingStats } from './marketing'
 import { readSpendMap, readRateMap } from './spend'
 import { getMergedGroups, getMonthPlans } from './settings'
+import { DEFAULT_PLAN } from './plan'
 import { getMonthDays, getWeekGroups, formatDay, formatWeek } from './utils'
 import type { DashData } from './types'
 
@@ -42,7 +43,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     getMonthPlans(),
   ])
 
-  const plan = monthPlans[monthKey] ?? 0
+  const plan = monthPlans[monthKey] ?? DEFAULT_PLAN
 
   // Fill days that have no manually-set rate with the auto-fetched rate
   if (autoRate > 0) {
