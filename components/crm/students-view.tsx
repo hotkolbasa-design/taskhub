@@ -12,8 +12,6 @@ type Move = {
   deal_title: string | null
 }
 
-type Bucket = { key: string; label: string; enrolled: number; expelled: number; total: number; title: string }
-
 type Stats = {
   baselineTotal: number
   baselineDate: string
