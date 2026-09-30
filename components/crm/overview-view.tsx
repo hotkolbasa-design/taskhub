@@ -178,10 +178,14 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
             </div>
           )}
           <div className="relative rounded-full overflow-visible" style={{ height: 36, background: 'var(--surface2)' }}>
-            <div className="h-full rounded-full flex items-center px-3 transition-all duration-500"
-              style={{ width: `${future ? 0 : Math.max(progressPct, 4)}%`, background: statusColor }}>
-              {!future && <span className="text-sm font-bold text-white whitespace-nowrap">{Math.round(progressPct)}% плана</span>}
-            </div>
+            {/* заливку на будущем месяце не рисуем вовсе: при нулевой ширине
+                её горизонтальный отступ всё равно накрывал начало подписи */}
+            {!future && (
+              <div className="h-full rounded-full flex items-center px-3 transition-all duration-500"
+                style={{ width: `${Math.max(progressPct, 4)}%`, background: statusColor }}>
+                <span className="text-sm font-bold text-white whitespace-nowrap">{Math.round(progressPct)}% плана</span>
+              </div>
+            )}
             {future && (
               <span className="absolute inset-0 flex items-center px-3 text-sm" style={{ color: 'var(--text2)' }}>
                 Факт пойдёт с 1-го числа
