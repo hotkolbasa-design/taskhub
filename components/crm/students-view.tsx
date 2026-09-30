@@ -62,24 +62,18 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
     return <div className="py-10 text-sm" style={{ color: 'var(--red)' }}>Не удалось получить данные: {error}</div>
   }
 
-  // Один и тот же график рисуется по дням или по неделям — данные приводим к общему виду
-  const buckets: Bucket[] = scale === 'days'
-    ? data.days.map(d => ({
-        key: d.date,
-        label: d.date.slice(8),
-        enrolled: d.enrolled,
-        expelled: d.expelled,
-        total: d.total,
-        title: `${formatDate(d.date)}: ${d.total} учеников (+${d.enrolled} / −${d.expelled})`,
-      }))
-    : (data.weeks ?? []).map(w => ({
-        key: w.from,
-        label: w.label,
-        enrolled: w.enrolled,
-        expelled: w.expelled,
-        total: w.total,
-        title: `${w.label}: ${w.total} учеников на конец недели (+${w.enrolled} / −${w.expelled})`,
-      }))
+  // По дням смотрят на форму кривой, по неделям — на сами числа,
+  // поэтому недели показываем таблицей, а не графиком
+  const buckets = data.days.map(d => ({
+    key: d.date,
+    label: d.date.slice(8),
+    enrolled: d.enrolled,
+    expelled: d.expelled,
+    total: d.total,
+    title: `${formatDate(d.date)}: ${d.total} учеников (+${d.enrolled} / −${d.expelled})`,
+  }))
+
+  const weeks = data.weeks ?? []
 
   const maxBar = Math.max(1, ...buckets.map(d => Math.max(d.enrolled, d.expelled)))
   const totals = buckets.map(d => d.total)
@@ -97,12 +91,12 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
         <Tile label="Чистый прирост" value={Math.abs(data.net)} color={data.net >= 0 ? '#2DD4A0' : '#F75C6E'} prefix={data.net >= 0 ? '+' : '−'} />
       </div>
 
-      {buckets.length > 0 && (
+      {(scale === 'days' ? buckets.length > 0 : weeks.length > 0) && (
         <div className="rounded-xl px-5 py-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                Численность {scale === 'days' ? 'по дням' : 'по неделям'}
+                {scale === 'days' ? 'Численность по дням' : 'Движение по неделям'}
               </span>
               <div className="flex items-center gap-1">
                 {(['days', 'weeks'] as const).map(v => (
@@ -118,31 +112,69 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text2)' }}>
-              <Legend color="#2DD4A0" text="пришли" />
-              <Legend color="#F75C6E" text="ушли" />
-            </div>
+            {scale === 'days' && (
+              <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text2)' }}>
+                <Legend color="#2DD4A0" text="пришли" />
+                <Legend color="#F75C6E" text="ушли" />
+              </div>
+            )}
           </div>
 
-          <div className="flex items-end gap-1" style={{ height: 150 }}>
-            {buckets.map(d => {
-              const h = 8 + ((d.total - minTotal) / span) * 100
-              return (
-                <div key={d.key} className="flex-1 flex flex-col items-center justify-end gap-1" title={d.title}>
-                  <div className="w-full flex items-end justify-center gap-0.5" style={{ height: 34 }}>
-                    {d.enrolled > 0 && (
-                      <div style={{ width: 4, height: (d.enrolled / maxBar) * 30, background: '#2DD4A0', borderRadius: 2 }} />
-                    )}
-                    {d.expelled > 0 && (
-                      <div style={{ width: 4, height: (d.expelled / maxBar) * 30, background: '#F75C6E', borderRadius: 2 }} />
-                    )}
+          {scale === 'days' ? (
+            <div className="flex items-end gap-1" style={{ height: 150 }}>
+              {buckets.map(d => {
+                const h = 8 + ((d.total - minTotal) / span) * 100
+                return (
+                  <div key={d.key} className="flex-1 flex flex-col items-center justify-end gap-1" title={d.title}>
+                    <div className="w-full flex items-end justify-center gap-0.5" style={{ height: 34 }}>
+                      {d.enrolled > 0 && (
+                        <div style={{ width: 4, height: (d.enrolled / maxBar) * 30, background: '#2DD4A0', borderRadius: 2 }} />
+                      )}
+                      {d.expelled > 0 && (
+                        <div style={{ width: 4, height: (d.expelled / maxBar) * 30, background: '#F75C6E', borderRadius: 2 }} />
+                      )}
+                    </div>
+                    <div className="w-full rounded-t" style={{ height: h, background: 'rgba(124,92,246,0.35)', borderTop: '2px solid #7C5CF6' }} />
+                    <span className="text-[9px] whitespace-nowrap" style={{ color: 'var(--text2)' }}>{d.label}</span>
                   </div>
-                  <div className="w-full rounded-t" style={{ height: h, background: 'rgba(124,92,246,0.35)', borderTop: '2px solid #7C5CF6' }} />
-                  <span className="text-[9px] whitespace-nowrap" style={{ color: 'var(--text2)' }}>{d.label}</span>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          ) : (
+            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <Th>Неделя</Th>
+                  <Th right>Пришло</Th>
+                  <Th right>Отчислено</Th>
+                  <Th right>Изменение</Th>
+                  <Th right>Учеников на конец недели</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {weeks.map(w => {
+                  const net = w.enrolled - w.expelled
+                  return (
+                    <tr key={w.from} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--text)' }}>{w.label}</td>
+                      <td className="px-4 py-2.5 text-right" style={{ color: w.enrolled ? '#2DD4A0' : 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                        {w.enrolled ? `+${w.enrolled}` : '0'}
+                      </td>
+                      <td className="px-4 py-2.5 text-right" style={{ color: w.expelled ? '#F75C6E' : 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                        {w.expelled ? `−${w.expelled}` : '0'}
+                      </td>
+                      <td className="px-4 py-2.5 text-right" style={{ color: net > 0 ? '#2DD4A0' : net < 0 ? '#F75C6E' : 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                        {net > 0 ? `+${net}` : net < 0 ? `−${Math.abs(net)}` : '0'}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
+                        {w.total}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
