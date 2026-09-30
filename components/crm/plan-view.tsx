@@ -133,6 +133,7 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
 
   const frozen = data.frozen === true
   const closedCount = rows.filter(r => r.closed).length
+  const future = (data.daysIso[0] ?? '') > TODAY
 
   return (
     <div>
@@ -143,7 +144,9 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
         <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
           <div className="text-xs leading-relaxed max-w-2xl" style={{ color: 'var(--text2)' }}>
             Цель по сделкам разворачивается вверх по воронке нормативами конверсии.
-            {' '}{closedCount} из {rows.length} недель закрыто — их факт уже учтён в разбивке ниже.
+            {future
+              ? ' Месяц ещё не начался — план можно выставить заранее, факт начнёт наполняться с первого числа.'
+              : ` ${closedCount} из ${rows.length} недель закрыто — их факт уже учтён в разбивке ниже.`}
           </div>
           {!frozen && (
             <button onClick={save} disabled={!dirty || saving}
@@ -182,9 +185,10 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
 
         <div className="grid gap-px mt-4 rounded-xl overflow-hidden" style={{ background: 'var(--border)', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
           {PLAN_METRICS.map(m => (
-            <div key={m.key} className="px-3 py-2.5" style={{ background: 'var(--surface2)' }}>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75 }}>{m.name}</div>
-              <div className="text-lg font-semibold mt-0.5" style={{ color: m.key === 'paid' ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+            // подпись в две строки не должна опускать цифру: высота подписи фиксирована
+            <div key={m.key} className="px-3 py-2.5 flex flex-col" style={{ background: 'var(--surface2)' }}>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{m.name}</div>
+              <div className="text-lg font-semibold mt-auto pt-0.5" style={{ color: m.key === 'paid' ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(m.key, metrics[m.key])}
               </div>
             </div>

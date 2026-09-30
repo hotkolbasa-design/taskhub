@@ -79,16 +79,20 @@ const MONTH_NAMES_RU = [
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ]
 
-export function getAvailableMonths(): { key: string; label: string }[] {
-  const months = []
+// Следующий месяц идёт первым, чтобы план можно было выставить до его начала.
+// Он помечен future: дашборд по умолчанию открывает всё равно текущий месяц.
+export function getAvailableMonths(): { key: string; label: string; future?: boolean }[] {
+  const months: { key: string; label: string; future?: boolean }[] = []
   const now = new Date()
-  for (let i = 0; i < 12; i++) {
+  for (let i = -1; i < 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const y = d.getFullYear()
     const m = d.getMonth()
+    const future = i < 0
     months.push({
       key: `${y}-${String(m + 1).padStart(2, '0')}`,
-      label: `${MONTH_NAMES_RU[m]} ${y}`,
+      label: `${MONTH_NAMES_RU[m]} ${y}${future ? ' · план' : ''}`,
+      ...(future ? { future: true } : {}),
     })
   }
   return months
