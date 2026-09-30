@@ -169,17 +169,25 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
           </div>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress bar. На будущем месяце ни маркера «сегодня», ни белой подписи
+            внутри пустой полосы — она вылезала бы на светлый фон */}
         <div className="relative mt-2">
-          <div style={{ position: 'absolute', left: `${todayMarkerPct}%`, top: -18, transform: 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text2)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-            СЕГОДНЯ
-          </div>
+          {!future && (
+            <div style={{ position: 'absolute', left: `${todayMarkerPct}%`, top: -18, transform: 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text2)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+              СЕГОДНЯ
+            </div>
+          )}
           <div className="relative rounded-full overflow-visible" style={{ height: 36, background: 'var(--surface2)' }}>
             <div className="h-full rounded-full flex items-center px-3 transition-all duration-500"
-              style={{ width: `${Math.max(progressPct, 4)}%`, background: statusColor }}>
-              <span className="text-sm font-bold text-white whitespace-nowrap">{Math.round(progressPct)}% плана</span>
+              style={{ width: `${future ? 0 : Math.max(progressPct, 4)}%`, background: statusColor }}>
+              {!future && <span className="text-sm font-bold text-white whitespace-nowrap">{Math.round(progressPct)}% плана</span>}
             </div>
-            <div style={{ position: 'absolute', left: `${todayMarkerPct}%`, top: 0, bottom: 0, width: 2, background: 'var(--text)', opacity: 0.6, transform: 'translateX(-50%)', borderRadius: 1 }} />
+            {future && (
+              <span className="absolute inset-0 flex items-center px-3 text-sm" style={{ color: 'var(--text2)' }}>
+                Факт пойдёт с 1-го числа
+              </span>
+            )}
+            {!future && <div style={{ position: 'absolute', left: `${todayMarkerPct}%`, top: 0, bottom: 0, width: 2, background: 'var(--text)', opacity: 0.6, transform: 'translateX(-50%)', borderRadius: 1 }} />}
           </div>
           <div className="flex justify-between mt-1">
             <span className="text-xs" style={{ color: 'var(--text2)' }}>0</span>
