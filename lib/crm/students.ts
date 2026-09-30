@@ -207,7 +207,8 @@ export async function getStudentStats(monthKey: string): Promise<StudentStats> {
   const reversed: { date: string; enrolled: number; expelled: number; total: number }[] = []
   const today = new Date().toISOString().slice(0, 10)
   for (const day of [...dayKeys].reverse()) {
-    if (day > today) continue
+    // До отметки численность неизвестна, а после сегодняшнего дня её ещё нет
+    if (day > today || day < baselineDate) continue
     const d = perDay.get(day) ?? { enrolled: 0, expelled: 0 }
     reversed.push({ date: day, enrolled: d.enrolled, expelled: d.expelled, total: running })
     running -= d.enrolled - d.expelled
