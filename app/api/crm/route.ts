@@ -3,6 +3,7 @@ import { computeDashboardData, getAvailableMonths } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
 import { saveSpendValue, saveRateValue } from '@/lib/crm/spend'
 import { getExcludedSources, saveExcludedSources, saveMergedGroups, saveMonthPlan } from '@/lib/crm/settings'
+import { normalizePlan } from '@/lib/crm/plan'
 import { readSheetRows } from '@/lib/crm/read-sheet'
 import { getMonthDays, isTestTitle } from '@/lib/crm/utils'
 import { getStudentStats, syncStudentMoves } from '@/lib/crm/students'
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
     if (action === 'savePlan') {
-      await saveMonthPlan(body.monthKey, Number(body.plan) || 0)
+      await saveMonthPlan(body.monthKey, normalizePlan(body.plan))
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveExcluded') {

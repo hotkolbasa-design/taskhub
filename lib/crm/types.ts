@@ -57,6 +57,45 @@ export type PipelineStat = {
   stages: MilestoneStat[]
 }
 
+export type PlanMetricKey = 'leads' | 'app' | 'held' | 'pre' | 'paid' | 'revenue' | 'budget'
+export type PlanMetrics = Record<PlanMetricKey, number>
+
+export type MonthPlan = {
+  target: number                       // цель по сделкам, от неё считается вся воронка
+  conv: { lead2app: number; app2held: number; held2pre: number; pre2paid: number }  // %
+  check: number                        // средний чек, ₸
+  cpl: number                          // потолок цены заявки, $
+  mode: 'even' | 'catch' | 'manual'    // как план делится по неделям
+  manual: Partial<PlanMetrics> | null  // метрики, вписанные руками поверх расчёта
+  weights: Record<string, number>      // множитель недели, ключ — ISO её первого дня
+  capacity: { hunters: number; cap: number; slots: number; callable: number }
+}
+
+export type WeekPlanRow = {
+  key: string
+  label: string
+  days: number
+  workdays: number
+  closed: boolean
+  current: boolean
+  weight: number
+  plan: PlanMetrics
+  even: PlanMetrics     // ровная разбивка — с ней сравнивается догоняющий план
+  fact: PlanMetrics
+}
+
+export type CapacityRow = {
+  key: string
+  label: string
+  closed: boolean
+  needLeads: number
+  leadCap: number
+  leadLoad: number
+  needSlots: number
+  slotCap: number
+  slotLoad: number
+}
+
 export type DashData = {
   monthKey: string
   days: string[]
@@ -71,7 +110,8 @@ export type DashData = {
     groups: GroupSourceData[]
   }
   rateMap: Record<string, number>
-  plan: number
+  plan: MonthPlan
+  frozen?: boolean
 }
 
 export type MilestoneDef = {

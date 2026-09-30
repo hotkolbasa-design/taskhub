@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { getWeekGroups } from '@/lib/crm/utils'
+import { planMetrics } from '@/lib/crm/plan'
 import type { DashData } from '@/lib/crm/types'
 
 const PALETTE = ['#7C5CF6', '#2DD4A0', '#F75C6E', '#F7C04F', '#60A5FA', '#FB923C', '#A78BFA', '#34D399', '#F472B6', '#94A3B8']
@@ -87,22 +87,9 @@ function WeeklyLineChart({ weekLabels, factValues, forecastValues, planPerWeek, 
 
 // ─── 01 · Plan ────────────────────────────────────────────────────────────────
 
-function PlanSection({ data, onSavePlan }: { data: DashData; onSavePlan: (plan: number) => void }) {
-  const serverPlan = data.plan > 0 ? data.plan : 300
-  const [plan, setPlan] = useState(serverPlan)
-  const [planInput, setPlanInput] = useState(String(serverPlan))
-
-  useEffect(() => {
-    const v = data.plan > 0 ? data.plan : 300
-    setPlan(v)
-    setPlanInput(String(v))
-  }, [data.plan, data.monthKey])
-
-  function commitPlan() {
-    const n = parseInt(planInput)
-    if (n > 0) { setPlan(n); onSavePlan(n) }
-    else setPlanInput(String(plan))
-  }
+function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void }) {
+  // Цель берётся из плана месяца — он живёт во вкладке «План» и задаётся там же
+  const plan = planMetrics(data.plan).leads
 
   const leads = data.marketing.overall.milestones[0]
   const totalLeads = leads.total
@@ -193,18 +180,17 @@ function PlanSection({ data, onSavePlan }: { data: DashData; onSavePlan: (plan: 
           </div>
         </div>
 
-        {/* Plan input */}
-        <div className="flex items-center gap-3 mt-5 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-          <span className="text-sm" style={{ color: 'var(--text2)' }}>План на {monthLabel}, заявок</span>
-          <input
-            type="text" value={planInput}
-            onChange={e => setPlanInput(e.target.value)}
-            onBlur={commitPlan}
-            onKeyDown={e => e.key === 'Enter' && commitPlan()}
-            className="text-sm font-medium rounded-lg px-3 py-2 text-center"
-            style={{ width: 80, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none' }}
-          />
-          <span className="text-sm" style={{ color: 'var(--text2)' }}>— поменяйте цифру, всё пересчитается</span>
+        {/* Ссылка на план месяца */}
+        <div className="flex items-center gap-3 mt-5 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border)' }}>
+          <span className="text-sm" style={{ color: 'var(--text2)' }}>
+            План на {monthLabel}: <strong style={{ color: 'var(--text)' }}>{plan} заявок</strong> под цель {data.plan.target} сделок
+          </span>
+          <button onClick={onGoPlan}
+            className="text-sm font-medium rounded-lg px-3 py-1.5"
+            style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}
+          >
+            Изменить во вкладке «План»
+          </button>
         </div>
       </div>
 
@@ -485,10 +471,10 @@ function FunnelMatrix({ data }: { data: DashData }) {
 
 // ─── export ───────────────────────────────────────────────────────────────────
 
-export function OverviewView({ data, onGoMarketing, onSavePlan }: { data: DashData; onGoMarketing: () => void; onSavePlan: (plan: number) => void }) {
+export function OverviewView({ data, onGoMarketing, onGoPlan }: { data: DashData; onGoMarketing: () => void; onGoPlan: () => void }) {
   return (
     <div>
-      <PlanSection data={data} onSavePlan={onSavePlan} />
+      <PlanSection data={data} onGoPlan={onGoPlan} />
       <SpendSection data={data} onGoMarketing={onGoMarketing} />
       <FunnelMatrix data={data} />
     </div>
