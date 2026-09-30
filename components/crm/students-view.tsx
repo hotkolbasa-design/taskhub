@@ -12,6 +12,8 @@ type Move = {
   deal_title: string | null
 }
 
+type Bucket = { key: string; label: string; enrolled: number; expelled: number; total: number; title: string }
+
 type Stats = {
   baselineTotal: number
   baselineDate: string
@@ -20,6 +22,7 @@ type Stats = {
   expelled: number
   net: number
   days: { date: string; enrolled: number; expelled: number; total: number }[]
+  weeks: { label: string; from: string; to: string; enrolled: number; expelled: number; total: number }[]
   moves: Move[]
 }
 
@@ -29,13 +32,18 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
   const [data, setData] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [scale, setScale] = useState<'days' | 'weeks'>('days')
 
   useEffect(() => {
     let alive = true
-    setError(null)
     fetch(`/api/crm?action=students&month=${monthKey}`)
       .then(r => r.json())
-      .then(d => { if (!alive) return; if (d.error) setError(d.error); else setData(d); setLoading(false) })
+      .then(d => {
+        if (!alive) return
+        if (d.error) setError(d.error)
+        else { setError(null); setData(d) }
+        setLoading(false)
+      })
       .catch(e => { if (alive) { setError(String(e)); setLoading(false) } })
     return () => { alive = false }
   }, [monthKey])
@@ -54,8 +62,27 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
     return <div className="py-10 text-sm" style={{ color: 'var(--red)' }}>Не удалось получить данные: {error}</div>
   }
 
-  const maxBar = Math.max(1, ...data.days.map(d => Math.max(d.enrolled, d.expelled)))
-  const totals = data.days.map(d => d.total)
+  // Один и тот же график рисуется по дням или по неделям — данные приводим к общему виду
+  const buckets: Bucket[] = scale === 'days'
+    ? data.days.map(d => ({
+        key: d.date,
+        label: d.date.slice(8),
+        enrolled: d.enrolled,
+        expelled: d.expelled,
+        total: d.total,
+        title: `${formatDate(d.date)}: ${d.total} учеников (+${d.enrolled} / −${d.expelled})`,
+      }))
+    : (data.weeks ?? []).map(w => ({
+        key: w.from,
+        label: w.label,
+        enrolled: w.enrolled,
+        expelled: w.expelled,
+        total: w.total,
+        title: `${w.label}: ${w.total} учеников на конец недели (+${w.enrolled} / −${w.expelled})`,
+      }))
+
+  const maxBar = Math.max(1, ...buckets.map(d => Math.max(d.enrolled, d.expelled)))
+  const totals = buckets.map(d => d.total)
   const minTotal = Math.min(...totals, data.current)
   const maxTotal = Math.max(...totals, data.current)
   // Минимальный размах, иначе прирост в одного ученика рисуется скачком во весь график
@@ -70,10 +97,27 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
         <Tile label="Чистый прирост" value={Math.abs(data.net)} color={data.net >= 0 ? '#2DD4A0' : '#F75C6E'} prefix={data.net >= 0 ? '+' : '−'} />
       </div>
 
-      {data.days.length > 0 && (
+      {buckets.length > 0 && (
         <div className="rounded-xl px-5 py-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Численность по дням</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                Численность {scale === 'days' ? 'по дням' : 'по неделям'}
+              </span>
+              <div className="flex items-center gap-1">
+                {(['days', 'weeks'] as const).map(v => (
+                  <button key={v} type="button" onClick={() => setScale(v)}
+                    className="px-2.5 py-1 rounded-lg text-xs"
+                    style={{
+                      background: scale === v ? 'rgba(124,92,246,0.15)' : 'transparent',
+                      color: scale === v ? '#7C5CF6' : 'var(--text2)',
+                      border: '1px solid var(--border)', cursor: 'pointer',
+                    }}>
+                    {v === 'days' ? 'Дни' : 'Недели'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text2)' }}>
               <Legend color="#2DD4A0" text="пришли" />
               <Legend color="#F75C6E" text="ушли" />
@@ -81,10 +125,10 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
           </div>
 
           <div className="flex items-end gap-1" style={{ height: 150 }}>
-            {data.days.map(d => {
+            {buckets.map(d => {
               const h = 8 + ((d.total - minTotal) / span) * 100
               return (
-                <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1" title={`${formatDate(d.date)}: ${d.total} учеников (+${d.enrolled} / −${d.expelled})`}>
+                <div key={d.key} className="flex-1 flex flex-col items-center justify-end gap-1" title={d.title}>
                   <div className="w-full flex items-end justify-center gap-0.5" style={{ height: 34 }}>
                     {d.enrolled > 0 && (
                       <div style={{ width: 4, height: (d.enrolled / maxBar) * 30, background: '#2DD4A0', borderRadius: 2 }} />
@@ -94,7 +138,7 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                     )}
                   </div>
                   <div className="w-full rounded-t" style={{ height: h, background: 'rgba(124,92,246,0.35)', borderTop: '2px solid #7C5CF6' }} />
-                  <span className="text-[9px]" style={{ color: 'var(--text2)' }}>{d.date.slice(8)}</span>
+                  <span className="text-[9px] whitespace-nowrap" style={{ color: 'var(--text2)' }}>{d.label}</span>
                 </div>
               )
             })}

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getWeekGroups, formatWeek } from '@/lib/crm/utils'
 
 /** Стадия «Зарегистрировать на платформу» воронки «Зачисление в школу» — сюда попадает пришедший ученик. */
 const ENROLL_STAGE = 'C4:PREPARATION'
@@ -153,6 +154,8 @@ export type StudentStats = {
   net: number
   /** По дням месяца, для графика */
   days: { date: string; enrolled: number; expelled: number; total: number }[]
+  /** Те же данные, свёрнутые в недели пн–вс — как в остальных разрезах CRM */
+  weeks: { label: string; from: string; to: string; enrolled: number; expelled: number; total: number }[]
   moves: StudentMove[]
 }
 
@@ -214,6 +217,28 @@ export async function getStudentStats(monthKey: string): Promise<StudentStats> {
     running -= d.enrolled - d.expelled
   }
 
+  const days = reversed.reverse()
+
+  // Недели считаем по тем же дням: приходы и уходы складываем,
+  // численность берём на последний показанный день недели
+  const byDay = new Map(days.map(d => [d.date, d]))
+  const weeks = getWeekGroups(dayKeys)
+    .map(group => {
+      const shown = group.filter(d => byDay.has(d))
+      if (shown.length === 0) return null
+      const enrolledSum = shown.reduce((s, d) => s + (byDay.get(d)?.enrolled ?? 0), 0)
+      const expelledSum = shown.reduce((s, d) => s + (byDay.get(d)?.expelled ?? 0), 0)
+      return {
+        label: formatWeek(group),
+        from: group[0],
+        to: group[group.length - 1],
+        enrolled: enrolledSum,
+        expelled: expelledSum,
+        total: byDay.get(shown[shown.length - 1])?.total ?? 0,
+      }
+    })
+    .filter((w): w is NonNullable<typeof w> => w !== null)
+
   return {
     baselineTotal,
     baselineDate,
@@ -221,7 +246,8 @@ export async function getStudentStats(monthKey: string): Promise<StudentStats> {
     enrolled,
     expelled,
     net: enrolled - expelled,
-    days: reversed.reverse(),
+    days,
+    weeks,
     moves: monthMoves,
   }
 }
