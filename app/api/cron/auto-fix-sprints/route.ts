@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
+import { syncStudentMoves } from '@/lib/crm/students'
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
@@ -111,5 +112,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json(results)
+  // Движение учеников подтягиваем ночью же: вкладка CRM синхронизируется при открытии,
+  // но если её никто не открыл, счётчик всё равно должен быть верным
+  const students = await syncStudentMoves().catch(e => {
+    console.error('[cron] синхронизация учеников:', e.message)
+    return null
+  })
+
+  return NextResponse.json({ ...results, students })
 }
