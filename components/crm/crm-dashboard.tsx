@@ -10,7 +10,7 @@ import StudentsView from './students-view'
 
 import type { MonthPlan } from '@/lib/crm/types'
 
-type MonthOption = { key: string; label: string }
+type MonthOption = { key: string; label: string; future?: boolean }
 type ValuesSet = { dayValues: number[]; weekValues: number[]; total: number }
 type Milestone = { name: string; dayValues: number[]; weekValues: number[]; total: number }
 type Spend = {
@@ -1146,7 +1146,9 @@ export default function CrmDashboard() {
       .then((ms: MonthOption[] | { error: string }) => {
         if ('error' in ms) { setError(ms.error); setLoading(false); return }
         setMonths(ms)
-        if (ms.length) setSelectedMonth(ms[0].key)
+        // Открываем текущий месяц, а не следующий: тот лежит первым только ради плана
+        const current = ms.find(m => !m.future) ?? ms[0]
+        if (current) setSelectedMonth(current.key)
       })
       .catch(e => { setError(String(e)); setLoading(false) })
   }, [])

@@ -101,10 +101,13 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
   const progressPct = Math.min(totalLeads / plan * 100, 100)
   const todayMarkerPct = Math.min((daysElapsed / totalDays) * 100, 100)
 
+  // Месяц можно открыть до его начала — чтобы выставить план. Тогда «отстаём» было бы враньём
+  const future = (daysIso[0] ?? '') > TODAY
+
   const status = forecast >= plan * 1.05 ? 'ahead' : forecast >= plan * 0.9 ? 'on' : 'behind'
-  const statusLabel = { ahead: 'Опережаем план', on: 'Идём по плану', behind: 'Отстаём от плана' }[status]
-  const statusColor = { ahead: 'var(--green)', on: 'var(--accent)', behind: 'var(--red)' }[status]
-  const statusBg = { ahead: 'rgba(45,212,160,0.12)', on: 'rgba(124,92,246,0.12)', behind: 'rgba(247,92,110,0.12)' }[status]
+  const statusLabel = future ? 'Месяц ещё не начался' : { ahead: 'Опережаем план', on: 'Идём по плану', behind: 'Отстаём от плана' }[status]
+  const statusColor = future ? 'var(--text2)' : { ahead: 'var(--green)', on: 'var(--accent)', behind: 'var(--red)' }[status]
+  const statusBg = future ? 'var(--surface2)' : { ahead: 'rgba(45,212,160,0.12)', on: 'rgba(124,92,246,0.12)', behind: 'rgba(247,92,110,0.12)' }[status]
 
   const weekGroups = getWeekGroups(daysIso)
   const weekLabels = data.weeks
@@ -149,16 +152,20 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
               <span className="text-xl" style={{ color: 'var(--text2)' }}>из {plan} заявок</span>
             </div>
             <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>
-              Прошло {daysElapsed} из {totalDays} дня месяца · {Math.round(daysElapsed / totalDays * 100)}%
+              {future
+                ? `Месяц впереди — ${totalDays} дней, факт появится с первого числа`
+                : `Прошло ${daysElapsed} из ${totalDays} дня месяца · ${Math.round(daysElapsed / totalDays * 100)}%`}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <span className="px-3 py-1.5 rounded-full text-sm font-semibold" style={{ background: statusBg, color: statusColor }}>
               {status === 'ahead' ? '↗ ' : status === 'behind' ? '↘ ' : ''}{statusLabel}
             </span>
-            <span className="text-xs" style={{ color: 'var(--text2)' }}>
-              Прогноз на {totalDays}.{month}: <strong style={{ color: 'var(--text)' }}>{forecast} заявки</strong>
-            </span>
+            {!future && (
+              <span className="text-xs" style={{ color: 'var(--text2)' }}>
+                Прогноз на {totalDays}.{month}: <strong style={{ color: 'var(--text)' }}>{forecast} заявки</strong>
+              </span>
+            )}
           </div>
         </div>
 
