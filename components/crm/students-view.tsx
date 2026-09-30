@@ -10,6 +10,8 @@ type Move = {
   students: number
   student_names: string[]
   deal_title: string | null
+  counted: boolean
+  skip_reason: string | null
 }
 
 type Stats = {
@@ -193,7 +195,7 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
             </thead>
             <tbody>
               {data.moves.map(m => (
-                <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <tr key={m.id} style={{ borderBottom: '1px solid var(--border)', opacity: m.counted === false ? 0.55 : 1 }}>
                   <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: 'var(--text2)' }}>{formatDate(m.happened_at.slice(0, 10))}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     <span className="text-xs px-2 py-1 rounded-md" style={{
@@ -205,9 +207,12 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                   </td>
                   <td className="px-4 py-2.5" style={{ color: 'var(--text)' }}>
                     {m.student_names.length > 0 ? m.student_names.join(', ') : <span style={{ color: 'var(--text2)' }}>ФИО не заполнено</span>}
+                    {m.counted === false && m.skip_reason && (
+                      <span className="block text-xs mt-0.5" style={{ color: 'var(--text2)' }}>не учтено: {m.skip_reason}</span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-right" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
-                    {m.kind === 'enroll' ? '+' : '−'}{m.students}
+                    {m.counted === false ? '—' : `${m.kind === 'enroll' ? '+' : '−'}${m.students}`}
                   </td>
                   <td className="px-4 py-2.5">
                     <a href={`${DEAL_URL}/${m.deal_id}/`} target="_blank" rel="noreferrer"
