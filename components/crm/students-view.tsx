@@ -58,14 +58,15 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
   const totals = data.days.map(d => d.total)
   const minTotal = Math.min(...totals, data.current)
   const maxTotal = Math.max(...totals, data.current)
-  const span = Math.max(1, maxTotal - minTotal)
+  // Минимальный размах, иначе прирост в одного ученика рисуется скачком во весь график
+  const span = Math.max(12, maxTotal - minTotal)
 
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
         <Tile label="Учеников сейчас" value={data.current} hint={`отметка ${data.baselineTotal} на ${formatDate(data.baselineDate)}`} big />
-        <Tile label="Пришло за месяц" value={data.enrolled} color="#2DD4A0" prefix="+" />
-        <Tile label="Отчислено за месяц" value={data.expelled} color="#F75C6E" prefix="−" />
+        <Tile label="Пришло за месяц" value={data.enrolled} color={data.enrolled ? '#2DD4A0' : undefined} prefix={data.enrolled ? '+' : ''} />
+        <Tile label="Отчислено за месяц" value={data.expelled} color={data.expelled ? '#F75C6E' : undefined} prefix={data.expelled ? '−' : ''} />
         <Tile label="Чистый прирост" value={Math.abs(data.net)} color={data.net >= 0 ? '#2DD4A0' : '#F75C6E'} prefix={data.net >= 0 ? '+' : '−'} />
       </div>
 
