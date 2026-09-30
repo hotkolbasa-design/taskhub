@@ -68,22 +68,31 @@ export function planMetrics(plan: MonthPlan): PlanMetrics {
   const held = pre / (c.held2pre / 100)
   const app = held / (c.app2held / 100)
   const leads = app / (c.lead2app / 100)
-  const derived: PlanMetrics = {
+  const out: PlanMetrics = {
     leads: Math.round(leads),
     app: Math.round(app),
     held: Math.round(held),
     pre: Math.round(pre),
     paid: Math.round(paid),
-    revenue: Math.round(paid * plan.check),
-    budget: Math.round(leads * plan.cpl),
+    revenue: 0,
+    budget: 0,
   }
-  if (!plan.manual) return derived
-  const out = { ...derived }
-  for (const k of Object.keys(plan.manual) as PlanMetricKey[]) {
-    const v = plan.manual[k]
-    if (typeof v === 'number' && v > 0) out[k] = v
+
+  // Ручные значения ступеней перекрывают расчёт…
+  if (plan.manual) {
+    for (const k of ['leads', 'app', 'held', 'pre', 'paid'] as const) {
+      const v = plan.manual[k]
+      if (typeof v === 'number' && v > 0) out[k] = v
+    }
   }
+  // …и деньги считаются уже от них, иначе бюджет расходится с числом заявок на экране
+  out.revenue = manualOr(plan.manual?.revenue, Math.round(out.paid * plan.check))
+  out.budget = manualOr(plan.manual?.budget, Math.round(out.leads * plan.cpl))
   return out
+}
+
+function manualOr(manual: number | undefined, derived: number): number {
+  return typeof manual === 'number' && manual > 0 ? manual : derived
 }
 
 export function throughput(plan: MonthPlan): number {

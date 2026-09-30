@@ -107,6 +107,15 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
     setSaved(false)
   }, [])
 
+  // Правка цели или конверсий означает, что человек хочет расчётную модель.
+  // Пока в плане висят ручные значения (например, цель по заявкам из старого формата),
+  // они перекрывают расчёт, и на экране цифры не двигаются — поэтому снимаем их.
+  const patchModel = useCallback((p: Partial<MonthPlan>) => {
+    setDraft(prev => ({ ...prev, ...p, manual: null }))
+    setDirty(true)
+    setSaved(false)
+  }, [])
+
   const numField = (value: number, apply: (v: number) => void) => ({
     value: String(value).replace('.', ','),
     onChange: (raw: string) => {
@@ -168,31 +177,35 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
 
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
           <Field label="Сделки, цель" hint={`≈ ${Math.round(draft.target * 1.15)} учеников · 1,15 на сделку`} disabled={frozen}
-            {...numField(draft.target, v => patch({ target: v }))} />
+            {...numField(draft.target, v => patchModel({ target: v }))} />
           <Field label="Заявка → назначено" hint="норматив 25 %, цель 30 %" disabled={frozen}
-            {...numField(draft.conv.lead2app, v => patch({ conv: { ...draft.conv, lead2app: v } }))} />
+            {...numField(draft.conv.lead2app, v => patchModel({ conv: { ...draft.conv, lead2app: v } }))} />
           <Field label="Назначено → проведено" hint="норматив 75 %" disabled={frozen}
-            {...numField(draft.conv.app2held, v => patch({ conv: { ...draft.conv, app2held: v } }))} />
+            {...numField(draft.conv.app2held, v => patchModel({ conv: { ...draft.conv, app2held: v } }))} />
           <Field label="Проведено → предоплата" hint="норматив 60–65 %" disabled={frozen}
-            {...numField(draft.conv.held2pre, v => patch({ conv: { ...draft.conv, held2pre: v } }))} />
+            {...numField(draft.conv.held2pre, v => patchModel({ conv: { ...draft.conv, held2pre: v } }))} />
           <Field label="Предоплата → оплата" hint="норматив 80 %" disabled={frozen}
-            {...numField(draft.conv.pre2paid, v => patch({ conv: { ...draft.conv, pre2paid: v } }))} />
+            {...numField(draft.conv.pre2paid, v => patchModel({ conv: { ...draft.conv, pre2paid: v } }))} />
           <Field label="Средний чек, ₸" hint="из факта прошлого месяца" disabled={frozen}
-            {...numField(draft.check, v => patch({ check: v }))} />
+            {...numField(draft.check, v => patchModel({ check: v }))} />
           <Field label="CPL, потолок $" hint="цена заявки в CRM" disabled={frozen}
-            {...numField(draft.cpl, v => patch({ cpl: v }))} />
+            {...numField(draft.cpl, v => patchModel({ cpl: v }))} />
         </div>
 
         <div className="grid gap-px mt-4 rounded-xl overflow-hidden" style={{ background: 'var(--border)', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
-          {PLAN_METRICS.map(m => (
-            // подпись в две строки не должна опускать цифру: высота подписи фиксирована
-            <div key={m.key} className="px-3 py-2.5 flex flex-col" style={{ background: 'var(--surface2)' }}>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{m.name}</div>
-              <div className="text-lg font-semibold mt-auto pt-0.5" style={{ color: m.key === 'paid' ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(m.key, metrics[m.key])}
+          {PLAN_METRICS.map(m => {
+            const byHand = typeof draft.manual?.[m.key] === 'number'
+            return (
+              // подпись в две строки не должна опускать цифру: высота подписи фиксирована
+              <div key={m.key} className="px-3 py-2.5 flex flex-col" style={{ background: 'var(--surface2)' }}>
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{m.name}</div>
+                <div className="text-lg font-semibold mt-auto pt-0.5" style={{ color: m.key === 'paid' ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(m.key, metrics[m.key])}
+                </div>
+                {byHand && <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--yellow)' }}>задано вручную</div>}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         <div className="text-xs mt-3" style={{ color: 'var(--text2)' }}>
