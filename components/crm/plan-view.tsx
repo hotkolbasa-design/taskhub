@@ -61,6 +61,19 @@ function Field({ label, value, hint, onChange, disabled }: {
   )
 }
 
+/** Совпадает ли черновик с сохранённым планом — по значениям, без оглядки на порядок ключей. */
+function samePlan(a: MonthPlan, b: MonthPlan): boolean {
+  const near = (x: number, y: number) => Math.abs(x - y) < 1e-9
+  return near(a.target, b.target)
+    && near(a.check, b.check)
+    && near(a.cpl, b.cpl)
+    && a.mode === b.mode
+    && (['lead2app', 'app2held', 'held2pre', 'pre2paid'] as const).every(k => near(a.conv[k], b.conv[k]))
+    && (['hunters', 'cap', 'slots', 'callable'] as const).every(k => near(a.capacity[k], b.capacity[k]))
+    && JSON.stringify(a.weights ?? {}) === JSON.stringify(b.weights ?? {})
+    && JSON.stringify(a.manual ?? null) === JSON.stringify(b.manual ?? null)
+}
+
 function StatusMark({ status }: { status: MetricStatus }) {
   if (!status) return null
   const color = status === 'ok' ? 'var(--green)' : status === 'near' ? 'var(--yellow)' : 'var(--red)'
@@ -185,7 +198,6 @@ function Bar({ load }: { load: number }) {
 
 export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (plan: MonthPlan) => Promise<void> }) {
   const [draft, setDraft] = useState<MonthPlan>(data.plan)
-  const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -194,12 +206,14 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
   if (syncedPlan !== data.plan) {
     setSyncedPlan(data.plan)
     setDraft(data.plan)
-    setDirty(false)
   }
+
+  // Кнопка живёт от сравнения с сохранённым, а не от флага: после «Вернуть нормативы»
+  // значения снова совпадают с серверными, и сохранять нечего
+  const dirty = !samePlan(draft, data.plan)
 
   const patch = useCallback((p: Partial<MonthPlan>) => {
     setDraft(prev => ({ ...prev, ...p }))
-    setDirty(true)
     setSaved(false)
   }, [])
 
@@ -208,12 +222,13 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
   // они перекрывают расчёт, и на экране цифры не двигаются — поэтому снимаем их.
   const patchModel = useCallback((p: Partial<MonthPlan>) => {
     setDraft(prev => ({ ...prev, ...p, manual: null }))
-    setDirty(true)
     setSaved(false)
   }, [])
 
+  // Показываем два знака: после правки заявок конверсия приходит как 24,074074074074076.
+  // Округляем только на экране — в модели точное значение, иначе соседние ступени сдвинутся.
   const numField = (value: number, apply: (v: number) => void) => ({
-    value: String(value).replace('.', ','),
+    value: String(Math.round(value * 100) / 100).replace('.', ','),
     onChange: (raw: string) => {
       const v = parseFloat(raw.replace(',', '.'))
       if (Number.isFinite(v) && v > 0) apply(v)
@@ -236,7 +251,7 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
 
   async function save() {
     setSaving(true)
-    try { await onSavePlan(draft); setDirty(false); setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    try { await onSavePlan(draft); setSaved(true); setTimeout(() => setSaved(false), 2000) }
     finally { setSaving(false) }
   }
 
