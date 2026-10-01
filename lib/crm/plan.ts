@@ -1,13 +1,13 @@
-import type { MonthPlan, PlanMetricKey, PlanMetrics, WeekPlanRow, CapacityRow, DashData } from './types'
+import type { MonthPlan, PlanMetricKey, PlanMetrics, WeekPlanRow, CapacityRow, DashData, MetricStatus } from './types'
 
-export const PLAN_METRICS: { key: PlanMetricKey; name: string; sub: string; unit?: 'kzt' | 'usd' }[] = [
+export const PLAN_METRICS: { key: PlanMetricKey; name: string; sub: string; unit?: 'kzt' | 'usd'; lowerIsBetter?: boolean }[] = [
   { key: 'leads', name: 'Заявки', sub: 'новые лиды' },
   { key: 'app', name: 'Собеседование назначено', sub: 'лист «Лиды»' },
   { key: 'held', name: 'Собеседование проведено', sub: 'воронка «Собеседование»' },
   { key: 'pre', name: 'Предоплата', sub: '3 000 ₸' },
   { key: 'paid', name: 'Оплата', sub: 'сделки' },
   { key: 'revenue', name: 'Выручка', sub: 'по оплаченным сделкам', unit: 'kzt' },
-  { key: 'budget', name: 'Рекламный бюджет', sub: 'расход на рекламу', unit: 'usd' },
+  { key: 'budget', name: 'Рекламный бюджет', sub: 'расход на рекламу', unit: 'usd', lowerIsBetter: true },
 ]
 
 export const DEFAULT_PLAN: MonthPlan = {
@@ -95,6 +95,77 @@ function manualOr(manual: number | undefined, derived: number): number {
   return typeof manual === 'number' && manual > 0 ? manual : derived
 }
 
+// Те же ступени без округления: правка числа пересчитывается по ним, иначе
+// округление соседей поползёт при каждом редактировании
+function rawMetrics(plan: MonthPlan): { leads: number; app: number; held: number; pre: number; paid: number } {
+  const c = plan.conv
+  const paid = plan.target
+  const pre = paid / (c.pre2paid / 100)
+  const held = pre / (c.held2pre / 100)
+  const app = held / (c.app2held / 100)
+  const leads = app / (c.lead2app / 100)
+  return { leads, app, held, pre, paid }
+}
+
+/**
+ * Правка числа прямо в плитке. Правило: изменение одной суммы не двигает другие
+ * суммы — пересчитываются только проценты на стыках этой ступени.
+ * Поставили 1500 заявок вместо 1444 — назначенные, проведённые и цель остаются,
+ * а конверсия «заявка → назначено» становится 24,1 %.
+ * Деньги связаны множителем, поэтому правка выручки меняет чек, а бюджета — CPL.
+ */
+export function applyMetricEdit(plan: MonthPlan, key: PlanMetricKey, value: number): MonthPlan {
+  if (!(value > 0)) return plan
+  const m = rawMetrics(plan)
+  const conv = { ...plan.conv }
+  const next: MonthPlan = { ...plan, conv, manual: null }
+  const ratio = (a: number, b: number) => b > 0 ? Math.min(100, a / b * 100) : 100
+
+  switch (key) {
+    case 'leads':
+      conv.lead2app = ratio(m.app, value)
+      break
+    case 'app':
+      conv.lead2app = ratio(value, m.leads)
+      conv.app2held = ratio(m.held, value)
+      break
+    case 'held':
+      conv.app2held = ratio(value, m.app)
+      conv.held2pre = ratio(m.pre, value)
+      break
+    case 'pre':
+      conv.held2pre = ratio(value, m.held)
+      conv.pre2paid = ratio(m.paid, value)
+      break
+    case 'paid':
+      conv.pre2paid = ratio(value, m.pre)
+      next.target = value
+      break
+    // Деньги делим на то же округлённое число, что человек видит в плитке,
+    // иначе введённые $4 000 возвращаются как $3 999
+    case 'revenue':
+      next.check = value / Math.round(m.paid)
+      break
+    case 'budget':
+      next.cpl = value / Math.round(m.leads)
+      break
+  }
+  return next
+}
+
+/** Конверсии, уведённые от норматива руками: о них стоит сказать вслух. */
+export function convDrift(plan: MonthPlan): { key: keyof MonthPlan['conv']; label: string; value: number; norm: number }[] {
+  const labels: Record<keyof MonthPlan['conv'], string> = {
+    lead2app: 'заявка → назначено',
+    app2held: 'назначено → проведено',
+    held2pre: 'проведено → предоплата',
+    pre2paid: 'предоплата → оплата',
+  }
+  return (Object.keys(labels) as (keyof MonthPlan['conv'])[])
+    .filter(k => Math.abs(plan.conv[k] - DEFAULT_PLAN.conv[k]) >= 0.05)
+    .map(k => ({ key: k, label: labels[k], value: plan.conv[k], norm: DEFAULT_PLAN.conv[k] }))
+}
+
 export function throughput(plan: MonthPlan): number {
   const c = plan.conv
   return (c.lead2app / 100) * (c.app2held / 100) * (c.held2pre / 100) * (c.pre2paid / 100) * 100
@@ -120,6 +191,62 @@ function weekFacts(data: DashData): PlanMetrics[] {
     revenue: revenue[i] ?? 0,
     budget: budget[i] ?? 0,
   }))
+}
+
+/** Накопленный факт месяца — из уже посчитанной общей карточки. */
+export function monthFact(data: DashData): PlanMetrics {
+  const ms = data.marketing.overall.milestones
+  return {
+    leads: ms[0]?.total ?? 0,
+    app: ms[1]?.total ?? 0,
+    held: ms[2]?.total ?? 0,
+    pre: ms[3]?.total ?? 0,
+    paid: ms[ms.length - 1]?.total ?? 0,
+    revenue: data.marketing.overall.revenue?.total ?? 0,
+    budget: data.marketing.overall.spend?.spent.total ?? 0,
+  }
+}
+
+/**
+ * Сколько должно быть к сегодняшнему дню. Считается по ровному темпу, а не по
+ * догоняющему: иначе провал первой недели задерёт планку текущей и отставание
+ * посчитается дважды. Сегодняшний день входит в срок — норму дня надо делать сегодня.
+ */
+export function planToDate(plan: MonthPlan, data: DashData, todayIso: string): PlanMetrics {
+  const metrics = planMetrics(plan)
+  const total = data.daysIso.length
+  const passed = data.daysIso.filter(d => d <= todayIso).length
+  const share = total > 0 ? Math.min(1, passed / total) : 0
+  const out = {} as PlanMetrics
+  for (const { key } of PLAN_METRICS) out[key] = metrics[key] * share
+  return out
+}
+
+/**
+ * Галочка, если дошли до плана на сегодня; крестик, если недобор больше десятой части.
+ * Для расхода знак обратный: уложиться в бюджет — хорошо, перебрать — плохо.
+ */
+export function metricStatus(fact: number, due: number, lowerIsBetter = false): MetricStatus {
+  if (due <= 0) return null
+  const ratio = fact / due
+  if (lowerIsBetter) {
+    if (ratio <= 1) return 'ok'
+    if (ratio <= 1.1) return 'near'
+    return 'behind'
+  }
+  if (ratio >= 1) return 'ok'
+  if (ratio >= 0.9) return 'near'
+  return 'behind'
+}
+
+/** Чем кончится месяц, если темп не изменится. */
+export function forecastMonth(fact: PlanMetrics, data: DashData, todayIso: string): PlanMetrics {
+  const total = data.daysIso.length
+  const passed = Math.max(1, data.daysIso.filter(d => d <= todayIso).length)
+  const k = total / passed
+  const out = {} as PlanMetrics
+  for (const { key } of PLAN_METRICS) out[key] = fact[key] * k
+  return out
 }
 
 // Воскресенье — выходной: слоты собеседований считаются по рабочим дням недели

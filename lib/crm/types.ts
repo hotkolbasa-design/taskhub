@@ -84,6 +84,8 @@ export type WeekPlanRow = {
   fact: PlanMetrics
 }
 
+export type MetricStatus = 'ok' | 'near' | 'behind' | null
+
 export type CapacityRow = {
   key: string
   label: string
