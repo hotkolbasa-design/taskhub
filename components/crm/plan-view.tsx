@@ -1,13 +1,25 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { PLAN_METRICS, planMetrics, throughput, buildWeekPlan, buildCapacity, neededHunters, neededSlots, planGap } from '@/lib/crm/plan'
-import type { DashData, MonthPlan, PlanMetricKey } from '@/lib/crm/types'
+import {
+  PLAN_METRICS, planMetrics, throughput, buildWeekPlan, buildCapacity, neededHunters, neededSlots, planGap,
+  applyMetricEdit, convDrift, monthFact, planToDate, metricStatus, forecastMonth, DEFAULT_PLAN,
+} from '@/lib/crm/plan'
+import type { DashData, MonthPlan, PlanMetricKey, MetricStatus } from '@/lib/crm/types'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 const NF = new Intl.NumberFormat('ru-RU')
 
 const n = (v: number) => NF.format(Math.round(v))
+
+function plural(v: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(Math.round(v)) % 100
+  const last = abs % 10
+  if (abs > 10 && abs < 20) return many
+  if (last > 1 && last < 5) return few
+  if (last === 1) return one
+  return many
+}
 const thousands = (v: number) => NF.format(Math.round(v / 1000)) + 'к'
 const pct = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',') + ' %'
 
@@ -45,6 +57,90 @@ function Field({ label, value, hint, onChange, disabled }: {
         }}
       />
       <span className="text-[10px]" style={{ color: 'var(--text2)', opacity: 0.7, fontFamily: 'var(--font-mono)' }}>{hint}</span>
+    </div>
+  )
+}
+
+function StatusMark({ status }: { status: MetricStatus }) {
+  if (!status) return null
+  const color = status === 'ok' ? 'var(--green)' : status === 'near' ? 'var(--yellow)' : 'var(--red)'
+  const title = status === 'ok' ? 'план на сегодня выполнен' : status === 'near' ? 'почти по плану' : 'отстаём от плана на сегодня'
+  return (
+    <span title={title} aria-label={title} className="inline-flex items-center justify-center shrink-0"
+      style={{ width: 14, height: 14, borderRadius: 7, background: color, color: '#fff', fontSize: 9, lineHeight: '14px', fontWeight: 700 }}>
+      {status === 'behind' ? '✕' : status === 'near' ? '≈' : '✓'}
+    </span>
+  )
+}
+
+/**
+ * Плитка метрики: план редактируется по клику, под ним факт месяца со значком.
+ * Значок сравнивает факт не с планом месяца, а с планом на сегодня — иначе
+ * первого числа всё было бы красным.
+ */
+function MetricTile({ metric, plan, fact, due, showFact, editable, onEdit }: {
+  metric: { key: PlanMetricKey; name: string; lowerIsBetter?: boolean }
+  plan: number
+  fact: number
+  due: number
+  showFact: boolean
+  editable: boolean
+  onEdit: (v: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [raw, setRaw] = useState('')
+
+  function commit() {
+    const v = parseFloat(raw.replace(/\s/g, '').replace(',', '.'))
+    if (Number.isFinite(v) && v > 0) onEdit(v)
+    setEditing(false)
+  }
+
+  const status = showFact ? metricStatus(fact, due, metric.lowerIsBetter) : null
+
+  return (
+    <div className="px-3 py-2.5 flex flex-col" style={{ background: 'var(--surface2)' }}>
+      {/* подпись в две строки не должна опускать цифру: высота подписи фиксирована */}
+      <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{metric.name}</div>
+
+      <div className="mt-auto pt-0.5">
+        {editing ? (
+          <input
+            autoFocus type="text" inputMode="decimal" value={raw}
+            onChange={e => setRaw(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+            className="w-full px-1.5 py-0.5 rounded outline-none text-lg font-semibold"
+            style={{
+              background: 'var(--surface)', border: '1px solid var(--accent)', color: 'var(--text)',
+              fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
+            }}
+          />
+        ) : (
+          <button
+            onClick={() => { if (editable) { setRaw(String(Math.round(plan))); setEditing(true) } }}
+            title={editable ? 'нажмите, чтобы поставить своё число' : undefined}
+            className="text-lg font-semibold text-left w-full"
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              color: metric.key === 'paid' ? 'var(--accent)' : 'var(--text)',
+              fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
+              cursor: editable ? 'pointer' : 'default',
+            }}
+          >
+            {fmt(metric.key, plan)}
+          </button>
+        )}
+      </div>
+
+      {showFact && (
+        <div className="flex items-center gap-1.5 mt-1">
+          <StatusMark status={status} />
+          <span className="text-[11px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+            факт {fmt(metric.key, fact)}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -125,6 +221,10 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
   })
 
   const metrics = useMemo(() => planMetrics(draft), [draft])
+  const fact = useMemo(() => monthFact(data), [data])
+  const due = useMemo(() => planToDate(draft, data, TODAY), [draft, data])
+  const forecast = useMemo(() => forecastMonth(fact, data, TODAY), [fact, data])
+  const drift = useMemo(() => convDrift(draft), [draft])
   const rows = useMemo(() => buildWeekPlan(data, draft, TODAY), [data, draft])
   const caps = useMemo(() => buildCapacity(rows, draft), [rows, draft])
   const { gap, openWeeks } = useMemo(() => planGap(rows), [rows])
@@ -193,26 +293,48 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
         </div>
 
         <div className="grid gap-px mt-4 rounded-xl overflow-hidden" style={{ background: 'var(--border)', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
-          {PLAN_METRICS.map(m => {
-            const byHand = typeof draft.manual?.[m.key] === 'number'
-            return (
-              // подпись в две строки не должна опускать цифру: высота подписи фиксирована
-              <div key={m.key} className="px-3 py-2.5 flex flex-col" style={{ background: 'var(--surface2)' }}>
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{m.name}</div>
-                <div className="text-lg font-semibold mt-auto pt-0.5" style={{ color: m.key === 'paid' ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(m.key, metrics[m.key])}
-                </div>
-                {byHand && <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--yellow)' }}>задано вручную</div>}
-              </div>
-            )
-          })}
+          {PLAN_METRICS.map(m => (
+            <MetricTile
+              key={m.key}
+              metric={m}
+              plan={metrics[m.key]}
+              fact={fact[m.key]}
+              due={due[m.key]}
+              showFact={!future}
+              editable={!frozen}
+              onEdit={v => patch(applyMetricEdit(draft, m.key, v))}
+            />
+          ))}
         </div>
 
         <div className="text-xs mt-3" style={{ color: 'var(--text2)' }}>
           Сквозная конверсия заявки → оплата — <b style={{ color: 'var(--text)' }}>{pct(throughput(draft))}</b>.
           {' '}Цена клиента при этом плане — <b style={{ color: 'var(--text)' }}>${(metrics.budget / metrics.paid).toFixed(1).replace('.', ',')}</b>,
           {' '}выручка <b style={{ color: 'var(--text)' }}>{n(metrics.revenue)} ₸</b>.
+          {!future && fact.leads > 0 && (
+            <> При сегодняшнем темпе месяц закончится на <b style={{ color: forecast.paid >= metrics.paid ? 'var(--green)' : 'var(--red)' }}>{n(forecast.paid)} {plural(forecast.paid, 'сделке', 'сделках', 'сделках')}</b> против плана {n(metrics.paid)}.</>
+          )}
         </div>
+
+        {drift.length > 0 && !frozen && (
+          <div className="flex items-start gap-2 mt-3 flex-wrap text-xs" style={{ color: 'var(--text2)' }}>
+            <span>
+              Ручная правка увела конверсии от норматива:{' '}
+              {drift.map((d, i) => (
+                <span key={d.key}>
+                  {i > 0 && ', '}
+                  <b style={{ color: 'var(--yellow)' }}>{d.label} {pct(d.value)}</b> вместо {pct(d.norm)}
+                </span>
+              ))}.
+            </span>
+            <button onClick={() => patch({ conv: { ...DEFAULT_PLAN.conv } })}
+              className="px-2 py-0.5 rounded text-[11px]"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}
+            >
+              Вернуть нормативы
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── 02 · Разбивка по неделям ───────────────────────────────────────── */}
@@ -307,6 +429,14 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
                   <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>
                     {fmt(m.key, metrics[m.key])}
                   </span>
+                  {!future && (
+                    <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                      <StatusMark status={metricStatus(fact[m.key], due[m.key], m.lowerIsBetter)} />
+                      <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                        {fmt(m.key, fact[m.key])}
+                      </span>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
