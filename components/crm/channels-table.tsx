@@ -48,6 +48,18 @@ const n = (v: number) => NF.format(Math.round(v))
 const pct = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',') + ' %'
 const usd = (v: number) => '$' + (v >= 100 ? n(v) : String(Math.round(v * 100) / 100).replace('.', ','))
 
+function plural(v: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(Math.round(v)) % 100
+  const last = abs % 10
+  if (abs > 10 && abs < 20) return many
+  if (last > 1 && last < 5) return few
+  if (last === 1) return one
+  return many
+}
+
+const leadsWord = (v: number) => `${n(v)} ${plural(v, 'заявка', 'заявки', 'заявок')}`
+const paidWord = (v: number) => `${n(v)} ${plural(v, 'оплата', 'оплаты', 'оплат')}`
+
 // Источник иногда приходит вместе с текстом звонка — в таблице нужна только первая строка
 function shortName(s: string): string {
   const first = s.split('\n')[0].trim()
@@ -294,7 +306,7 @@ function Findings({ rows, avgToPaid, avgCac }: { rows: Row[]; avgToPaid: number;
       label: 'Дешевле всего клиент',
       name: cheapest.name,
       value: usd(cheapest.cac),
-      note: `${n(cheapest.paid)} оплат при расходе ${usd(cheapest.spent)}` +
+      note: `${paidWord(cheapest.paid)} при расходе ${usd(cheapest.spent)}` +
         (avgCac > 0 ? ` · в ${String(Math.round(avgCac / cheapest.cac * 10) / 10).replace('.', ',')} раза дешевле средней` : ''),
     },
     best && {
@@ -302,13 +314,13 @@ function Findings({ rows, avgToPaid, avgCac }: { rows: Row[]; avgToPaid: number;
       label: 'Лучше всех доводит до оплаты',
       name: best.name,
       value: pct(best.toPaid),
-      note: `${n(best.leads)} заявок → ${n(best.paid)} оплат · средняя по месяцу ${pct(avgToPaid)}`,
+      note: `${leadsWord(best.leads)} → ${paidWord(best.paid)} · средняя по месяцу ${pct(avgToPaid)}`,
     },
     weak && {
       tone: 'var(--red)',
       label: weak.paid === 0 ? 'Поток без единой оплаты' : 'Деньги уходят впустую',
       name: weak.name,
-      value: weak.paid === 0 ? `${n(weak.leads)} заявок` : usd(weak.cac),
+      value: weak.paid === 0 ? leadsWord(weak.leads) : usd(weak.cac),
       note: weak.paid === 0
         ? `конверсия в назначенное собеседование ${pct(weak.toApp)} — проверить, что это за поток`
         : `сквозная ${pct(weak.toPaid)} при средней ${pct(avgToPaid)} · расход ${usd(weak.spent)}`,
