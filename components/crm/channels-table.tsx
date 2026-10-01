@@ -1,7 +1,26 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { SourceData, GroupSourceData } from '@/lib/crm/types'
+import type { DashData, SourceData, GroupSourceData } from '@/lib/crm/types'
+
+/** Раздел «Каналы»: сводка эффективности источников за выбранный месяц. */
+export function ChannelsView({ data, excluded }: { data: DashData; excluded: Set<string> }) {
+  const groups = data.marketing.groups ?? []
+  const groupedNames = new Set(groups.flatMap(g => g.sources))
+  const visible = data.marketing.sources.filter(s => !excluded.has(s.source) && !groupedNames.has(s.source))
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--text2)', opacity: 0.6 }}>
+          Эффективность каналов
+        </span>
+        <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+      </div>
+      <ChannelsTable sources={visible} groups={groups} overall={data.marketing.overall} />
+    </div>
+  )
+}
 
 type Row = {
   name: string
@@ -74,7 +93,9 @@ const COLUMNS: { key: SortKey | null; label: string; hint?: string }[] = [
 ]
 
 export function ChannelsTable({ sources, groups, overall }: {
-  sources: SourceData[]; groups: GroupSourceData[]; overall: SourceData
+  sources: SourceData[]
+  groups: GroupSourceData[]
+  overall: DashData['marketing']['overall']   // у общей карточки имя источника необязательно
 }) {
   const [sort, setSort] = useState<SortKey>('paid')
   const [asc, setAsc] = useState(false)
@@ -157,9 +178,11 @@ export function ChannelsTable({ sources, groups, overall }: {
 
   return (
     <div className="mb-6">
+      <Findings rows={rows} avgToPaid={avgToPaid} avgCac={avgCac} />
+
       <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
         <div>
-          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>Эффективность каналов</h3>
+          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>Все каналы месяца</h3>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>
             Зелёным — лучше средней по месяцу, красным — заметно хуже. Клик по заголовку сортирует.
           </p>
@@ -242,6 +265,70 @@ export function ChannelsTable({ sources, groups, overall }: {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Три вывода, ради которых раздел и открывают: где клиент дешевле всего,
+ * где лучше доводят до оплаты и куда деньги уходят зря.
+ * Канал меньше 20 заявок в лидеры по конверсии не берём — на пяти заявках
+ * «40 %» это случайность, а не канал.
+ */
+function Findings({ rows, avgToPaid, avgCac }: { rows: Row[]; avgToPaid: number; avgCac: number }) {
+  const paidRows = rows.filter(r => r.cac > 0)
+  const cheapest = paidRows.length ? paidRows.reduce((a, b) => (b.cac < a.cac ? b : a)) : null
+
+  const solid = rows.filter(r => r.leads >= 20)
+  const best = solid.length ? solid.reduce((a, b) => (b.toPaid > a.toPaid ? b : a)) : null
+
+  // Слабое место: платный канал с конверсией заметно ниже средней, иначе —
+  // самый большой поток заявок, который не дал ни одной оплаты
+  const weakPaid = paidRows.filter(r => r.toPaid < avgToPaid * 0.8).sort((a, b) => b.spent - a.spent)[0]
+  const deadFlow = rows.filter(r => r.paid === 0 && r.leads >= 20).sort((a, b) => b.leads - a.leads)[0]
+  const weak = weakPaid ?? deadFlow ?? null
+
+  const cards = [
+    cheapest && {
+      tone: 'var(--green)',
+      label: 'Дешевле всего клиент',
+      name: cheapest.name,
+      value: usd(cheapest.cac),
+      note: `${n(cheapest.paid)} оплат при расходе ${usd(cheapest.spent)}` +
+        (avgCac > 0 ? ` · в ${String(Math.round(avgCac / cheapest.cac * 10) / 10).replace('.', ',')} раза дешевле средней` : ''),
+    },
+    best && {
+      tone: 'var(--accent)',
+      label: 'Лучше всех доводит до оплаты',
+      name: best.name,
+      value: pct(best.toPaid),
+      note: `${n(best.leads)} заявок → ${n(best.paid)} оплат · средняя по месяцу ${pct(avgToPaid)}`,
+    },
+    weak && {
+      tone: 'var(--red)',
+      label: weak.paid === 0 ? 'Поток без единой оплаты' : 'Деньги уходят впустую',
+      name: weak.name,
+      value: weak.paid === 0 ? `${n(weak.leads)} заявок` : usd(weak.cac),
+      note: weak.paid === 0
+        ? `конверсия в назначенное собеседование ${pct(weak.toApp)} — проверить, что это за поток`
+        : `сквозная ${pct(weak.toPaid)} при средней ${pct(avgToPaid)} · расход ${usd(weak.spent)}`,
+    },
+  ].filter(Boolean) as { tone: string; label: string; name: string; value: string; note: string }[]
+
+  if (!cards.length) return null
+
+  return (
+    <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+      {cards.map(c => (
+        <div key={c.label} className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${c.tone}` }}>
+          <div className="text-[10px] uppercase tracking-wider" style={{ color: c.tone }}>{c.label}</div>
+          <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+            <span className="text-xl font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{c.value}</span>
+            <span className="text-sm" style={{ color: 'var(--text2)' }}>{c.name}</span>
+          </div>
+          <div className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--text2)' }}>{c.note}</div>
+        </div>
+      ))}
     </div>
   )
 }
