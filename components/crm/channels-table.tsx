@@ -25,6 +25,7 @@ export function ChannelsView({ data, excluded }: { data: DashData; excluded: Set
 type Row = {
   name: string
   grouped: boolean
+  parts: number      // сколько источников внутри группы
   leads: number
   app: number
   held: number
@@ -41,6 +42,7 @@ type Row = {
   share: number      // доля в оплатах, %
 }
 
+type Totals = { leads: number; paid: number; spent: number; revenue: number; toPaid: number; cpl: number; cac: number }
 type SortKey = 'leads' | 'paid' | 'toPaid' | 'cac' | 'romi' | 'spent' | 'revenue'
 
 const NF = new Intl.NumberFormat('ru-RU')
@@ -78,6 +80,7 @@ function toRow(s: SourceData | GroupSourceData, grouped: boolean, totalPaid: num
   return {
     name: shortName(s.source),
     grouped,
+    parts: 'sources' in s ? s.sources.length : 0,
     leads, app, held, pre, paid,
     toApp: leads > 0 ? app / leads * 100 : 0,
     toHeld: app > 0 ? held / app * 100 : 0,
@@ -88,6 +91,19 @@ function toRow(s: SourceData | GroupSourceData, grouped: boolean, totalPaid: num
     revenue,
     romi: s.spend?.romi.total ?? 0,
     share: totalPaid > 0 ? paid / totalPaid * 100 : 0,
+  }
+}
+
+function sumRows(rows: Row[]): Totals {
+  const leads = rows.reduce((s, r) => s + r.leads, 0)
+  const paid = rows.reduce((s, r) => s + r.paid, 0)
+  const spent = rows.reduce((s, r) => s + r.spent, 0)
+  const revenue = rows.reduce((s, r) => s + r.revenue, 0)
+  return {
+    leads, paid, spent, revenue,
+    toPaid: leads > 0 ? paid / leads * 100 : 0,
+    cpl: leads > 0 && spent > 0 ? spent / leads : 0,
+    cac: paid > 0 && spent > 0 ? spent / paid : 0,
   }
 }
 
@@ -114,7 +130,7 @@ export function ChannelsTable({ sources, groups, overall }: {
 
   // Итог берётся из общей карточки месяца, а не из суммы каналов: часть заявок
   // приходит без источника и ни в один канал не попадает
-  const totals = useMemo(() => {
+  const totals = useMemo<Totals>(() => {
     const ms = overall.milestones
     const leads = ms[0]?.total ?? 0
     const paid = ms[ms.length - 1]?.total ?? 0
@@ -128,17 +144,10 @@ export function ChannelsTable({ sources, groups, overall }: {
     }
   }, [overall])
 
-  const { rows, rest } = useMemo(() => {
-    const all = [
-      ...groups.map(g => ({ item: g as SourceData, grouped: true })),
-      ...sources.map(s => ({ item: s, grouped: false })),
-    ]
-    const list = all
-      .map(({ item, grouped }) => toRow(item, grouped, totals.paid))
-      // Канал с парой заявок и без денег — шум, он только мешает сравнивать
-      .filter(r => r.leads >= 5 || r.paid > 0 || r.spent > 0)
-
-    const sorted = [...list].sort((a, b) => {
+  const { groupRows, sourceRows, rest } = useMemo(() => {
+    // Канал с парой заявок и без денег — шум, он только мешает сравнивать
+    const worth = (r: Row) => r.leads >= 5 || r.paid > 0 || r.spent > 0
+    const order = (list: Row[]) => [...list].sort((a, b) => {
       // нулевая цена клиента значит «не платили», ей не место наверху рейтинга дешёвых
       const d = sort === 'cac'
         ? (a.cac || Infinity) - (b.cac || Infinity)
@@ -146,14 +155,14 @@ export function ChannelsTable({ sources, groups, overall }: {
       return asc ? -d : d
     })
 
-    // Всё, что не попало в строки: мелкие источники и заявки без источника
-    const shown = list.reduce((acc, r) => ({
-      leads: acc.leads + r.leads, paid: acc.paid + r.paid,
-      spent: acc.spent + r.spent, revenue: acc.revenue + r.revenue,
-    }), { leads: 0, paid: 0, spent: 0, revenue: 0 })
+    const g = groups.map(x => toRow(x as SourceData, true, totals.paid)).filter(worth)
+    const s = sources.map(x => toRow(x, false, totals.paid)).filter(worth)
+    const shown = sumRows([...g, ...s])
 
     return {
-      rows: sorted,
+      groupRows: order(g),
+      sourceRows: order(s),
+      // Всё, что не попало в строки: мелкие источники и заявки без источника
       rest: {
         leads: Math.max(0, totals.leads - shown.leads),
         paid: Math.max(0, totals.paid - shown.paid),
@@ -163,44 +172,97 @@ export function ChannelsTable({ sources, groups, overall }: {
     }
   }, [sources, groups, sort, asc, totals])
 
-  if (!rows.length) return null
+  if (!groupRows.length && !sourceRows.length) return null
 
   // Канал сравнивается со средним по месяцу, а не с абстрактной нормой.
-  // База — те же цифры, что в строке «Итого», иначе в шапке и в итоге стояли бы разные.
+  // База — те же цифры, что в итоге месяца, иначе в шапке и в итоге стояли бы разные.
   const avgToPaid = totals.toPaid
   const avgCac = totals.cac
 
+  const sortBy = (key: SortKey) => {
+    if (key === sort) setAsc(v => !v)
+    else { setSort(key); setAsc(false) }
+  }
+
+  return (
+    <div>
+      <Findings rows={[...groupRows, ...sourceRows]} avgToPaid={avgToPaid} avgCac={avgCac} />
+
+      {groupRows.length > 0 && (
+        <ChannelBlock
+          title="Группы каналов"
+          subtitle="объединённые источники — ими и управляют бюджетом"
+          rows={groupRows}
+          footerLabel="Итого по группам"
+          footer={sumRows(groupRows)}
+          sort={sort} asc={asc} onSort={sortBy}
+          avgToPaid={avgToPaid} avgCac={avgCac}
+        />
+      )}
+
+      {sourceRows.length > 0 && (
+        <ChannelBlock
+          title="Отдельные источники"
+          subtitle="всё, что не входит ни в одну группу"
+          rows={sourceRows}
+          footerLabel="Итого по источникам"
+          footer={sumRows(sourceRows)}
+          sort={sort} asc={asc} onSort={sortBy}
+          avgToPaid={avgToPaid} avgCac={avgCac}
+          rest={rest.leads > 0 || rest.paid > 0 ? rest : undefined}
+        />
+      )}
+
+      <div className="rounded-2xl px-4 py-3 flex flex-wrap items-baseline gap-x-6 gap-y-1"
+        style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Всего за месяц</span>
+        <Stat label="заявки" value={n(totals.leads)} />
+        <Stat label="оплаты" value={n(totals.paid)} />
+        <Stat label="сквозная" value={pct(totals.toPaid)} />
+        {totals.spent > 0 && <Stat label="расход" value={usd(totals.spent)} />}
+        {totals.cpl > 0 && <Stat label="CPL" value={usd(totals.cpl)} />}
+        {totals.cac > 0 && <Stat label="клиент" value={usd(totals.cac)} />}
+        {totals.revenue > 0 && <Stat label="выручка" value={n(totals.revenue / 1000) + 'к ₸'} />}
+      </div>
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="text-sm" style={{ color: 'var(--text2)' }}>
+      {label}{' '}
+      <strong style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{value}</strong>
+    </span>
+  )
+}
+
+function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, onSort, avgToPaid, avgCac, rest }: {
+  title: string
+  subtitle: string
+  rows: Row[]
+  footer: Totals
+  footerLabel: string
+  sort: SortKey
+  asc: boolean
+  onSort: (key: SortKey) => void
+  avgToPaid: number
+  avgCac: number
+  rest?: { leads: number; paid: number; spent: number; revenue: number }
+}) {
   const convColor = (v: number) => v === 0 ? 'var(--text2)' : v >= avgToPaid * 1.25 ? 'var(--green)' : v <= avgToPaid * 0.6 ? 'var(--red)' : 'var(--text)'
   const cacColor = (v: number) => v === 0 ? 'var(--text2)' : v <= avgCac * 0.75 ? 'var(--green)' : v >= avgCac * 1.5 ? 'var(--red)' : 'var(--text)'
   const romiColor = (v: number, spent: number) => spent === 0 ? 'var(--text2)' : v >= 400 ? 'var(--green)' : v < 100 ? 'var(--red)' : 'var(--text)'
 
-  const th = (label: string, key: SortKey | null, hint?: string) => (
-    <th key={label} title={hint}
-      onClick={key ? () => { if (key === sort) setAsc(v => !v); else { setSort(key); setAsc(false) } } : undefined}
-      className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider whitespace-nowrap"
-      style={{
-        color: key && sort === key ? 'var(--accent)' : 'var(--text2)',
-        background: 'var(--surface2)', borderBottom: '1px solid var(--border)',
-        cursor: key ? 'pointer' : 'default', fontWeight: key && sort === key ? 700 : 500,
-      }}
-    >
-      {label}{key && sort === key ? (asc ? ' ↑' : ' ↓') : ''}
-    </th>
-  )
-
   return (
     <div className="mb-6">
-      <Findings rows={rows} avgToPaid={avgToPaid} avgCac={avgCac} />
-
       <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
         <div>
-          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>Все каналы месяца</h3>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>
-            Зелёным — лучше средней по месяцу, красным — заметно хуже. Клик по заголовку сортирует.
-          </p>
+          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>{title}</h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{subtitle}</p>
         </div>
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
-          средняя сквозная {pct(avgToPaid)}{avgCac > 0 ? ` · средняя цена клиента ${usd(avgCac)}` : ''}
+          зелёным — лучше средней по месяцу ({pct(avgToPaid)}), красным — заметно хуже
         </span>
       </div>
 
@@ -209,8 +271,22 @@ export function ChannelsTable({ sources, groups, overall }: {
           <thead>
             <tr>
               <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider sticky left-0"
-                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', minWidth: 210, zIndex: 1 }}>Канал</th>
-              {COLUMNS.map(c => th(c.label, c.key, c.hint))}
+                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', minWidth: 210, zIndex: 1 }}>
+                {title === 'Группы каналов' ? 'Группа' : 'Источник'}
+              </th>
+              {COLUMNS.map(c => (
+                <th key={c.label} title={c.hint}
+                  onClick={c.key ? () => onSort(c.key!) : undefined}
+                  className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider whitespace-nowrap"
+                  style={{
+                    color: c.key && sort === c.key ? 'var(--accent)' : 'var(--text2)',
+                    background: 'var(--surface2)', borderBottom: '1px solid var(--border)',
+                    cursor: c.key ? 'pointer' : 'default', fontWeight: c.key && sort === c.key ? 700 : 500,
+                  }}
+                >
+                  {c.label}{c.key && sort === c.key ? (asc ? ' ↑' : ' ↓') : ''}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -219,7 +295,11 @@ export function ChannelsTable({ sources, groups, overall }: {
                 <td className="px-3 py-2.5 sticky left-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', zIndex: 1 }}>
                   <div className="flex items-center gap-2">
                     <span className="text-sm" style={{ color: 'var(--text)' }}>{r.name}</span>
-                    {r.grouped && <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>группа</span>}
+                    {r.grouped && r.parts > 0 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap" style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>
+                        {r.parts} {plural(r.parts, 'источник', 'источника', 'источников')}
+                      </span>
+                    )}
                   </div>
                   {r.share > 0 && (
                     <div className="flex items-center gap-1.5 mt-1">
@@ -242,7 +322,8 @@ export function ChannelsTable({ sources, groups, overall }: {
                 <Num v={r.spent ? pct(r.romi) : '—'} color={romiColor(r.romi, r.spent)} muted={!r.spent} />
               </tr>
             ))}
-            {(rest.leads > 0 || rest.paid > 0) && (
+
+            {rest && (
               <tr>
                 <td className="px-3 py-2.5 sticky left-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', zIndex: 1 }}>
                   <span className="text-sm" style={{ color: 'var(--text2)' }}>Без источника и мелкие</span>
@@ -260,18 +341,19 @@ export function ChannelsTable({ sources, groups, overall }: {
                 <Num v="—" muted />
               </tr>
             )}
+
             <tr>
               <td className="px-3 py-2.5 sticky left-0 text-sm font-semibold"
-                style={{ background: 'var(--surface2)', color: 'var(--text)', zIndex: 1 }}>Итого</td>
-              <Num v={n(totals.leads)} bold total />
+                style={{ background: 'var(--surface2)', color: 'var(--text)', zIndex: 1 }}>{footerLabel}</td>
+              <Num v={n(footer.leads)} bold total />
               <Num v="" total />
               <Num v="" total />
-              <Num v={n(totals.paid)} bold total />
-              <Num v={pct(totals.toPaid)} bold total />
-              <Num v={totals.spent ? usd(totals.spent) : '—'} total />
-              <Num v={totals.cpl ? usd(totals.cpl) : '—'} total />
-              <Num v={totals.cac ? usd(totals.cac) : '—'} total />
-              <Num v={totals.revenue ? n(totals.revenue / 1000) + 'к' : '—'} total />
+              <Num v={n(footer.paid)} bold total />
+              <Num v={pct(footer.toPaid)} bold total />
+              <Num v={footer.spent ? usd(footer.spent) : '—'} total />
+              <Num v={footer.cpl ? usd(footer.cpl) : '—'} total />
+              <Num v={footer.cac ? usd(footer.cac) : '—'} total />
+              <Num v={footer.revenue ? n(footer.revenue / 1000) + 'к' : '—'} total />
               <Num v="" total />
             </tr>
           </tbody>
@@ -330,7 +412,7 @@ function Findings({ rows, avgToPaid, avgCac }: { rows: Row[]; avgToPaid: number;
   if (!cards.length) return null
 
   return (
-    <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+    <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
       {cards.map(c => (
         <div key={c.label} className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${c.tone}` }}>
           <div className="text-[10px] uppercase tracking-wider" style={{ color: c.tone }}>{c.label}</div>
