@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { OverviewView } from './overview-view'
 import { PlanView } from './plan-view'
+import { ChannelsTable } from './channels-table'
 import StudentsView from './students-view'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1001,6 +1002,9 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
           )}
         </button>
       </div>
+
+      {/* Сводка «кто эффективнее» — до подробных карточек по каждому каналу */}
+      <ChannelsTable sources={visible} groups={groups} />
 
       {/* Single shared scroll container for all table cards */}
       <div style={{ overflowX: 'auto' }}>
