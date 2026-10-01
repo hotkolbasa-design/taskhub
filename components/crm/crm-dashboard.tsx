@@ -1004,7 +1004,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
       </div>
 
       {/* Сводка «кто эффективнее» — до подробных карточек по каждому каналу */}
-      <ChannelsTable sources={visible} groups={groups} />
+      <ChannelsTable sources={visible} groups={groups} overall={data.marketing.overall} />
 
       {/* Single shared scroll container for all table cards */}
       <div style={{ overflowX: 'auto' }}>

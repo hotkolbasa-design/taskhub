@@ -73,45 +73,69 @@ const COLUMNS: { key: SortKey | null; label: string; hint?: string }[] = [
   { key: 'romi', label: 'ROMI' },
 ]
 
-export function ChannelsTable({ sources, groups }: { sources: SourceData[]; groups: GroupSourceData[] }) {
+export function ChannelsTable({ sources, groups, overall }: {
+  sources: SourceData[]; groups: GroupSourceData[]; overall: SourceData
+}) {
   const [sort, setSort] = useState<SortKey>('paid')
+  const [asc, setAsc] = useState(false)
 
-  const rows = useMemo(() => {
-    const all = [
-      ...groups.map(g => ({ item: g as SourceData, grouped: true })),
-      ...sources.map(s => ({ item: s, grouped: false })),
-    ]
-    const totalPaid = all.reduce((acc, { item }) => acc + (item.milestones[item.milestones.length - 1]?.total ?? 0), 0)
-    const list = all
-      .map(({ item, grouped }) => toRow(item, grouped, totalPaid))
-      // Канал с парой заявок и без денег — шум, он только мешает сравнивать
-      .filter(r => r.leads >= 5 || r.paid > 0 || r.spent > 0)
-    const dir = (a: number, b: number) => b - a
-    return [...list].sort((a, b) => sort === 'cac'
-      // нулевая цена клиента значит «не платили», ей не место наверху рейтинга дешёвых
-      ? (a.cac || Infinity) - (b.cac || Infinity)
-      : dir(a[sort], b[sort]))
-  }, [sources, groups, sort])
-
+  // Итог берётся из общей карточки месяца, а не из суммы каналов: часть заявок
+  // приходит без источника и ни в один канал не попадает
   const totals = useMemo(() => {
-    const leads = rows.reduce((s, r) => s + r.leads, 0)
-    const paid = rows.reduce((s, r) => s + r.paid, 0)
-    const spent = rows.reduce((s, r) => s + r.spent, 0)
-    const revenue = rows.reduce((s, r) => s + r.revenue, 0)
+    const ms = overall.milestones
+    const leads = ms[0]?.total ?? 0
+    const paid = ms[ms.length - 1]?.total ?? 0
+    const spent = overall.spend?.spent.total ?? 0
+    const revenue = overall.revenue?.total ?? 0
     return {
       leads, paid, spent, revenue,
       toPaid: leads > 0 ? paid / leads * 100 : 0,
       cpl: leads > 0 && spent > 0 ? spent / leads : 0,
       cac: paid > 0 && spent > 0 ? spent / paid : 0,
     }
-  }, [rows])
+  }, [overall])
+
+  const { rows, rest } = useMemo(() => {
+    const all = [
+      ...groups.map(g => ({ item: g as SourceData, grouped: true })),
+      ...sources.map(s => ({ item: s, grouped: false })),
+    ]
+    const list = all
+      .map(({ item, grouped }) => toRow(item, grouped, totals.paid))
+      // Канал с парой заявок и без денег — шум, он только мешает сравнивать
+      .filter(r => r.leads >= 5 || r.paid > 0 || r.spent > 0)
+
+    const sorted = [...list].sort((a, b) => {
+      // нулевая цена клиента значит «не платили», ей не место наверху рейтинга дешёвых
+      const d = sort === 'cac'
+        ? (a.cac || Infinity) - (b.cac || Infinity)
+        : b[sort] - a[sort]
+      return asc ? -d : d
+    })
+
+    // Всё, что не попало в строки: мелкие источники и заявки без источника
+    const shown = list.reduce((acc, r) => ({
+      leads: acc.leads + r.leads, paid: acc.paid + r.paid,
+      spent: acc.spent + r.spent, revenue: acc.revenue + r.revenue,
+    }), { leads: 0, paid: 0, spent: 0, revenue: 0 })
+
+    return {
+      rows: sorted,
+      rest: {
+        leads: Math.max(0, totals.leads - shown.leads),
+        paid: Math.max(0, totals.paid - shown.paid),
+        spent: Math.max(0, totals.spent - shown.spent),
+        revenue: Math.max(0, totals.revenue - shown.revenue),
+      },
+    }
+  }, [sources, groups, sort, asc, totals])
 
   if (!rows.length) return null
 
-  // Канал сравнивается со средней по месяцу, а не с абстрактной нормой
+  // Канал сравнивается со средним по месяцу, а не с абстрактной нормой.
+  // База — те же цифры, что в строке «Итого», иначе в шапке и в итоге стояли бы разные.
   const avgToPaid = totals.toPaid
-  const paidRows = rows.filter(r => r.cac > 0)
-  const avgCac = paidRows.length ? paidRows.reduce((s, r) => s + r.cac, 0) / paidRows.length : 0
+  const avgCac = totals.cac
 
   const convColor = (v: number) => v === 0 ? 'var(--text2)' : v >= avgToPaid * 1.25 ? 'var(--green)' : v <= avgToPaid * 0.6 ? 'var(--red)' : 'var(--text)'
   const cacColor = (v: number) => v === 0 ? 'var(--text2)' : v <= avgCac * 0.75 ? 'var(--green)' : v >= avgCac * 1.5 ? 'var(--red)' : 'var(--text)'
@@ -119,7 +143,7 @@ export function ChannelsTable({ sources, groups }: { sources: SourceData[]; grou
 
   const th = (label: string, key: SortKey | null, hint?: string) => (
     <th key={label} title={hint}
-      onClick={key ? () => setSort(key) : undefined}
+      onClick={key ? () => { if (key === sort) setAsc(v => !v); else { setSort(key); setAsc(false) } } : undefined}
       className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider whitespace-nowrap"
       style={{
         color: key && sort === key ? 'var(--accent)' : 'var(--text2)',
@@ -127,7 +151,7 @@ export function ChannelsTable({ sources, groups }: { sources: SourceData[]; grou
         cursor: key ? 'pointer' : 'default', fontWeight: key && sort === key ? 700 : 500,
       }}
     >
-      {label}{key && sort === key ? ' ↓' : ''}
+      {label}{key && sort === key ? (asc ? ' ↑' : ' ↓') : ''}
     </th>
   )
 
@@ -183,6 +207,24 @@ export function ChannelsTable({ sources, groups }: { sources: SourceData[]; grou
                 <Num v={r.spent ? pct(r.romi) : '—'} color={romiColor(r.romi, r.spent)} muted={!r.spent} />
               </tr>
             ))}
+            {(rest.leads > 0 || rest.paid > 0) && (
+              <tr>
+                <td className="px-3 py-2.5 sticky left-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', zIndex: 1 }}>
+                  <span className="text-sm" style={{ color: 'var(--text2)' }}>Без источника и мелкие</span>
+                  <div className="text-[10px] mt-0.5" style={{ color: 'var(--text2)', opacity: 0.8 }}>заявки без метки и каналы меньше 5 заявок</div>
+                </td>
+                <Num v={n(rest.leads)} muted />
+                <Num v="—" muted />
+                <Num v="—" muted />
+                <Num v={n(rest.paid)} muted />
+                <Num v={rest.leads ? pct(rest.paid / rest.leads * 100) : '—'} muted />
+                <Num v={rest.spent ? usd(rest.spent) : '—'} muted />
+                <Num v="—" muted />
+                <Num v="—" muted />
+                <Num v={rest.revenue ? n(rest.revenue / 1000) + 'к' : '—'} muted />
+                <Num v="—" muted />
+              </tr>
+            )}
             <tr>
               <td className="px-3 py-2.5 sticky left-0 text-sm font-semibold"
                 style={{ background: 'var(--surface2)', color: 'var(--text)', zIndex: 1 }}>Итого</td>
@@ -213,6 +255,7 @@ function Num({ v, color, bold, muted, total }: { v: string; color?: string; bold
         fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
         fontSize: 13, fontWeight: bold ? 600 : 400,
         color: color ?? (muted ? 'var(--text2)' : 'var(--text)'),
+        whiteSpace: 'nowrap',  // «201,4 %» не должно разрываться между строк
       }}
     >{v}</td>
   )
