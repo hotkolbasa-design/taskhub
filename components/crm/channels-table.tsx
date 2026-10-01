@@ -94,16 +94,24 @@ function toRow(s: SourceData | GroupSourceData, grouped: boolean, totalPaid: num
   }
 }
 
+/**
+ * Подытог блока. CPL и цена клиента считаются только по каналам с расходом:
+ * если делить бюджет на весь поток вместе с органикой и звонками, заявка
+ * выходит по 80 центов, и цифра перестаёт что-либо значить.
+ */
 function sumRows(rows: Row[]): Totals {
   const leads = rows.reduce((s, r) => s + r.leads, 0)
   const paid = rows.reduce((s, r) => s + r.paid, 0)
   const spent = rows.reduce((s, r) => s + r.spent, 0)
   const revenue = rows.reduce((s, r) => s + r.revenue, 0)
+  const withSpend = rows.filter(r => r.spent > 0)
+  const paidLeads = withSpend.reduce((s, r) => s + r.leads, 0)
+  const paidSales = withSpend.reduce((s, r) => s + r.paid, 0)
   return {
     leads, paid, spent, revenue,
     toPaid: leads > 0 ? paid / leads * 100 : 0,
-    cpl: leads > 0 && spent > 0 ? spent / leads : 0,
-    cac: paid > 0 && spent > 0 ? spent / paid : 0,
+    cpl: paidLeads > 0 && spent > 0 ? spent / paidLeads : 0,
+    cac: paidSales > 0 && spent > 0 ? spent / paidSales : 0,
   }
 }
 
@@ -223,6 +231,9 @@ export function ChannelsTable({ sources, groups, overall }: {
         {totals.cpl > 0 && <Stat label="CPL" value={usd(totals.cpl)} />}
         {totals.cac > 0 && <Stat label="клиент" value={usd(totals.cac)} />}
         {totals.revenue > 0 && <Stat label="выручка" value={n(totals.revenue / 1000) + 'к ₸'} />}
+        <span className="text-[11px] w-full" style={{ color: 'var(--text2)', opacity: 0.8 }}>
+          Здесь CPL и клиент считаются на весь поток заявок — те же цифры, что в разделе «Маркетинг».
+        </span>
       </div>
     </div>
   )
@@ -359,6 +370,9 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
           </tbody>
         </table>
       </div>
+      <p className="text-[11px] mt-1.5" style={{ color: 'var(--text2)' }}>
+        В подытоге CPL и цена клиента считаются только по каналам с расходом — бесплатные заявки их не разбавляют.
+      </p>
     </div>
   )
 }
