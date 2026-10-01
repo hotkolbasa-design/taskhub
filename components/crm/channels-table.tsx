@@ -115,6 +115,25 @@ function sumRows(rows: Row[]): Totals {
   }
 }
 
+/**
+ * Строка «Без источника и мелкие» входит в подытог блока — иначе итог меньше
+ * того, что человек видит над ним. CPL и цена клиента остаются от показанных
+ * платных каналов: что внутри этого остатка, по отдельности неизвестно.
+ */
+function withRest(base: Totals, rest?: { leads: number; paid: number; spent: number; revenue: number }): Totals {
+  if (!rest) return base
+  const leads = base.leads + rest.leads
+  const paid = base.paid + rest.paid
+  return {
+    leads, paid,
+    spent: base.spent + rest.spent,
+    revenue: base.revenue + rest.revenue,
+    toPaid: leads > 0 ? paid / leads * 100 : 0,
+    cpl: base.cpl,
+    cac: base.cac,
+  }
+}
+
 const COLUMNS: { key: SortKey | null; label: string; hint?: string }[] = [
   { key: 'leads', label: 'Заявки' },
   { key: null, label: '→ назнач.', hint: 'доля заявок, дошедших до назначенного собеседования' },
@@ -214,7 +233,7 @@ export function ChannelsTable({ sources, groups, overall }: {
           subtitle="всё, что не входит ни в одну группу"
           rows={sourceRows}
           footerLabel="Итого по источникам"
-          footer={sumRows(sourceRows)}
+          footer={withRest(sumRows(sourceRows), rest.leads > 0 || rest.paid > 0 ? rest : undefined)}
           sort={sort} asc={asc} onSort={sortBy}
           avgToPaid={avgToPaid} avgCac={avgCac}
           rest={rest.leads > 0 || rest.paid > 0 ? rest : undefined}
@@ -371,7 +390,8 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
         </table>
       </div>
       <p className="text-[11px] mt-1.5" style={{ color: 'var(--text2)' }}>
-        В подытоге CPL и цена клиента считаются только по каналам с расходом — бесплатные заявки их не разбавляют.
+        Подытог считает все строки блока{rest ? ', включая «Без источника и мелкие»' : ''}. CPL и цена клиента в нём —
+        только по каналам с расходом, бесплатные заявки их не разбавляют.
       </p>
     </div>
   )
