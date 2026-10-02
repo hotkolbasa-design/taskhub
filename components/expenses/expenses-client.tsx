@@ -36,7 +36,9 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
   // Обновление данных после действия — через transition: пока оно идёт, карточка
   // показывает индикатор, иначе экран несколько секунд выглядит так, будто ничего не произошло
   const [refreshing, startRefresh] = useTransition()
-  const [tab, setTab] = useState<Tab>('pending')
+  // Бухгалтерии показываем сразу её вкладку: решения не её работа, а «На рассмотрении»
+  // для неё всегда пустая
+  const [tab, setTab] = useState<Tab>(canPay && !canApprove ? 'to_pay' : 'pending')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ExpenseRequest | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
