@@ -11,20 +11,23 @@ export default async function ExpensesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, login, role, department, can_approve_expenses')
+    .select('id, full_name, login, role, department, can_approve_expenses, can_pay_expenses')
     .eq('id', user.id)
     .maybeSingle()
 
   if (!profile) redirect('/login')
 
   const canApprove = profile.role === 'admin' || profile.can_approve_expenses === true
-  const requests = await (canApprove ? getAllExpenseRequests() : getMyExpenseRequests(profile.id)).catch(() => [])
+  // Бухгалтерия видит весь список и проставляет оплату, но решений не принимает
+  const canPay = canApprove || profile.can_pay_expenses === true
+  const requests = await (canPay ? getAllExpenseRequests() : getMyExpenseRequests(profile.id)).catch(() => [])
 
   return (
     <ExpensesClient
       requests={requests}
       currentUserId={profile.id}
       canApprove={canApprove}
+      canPay={canPay}
       department={profile.department ?? null}
     />
   )

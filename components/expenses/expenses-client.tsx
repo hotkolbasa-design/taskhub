@@ -24,10 +24,12 @@ function matchesTab(r: ExpenseRequest, tab: Tab): boolean {
   return r.status === 'rejected' || r.status === 'cancelled' || (r.status === 'approved' && !!r.paid_at)
 }
 
-export default function ExpensesClient({ requests, currentUserId, canApprove }: {
+export default function ExpensesClient({ requests, currentUserId, canApprove, canPay }: {
   requests: ExpenseRequest[]
   currentUserId: string
   canApprove: boolean
+  /** Бухгалтерия: видит все заявки и отмечает оплату, но не решает */
+  canPay: boolean
   department: string | null
 }) {
   const router = useRouter()
@@ -90,7 +92,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove }: 
         <div>
           <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Расходы</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text2)' }}>
-            {canApprove ? 'Заявки всех отделов' : 'Ваши заявки на покупки'}
+            {canApprove ? 'Заявки всех отделов' : canPay ? 'Заявки всех отделов — к оплате' : 'Ваши заявки на покупки'}
           </p>
         </div>
         <button onClick={() => { setEditing(null); setFormOpen(true) }}
@@ -165,7 +167,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove }: 
                 )}
                 <Th>Номер</Th>
                 <Th>Что покупаем</Th>
-                {canApprove && <Th>Кто просит</Th>}
+                {canPay && <Th>Кто просит</Th>}
                 <Th>Категория</Th>
                 <Th right>Сумма</Th>
                 <Th>Нужно к</Th>
@@ -221,6 +223,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove }: 
         <ExpenseDrawer
           request={openRequest}
           canApprove={canApprove}
+          canPay={canPay}
           currentUserId={currentUserId}
           refreshing={refreshing}
           onClose={() => setOpenId(null)}

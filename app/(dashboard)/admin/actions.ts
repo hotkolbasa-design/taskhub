@@ -104,6 +104,22 @@ export async function setCanApproveExpenses(userId: string, value: boolean) {
   revalidateTag('expenses', "default")
 }
 
+/**
+ * Право бухгалтерии: видеть все заявки на расходы и проставлять оплату.
+ * Решения по заявкам при этом остаются у утверждающих — это разные вещи.
+ */
+export async function setCanPayExpenses(userId: string, value: boolean) {
+  const caller = await requireAdmin()
+  if (!(await isSuperAdmin(caller.id))) {
+    throw new Error('Только суперадмин может выдавать доступ к расходам')
+  }
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update({ can_pay_expenses: value }).eq('id', userId)
+  if (error) throw new Error(error.message)
+  revalidateTag('profiles', "default")
+  revalidateTag('expenses', "default")
+}
+
 export async function updateUserName(userId: string, fullName: string) {
   await requireAdmin()
   const admin = createAdminClient()

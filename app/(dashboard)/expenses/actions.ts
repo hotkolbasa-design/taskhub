@@ -11,7 +11,12 @@ type Caller = {
   id: string
   role: 'admin' | 'employee'
   department: string | null
+  /** Решает по заявкам: одобрить, отклонить, вернуть на доработку */
   canApprove: boolean
+  /** Отмечает оплату — это работа бухгалтерии, решения они не принимают */
+  canPay: boolean
+  /** Видит заявки всех отделов, а не только свои */
+  canViewAll: boolean
 }
 
 async function getCaller(): Promise<Caller | null> {
@@ -23,17 +28,25 @@ async function getCaller(): Promise<Caller | null> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, department, can_approve_expenses')
+    .select('id, role, department, can_approve_expenses, can_pay_expenses')
     .eq('id', user.id)
     .maybeSingle()
 
   if (!profile) return null
+
+  // Учредителю выдан флаг, чтобы решать по расходам, не получая остальную админку.
+  // Бухгалтерии — отдельный флаг: им нужно видеть весь список и проставлять оплату,
+  // но решение об одобрении принимают не они
+  const canApprove = profile.role === 'admin' || profile.can_approve_expenses === true
+  const canPay = canApprove || profile.can_pay_expenses === true
+
   return {
     id: profile.id,
     role: profile.role as 'admin' | 'employee',
     department: profile.department ?? null,
-    // Учредителю выдан флаг, чтобы решать по расходам, не получая остальную админку
-    canApprove: profile.role === 'admin' || profile.can_approve_expenses === true,
+    canApprove,
+    canPay,
+    canViewAll: canApprove || canPay,
   }
 }
 
@@ -46,6 +59,13 @@ async function requireCaller(): Promise<Caller> {
 async function requireApprover(): Promise<Caller> {
   const caller = await requireCaller()
   if (!caller.canApprove) throw new Error('Нет прав решать по заявкам')
+  return caller
+}
+
+/** Отметка об оплате — право бухгалтерии, поэтому проверка мягче, чем у решений. */
+async function requirePayer(): Promise<Caller> {
+  const caller = await requireCaller()
+  if (!caller.canPay) throw new Error('Нет прав отмечать оплату')
   return caller
 }
 
@@ -84,6 +104,29 @@ async function notifyApprovers(requestId: string, actorId: string, title: string
     type: 'expense_submitted' as const,
     data: { title },
   })))
+}
+
+/** Тем, кто проставляет оплату: админам, утверждающим и бухгалтерии. */
+async function notifyPayers(requestId: string, actorId: string, title: string, number: string) {
+  const admin = createAdminClient()
+  const { data: payers } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('status', 'active')
+    .or('role.eq.admin,can_approve_expenses.eq.true,can_pay_expenses.eq.true')
+
+  await createNotifications(
+    (payers ?? [])
+      .map((p: { id: string }) => p.id)
+      .filter(uid => uid !== actorId)
+      .map(uid => ({
+        user_id: uid,
+        actor_id: actorId,
+        expense_request_id: requestId,
+        type: 'expense_decided' as const,
+        data: { title, number, status: 'approved', toPay: true },
+      })),
+  )
 }
 
 async function notifyUser(
@@ -226,6 +269,9 @@ export async function decideExpenseRequest(
     number: current.number,
     status,
   })
+
+  // Одобренную заявку оплачивает бухгалтерия — без сигнала они узнают о ней случайно
+  if (status === 'approved') await notifyPayers(requestId, caller.id, current.title, current.number)
   revalidateTag('expenses', 'default')
   revalidatePath('/expenses')
 }
@@ -271,7 +317,7 @@ export async function cancelExpenseRequest(requestId: string) {
 
 /** Отметка об оплате — следующий шаг после одобрения, поэтому статус не меняется. */
 export async function markExpensePaid(requestId: string, paidAmount: number, note: string) {
-  const caller = await requireApprover()
+  const caller = await requirePayer()
   const admin = createAdminClient()
 
   const { data: current } = await admin
@@ -305,7 +351,7 @@ export async function markExpensePaid(requestId: string, paidAmount: number, not
 }
 
 export async function undoExpensePaid(requestId: string) {
-  const caller = await requireApprover()
+  const caller = await requirePayer()
   const admin = createAdminClient()
   const { error } = await admin
     .from('expense_requests')
@@ -327,7 +373,7 @@ export async function fetchExpenseFeed(requestId: string) {
     .eq('id', requestId)
     .maybeSingle()
   if (!request) throw new Error('Заявка не найдена')
-  if (request.requester_id !== caller.id && !caller.canApprove) throw new Error('Нет доступа к заявке')
+  if (request.requester_id !== caller.id && !caller.canViewAll) throw new Error('Нет доступа к заявке')
 
   return getExpenseFeed(requestId)
 }
@@ -344,7 +390,7 @@ export async function createExpenseComment(requestId: string, text: string, atta
     .eq('id', requestId)
     .maybeSingle()
   if (!request) throw new Error('Заявка не найдена')
-  if (request.requester_id !== caller.id && !caller.canApprove) throw new Error('Нет доступа к заявке')
+  if (request.requester_id !== caller.id && !caller.canViewAll) throw new Error('Нет доступа к заявке')
 
   const { error } = await admin.from('expense_request_comments').insert({
     request_id: requestId,

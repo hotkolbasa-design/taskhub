@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { setRole, setStatus, updateUserProfile, resetUserPassword, setCanApproveExpenses } from '@/app/(dashboard)/admin/actions'
+import { setRole, setStatus, updateUserProfile, resetUserPassword, setCanApproveExpenses, setCanPayExpenses } from '@/app/(dashboard)/admin/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
 
 const ROLES = [
@@ -28,6 +28,7 @@ export type DrawerUser = {
   department: string | null
   birth_date: string | null
   can_approve_expenses: boolean
+  can_pay_expenses: boolean
 }
 
 function buildCalendar(year: number, month: number) {
@@ -202,6 +203,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
   const [saving, setSaving] = useState(false)
   const [calOpen, setCalOpen] = useState(false)
   const [canApprove, setCanApprove] = useState(user.can_approve_expenses)
+  const [canPay, setCanPay] = useState(user.can_pay_expenses)
   const [approveSaving, setApproveSaving] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
   const [pwStage, setPwStage] = useState<'idle' | 'confirm' | 'loading' | 'done'>('idle')
@@ -260,6 +262,20 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
       onUpdated(user.id, { can_approve_expenses: next })
     } catch (e) {
       setCanApprove(!next)
+      setApproveError(e instanceof Error ? e.message : 'Не удалось изменить право')
+    }
+    setApproveSaving(false)
+  }
+
+  async function handlePayToggle(next: boolean) {
+    setCanPay(next)
+    setApproveSaving(true)
+    setApproveError(null)
+    try {
+      await setCanPayExpenses(user.id, next)
+      onUpdated(user.id, { can_pay_expenses: next })
+    } catch (e) {
+      setCanPay(!next)
       setApproveError(e instanceof Error ? e.message : 'Не удалось изменить право')
     }
     setApproveSaving(false)
@@ -464,6 +480,16 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                 style={{ width: 34, height: 20, padding: 2, background: canApprove ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}>
                 <span className="rounded-full bg-white transition-transform"
                   style={{ width: 16, height: 16, transform: canApprove ? 'translateX(14px)' : 'translateX(0)' }} />
+              </span>
+            </button>
+            <button type="button" onClick={() => handlePayToggle(!canPay)} disabled={approveSaving}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm disabled:opacity-60 mt-2"
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}>
+              <span>Бухгалтерия: видит все и отмечает оплату</span>
+              <span className="flex items-center rounded-full transition-colors"
+                style={{ width: 34, height: 20, padding: 2, background: canPay ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}>
+                <span className="rounded-full bg-white transition-transform"
+                  style={{ width: 16, height: 16, transform: canPay ? 'translateX(14px)' : 'translateX(0)' }} />
               </span>
             </button>
             {approveError && <span className="text-xs" style={{ color: 'var(--red)' }}>{approveError}</span>}

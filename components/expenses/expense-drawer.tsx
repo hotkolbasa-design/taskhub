@@ -29,9 +29,11 @@ const STATUS_WORD: Record<string, string> = {
   cancelled: 'Отозвано',
 }
 
-export default function ExpenseDrawer({ request, canApprove, currentUserId, refreshing, onClose, onChanged, onEdit }: {
+export default function ExpenseDrawer({ request, canApprove, canPay, currentUserId, refreshing, onClose, onChanged, onEdit }: {
   request: ExpenseRequest
   canApprove: boolean
+  /** Бухгалтерия: отмечает оплату, но решений не принимает */
+  canPay: boolean
   currentUserId: string
   refreshing: boolean
   onClose: () => void
@@ -208,7 +210,7 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, refr
             </Block>
           )}
 
-          {canApprove && request.status === 'approved' && !request.paid_at && (
+          {canPay && request.status === 'approved' && !request.paid_at && (
             <Block label="Оплата">
               {payOpen ? (
                 <div className="flex flex-col gap-2">
@@ -238,7 +240,7 @@ export default function ExpenseDrawer({ request, canApprove, currentUserId, refr
             </Block>
           )}
 
-          {canApprove && request.paid_at && (
+          {canPay && request.paid_at && (
             <button onClick={() => run('undo', () => undoExpensePaid(request.id))}
               className="text-xs text-left self-start" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
               {busy === 'undo' ? 'Отмена…' : 'Снять отметку об оплате'}
