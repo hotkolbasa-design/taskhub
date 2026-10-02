@@ -75,6 +75,7 @@ export type WeekPlanRow = {
   key: string
   label: string
   days: number
+  elapsed: number       // сколько дней недели прошло, включая сегодняшний
   workdays: number
   closed: boolean
   current: boolean

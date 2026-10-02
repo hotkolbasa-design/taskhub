@@ -420,23 +420,33 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
                   const planned = r.plan[m.key]
                   const shift = planned - r.even[m.key]
                   const shifted = !r.closed && draft.mode !== 'even' && Math.abs(shift) >= Math.max(1, planned * 0.02)
-                  const diff = r.fact[m.key] - planned
-                  const factColor = diff >= 0 ? 'var(--green)' : (planned > 0 && r.fact[m.key] / planned >= 0.9 ? 'var(--text2)' : 'var(--red)')
+                  const factValue = r.fact[m.key]
+                  const diff = factValue - planned
+                  // У идущей недели спрашиваем не весь её план, а долю по прошедшим дням
+                  const weekDue = r.closed ? planned : planned * (r.days > 0 ? r.elapsed / r.days : 0)
+                  const started = r.elapsed > 0
                   return (
                     <td key={r.key} className="px-3 py-2.5 text-right"
                       style={{ borderBottom: '1px solid var(--border)', background: r.current ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'transparent' }}>
                       <div className="text-sm" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', color: shifted ? 'var(--accent)' : 'var(--text)', fontWeight: shifted ? 600 : 400 }}>
                         {fmt(m.key, planned)}
                       </div>
-                      {r.closed ? (
-                        <div className="text-[10px] mt-0.5" style={{ color: factColor, fontFamily: 'var(--font-mono)' }}>
-                          {fmt(m.key, r.fact[m.key])} · {diff >= 0 ? '+' : '−'}{fmt(m.key, Math.abs(diff))}
+
+                      {started && (
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          <StatusMark status={metricStatus(factValue, weekDue, m.lowerIsBetter)} />
+                          <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                            {fmt(m.key, factValue)}
+                            {r.closed && <> · {diff >= 0 ? '+' : '−'}{fmt(m.key, Math.abs(diff))}</>}
+                          </span>
                         </div>
-                      ) : shifted ? (
-                        <div className="text-[10px] mt-0.5" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                      )}
+
+                      {!r.closed && shifted && (
+                        <div className="text-[10px] mt-0.5" style={{ color: 'var(--text2)', opacity: 0.8, fontFamily: 'var(--font-mono)' }}>
                           {shift > 0 ? '+' : '−'}{fmt(m.key, Math.abs(shift))} к ровному
                         </div>
-                      ) : null}
+                      )}
                     </td>
                   )
                 })}

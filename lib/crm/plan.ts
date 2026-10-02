@@ -279,6 +279,7 @@ export function buildWeekPlan(data: DashData, plan: MonthPlan, todayIso: string)
     key: weekKey(days),
     label: data.weeks[i] ?? '',
     days: days.length,
+    elapsed: days.filter(d => d <= todayIso).length,
     workdays: workdays(days),
     closed: closed[i],
     current: i === current,
