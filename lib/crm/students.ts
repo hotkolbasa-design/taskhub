@@ -7,6 +7,14 @@ const ENROLL_STAGE = 'C4:PREPARATION'
 const EXPEL_STAGE = 'C6:NEW'
 
 /**
+ * «Полная оплата есть» — стадия воронки «Продажи», откуда робот переносит сделку в зачисление.
+ * Настоящий новый ученик приходит только отсюда. В ту же стадию зачисления сделку заводят
+ * руками из «Неразобранное» и «Новые написавшие номера», она возвращается из «Дубль» и
+ * из более поздних стадий — такие переходы учеников не прибавляют.
+ */
+const PAID_STAGE = 'WON'
+
+/**
  * Поля «ФИО ученика 1…4» в сделке. В портале полно полей-дублей с теми же подписями,
  * поэтому коды зафиксированы явно, а не подбираются по названию.
  */
@@ -52,6 +60,40 @@ async function stageHistory(stageId: string, fromIso: string): Promise<HistoryIt
     start = body.next
   }
   return out
+}
+
+/** Вся история стадий по списку сделок — по ней видно, откуда сделка пришла в зачисление. */
+async function historyOfDeals(dealIds: string[]): Promise<Map<string, HistoryItem[]>> {
+  const map = new Map<string, HistoryItem[]>()
+
+  for (let i = 0; i < dealIds.length; i += 40) {
+    const chunk = dealIds.slice(i, i + 40)
+    const base: Record<string, string> = { entityTypeId: '2', 'order[ID]': 'ASC' }
+    chunk.forEach((id, j) => { base[`filter[OWNER_ID][${j}]`] = id })
+
+    let start = 0
+    for (;;) {
+      const body = await bitrix<{ result?: { items?: HistoryItem[] }; next?: number }>(
+        'crm.stagehistory.list', { ...base, start: String(start) },
+      )
+      for (const it of body.result?.items ?? []) {
+        const key = String(it.OWNER_ID)
+        const list = map.get(key) ?? []
+        list.push(it)
+        map.set(key, list)
+      }
+      if (body.next === undefined) break
+      start = body.next
+    }
+  }
+  return map
+}
+
+/** Стадия, с которой сделка пришла в этот переход. null — если предыдущей записи нет. */
+function originOf(item: { ID: number; OWNER_ID: number }, history: Map<string, HistoryItem[]>): string | null {
+  const list = (history.get(String(item.OWNER_ID)) ?? []).slice().sort((a, b) => a.ID - b.ID)
+  const idx = list.findIndex(x => x.ID === item.ID)
+  return idx > 0 ? list[idx - 1].STAGE_ID : null
 }
 
 async function dealsByIds(ids: string[]): Promise<Map<string, BitrixDeal>> {
@@ -112,7 +154,10 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
     result.skipped += items.length - fresh.length
     if (fresh.length === 0) continue
 
-    const deals = await dealsByIds([...new Set(fresh.map(i => String(i.OWNER_ID)))])
+    const dealIds = [...new Set(fresh.map(i => String(i.OWNER_ID)))]
+    const deals = await dealsByIds(dealIds)
+    // Для зачислений важно, откуда сделка пришла: учеников прибавляет только оплата
+    const history = kind === 'enroll' ? await historyOfDeals(dealIds) : new Map<string, HistoryItem[]>()
 
     // Кто уже числится зачисленным: по этим именам повторный приход — дубль сделки,
     // а не второй ученик. В Битриксе дубли создаются и объединяются постоянно
@@ -135,11 +180,17 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
       .map(i => {
         const deal = deals.get(String(i.OWNER_ID))
         const names = studentsOf(deal)
+        const origin = kind === 'enroll' ? originOf(i, history) : null
 
         let counted = true
         let skipReason: string | null = null
 
-        if (!deal) {
+        if (kind === 'enroll' && origin !== PAID_STAGE) {
+          counted = false
+          skipReason = origin
+            ? 'сделка пришла не из «Полная оплата есть»'
+            : 'у сделки нет предыдущей стадии — не из оплаты'
+        } else if (!deal) {
           // Сделку удалили или объединили с другой, пока событие шло к нам
           counted = false
           skipReason = 'сделка удалена'
@@ -171,6 +222,7 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
           deal_title: deal?.TITLE ?? null,
           counted,
           skip_reason: skipReason,
+          origin_stage: origin,
         }
       })
 
@@ -201,20 +253,42 @@ async function reviewRecentMoves(days = 45): Promise<void> {
   if (!recent || recent.length === 0) return
 
   const rows = recent as { history_id: number; deal_id: number; kind: string; counted: boolean; student_names: string[] }[]
-  const alive = await dealsByIds([...new Set(rows.map(r => String(r.deal_id)))])
+  const dealIds = [...new Set(rows.map(r => String(r.deal_id)))]
+  const alive = await dealsByIds(dealIds)
+  const history = await historyOfDeals(dealIds)
 
   for (const r of rows) {
     const deal = alive.get(String(r.deal_id))
-    const shouldCount = !!deal && studentsOf(deal).length > 0
-    if (r.counted && !shouldCount) {
+    const origin = r.kind === 'enroll'
+      ? originOf({ ID: r.history_id, OWNER_ID: r.deal_id }, history)
+      : null
+
+    let counted = true
+    let reason: string | null = null
+
+    if (r.kind === 'enroll' && origin !== PAID_STAGE) {
+      counted = false
+      reason = origin ? 'сделка пришла не из «Полная оплата есть»' : 'у сделки нет предыдущей стадии — не из оплаты'
+    } else if (!deal) {
+      counted = false
+      reason = 'сделка удалена или объединена'
+    } else if (studentsOf(deal).length === 0) {
+      counted = false
+      reason = 'в сделке не заполнено ни одного ФИО ученика'
+    }
+
+    if (r.counted !== counted) {
       await admin
         .from('student_moves')
         .update({
-          counted: false,
-          students: 0,
-          skip_reason: deal ? 'в сделке не заполнено ни одного ФИО ученика' : 'сделка удалена или объединена',
+          counted,
+          students: counted ? studentsOf(deal).length : 0,
+          skip_reason: reason,
+          origin_stage: origin,
         })
         .eq('history_id', r.history_id)
+    } else if (r.kind === 'enroll') {
+      await admin.from('student_moves').update({ origin_stage: origin }).eq('history_id', r.history_id)
     }
   }
 }
