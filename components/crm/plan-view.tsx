@@ -386,7 +386,8 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
                     <span className="text-[10px]" style={{ color: 'var(--text2)' }}>
                       {r.days} дн.{r.closed ? ' · закрыта' : r.current ? ' · идёт' : ''}
                     </span>
-                    {draft.mode === 'manual' && !r.closed && !frozen && (
+                    {/* множитель виден и у закрытой недели: он объясняет её план */}
+                    {draft.mode === 'manual' && !frozen && (
                       <button
                         onClick={() => {
                           const cycle = [1, 1.25, 1.5, 0.5]
