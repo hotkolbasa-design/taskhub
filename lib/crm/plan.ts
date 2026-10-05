@@ -1,13 +1,19 @@
 import type { MonthPlan, PlanMetricKey, PlanMetrics, WeekPlanRow, CapacityRow, DashData, MetricStatus } from './types'
 
-export const PLAN_METRICS: { key: PlanMetricKey; name: string; sub: string; unit?: 'kzt' | 'usd'; lowerIsBetter?: boolean }[] = [
-  { key: 'leads', name: 'Заявки', sub: 'новые лиды' },
+/**
+ * `everyDay` — метрика живёт по календарю, а не по графику отдела.
+ * Заявки идут и в выходные (13–24 % месячного потока), реклама тратится тоже;
+ * а собеседования, предоплаты и оплаты в субботу и воскресенье равны нулю —
+ * спрашивать их за выходные значит выдумывать отставание.
+ */
+export const PLAN_METRICS: { key: PlanMetricKey; name: string; sub: string; unit?: 'kzt' | 'usd'; lowerIsBetter?: boolean; everyDay?: boolean }[] = [
+  { key: 'leads', name: 'Заявки', sub: 'новые лиды', everyDay: true },
   { key: 'app', name: 'Собеседование назначено', sub: 'лист «Лиды»' },
   { key: 'held', name: 'Собеседование проведено', sub: 'воронка «Собеседование»' },
   { key: 'pre', name: 'Предоплата', sub: '3 000 ₸' },
   { key: 'paid', name: 'Оплата', sub: 'сделки' },
   { key: 'revenue', name: 'Выручка', sub: 'по оплаченным сделкам', unit: 'kzt' },
-  { key: 'budget', name: 'Рекламный бюджет', sub: 'расход на рекламу', unit: 'usd', lowerIsBetter: true },
+  { key: 'budget', name: 'Рекламный бюджет', sub: 'расход на рекламу', unit: 'usd', lowerIsBetter: true, everyDay: true },
 ]
 
 export const DEFAULT_PLAN: MonthPlan = {
@@ -214,11 +220,17 @@ export function monthFact(data: DashData): PlanMetrics {
  */
 export function planToDate(plan: MonthPlan, data: DashData, todayIso: string): PlanMetrics {
   const metrics = planMetrics(plan)
-  const total = data.daysIso.length
-  const passed = data.daysIso.filter(d => d <= todayIso).length
-  const share = total > 0 ? Math.min(1, passed / total) : 0
+  const all = data.daysIso
+  const work = all.filter(isWorkday)
+  const passedAll = all.filter(d => d <= todayIso).length
+  const passedWork = work.filter(d => d <= todayIso).length
+
   const out = {} as PlanMetrics
-  for (const { key } of PLAN_METRICS) out[key] = metrics[key] * share
+  for (const { key, everyDay } of PLAN_METRICS) {
+    const total = everyDay ? all.length : work.length
+    const passed = everyDay ? passedAll : passedWork
+    out[key] = total > 0 ? metrics[key] * Math.min(1, passed / total) : 0
+  }
   return out
 }
 
@@ -249,12 +261,18 @@ export function forecastMonth(fact: PlanMetrics, data: DashData, todayIso: strin
   return out
 }
 
-// Воскресенье — выходной: слоты собеседований считаются по рабочим дням недели
+/**
+ * Рабочий день отдела — с понедельника по пятницу. По факту сентября в субботу
+ * и воскресенье не было ни одной оплаты и ни одного проведённого собеседования.
+ */
+export function isWorkday(iso: string): boolean {
+  const [y, m, dd] = iso.split('-').map(Number)
+  const wd = new Date(Date.UTC(y, m - 1, dd)).getUTCDay()
+  return wd !== 0 && wd !== 6
+}
+
 function workdays(days: string[]): number {
-  return days.filter(d => {
-    const [y, m, dd] = d.split('-').map(Number)
-    return new Date(Date.UTC(y, m - 1, dd)).getUTCDay() !== 0
-  }).length
+  return days.filter(isWorkday).length
 }
 
 export function weekKey(days: string[]): string {
@@ -280,6 +298,7 @@ export function buildWeekPlan(data: DashData, plan: MonthPlan, todayIso: string)
     label: data.weeks[i] ?? '',
     days: days.length,
     elapsed: days.filter(d => d <= todayIso).length,
+    elapsedWork: days.filter(d => d <= todayIso && isWorkday(d)).length,
     workdays: workdays(days),
     closed: closed[i],
     current: i === current,
@@ -292,12 +311,18 @@ export function buildWeekPlan(data: DashData, plan: MonthPlan, todayIso: string)
   // Ручной вес принадлежит неделе, а не её состоянию: неделя с множителем 0,5
   // держит свой половинный план и после закрытия, иначе задним числом окажется,
   // что она провалила план, которого ей не ставили
-  const weightOf = (i: number) => rows[i].days * (plan.mode === 'manual' ? rows[i].weight : 1)
-  const weightSum = rows.reduce((s, _, i) => s + weightOf(i), 0)
+  const totalWork = weeks.reduce((s, w) => s + workdays(w), 0) || 1
 
-  for (const { key } of PLAN_METRICS) {
+  for (const { key, everyDay } of PLAN_METRICS) {
     const total = metrics[key]
-    weeks.forEach((days, i) => { rows[i].even[key] = total * (days.length / totalDays) })
+    // Продажи делятся по рабочим дням недели, заявки и расход — по календарным:
+    // короткая неделя с двумя буднями не должна требовать оплат как за четыре дня
+    const unitsOf = (i: number) => everyDay ? rows[i].days : rows[i].workdays
+    const unitsTotal = everyDay ? totalDays : totalWork
+    const weightOf = (i: number) => unitsOf(i) * (plan.mode === 'manual' ? rows[i].weight : 1)
+    const weightSum = rows.reduce((s, _, i) => s + weightOf(i), 0)
+
+    weeks.forEach((_, i) => { rows[i].even[key] = total * (unitsOf(i) / unitsTotal) })
 
     if (plan.mode === 'even') {
       weeks.forEach((_, i) => { rows[i].plan[key] = rows[i].even[key] })

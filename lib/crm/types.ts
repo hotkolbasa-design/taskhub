@@ -76,7 +76,8 @@ export type WeekPlanRow = {
   label: string
   days: number
   elapsed: number       // сколько дней недели прошло, включая сегодняшний
-  workdays: number
+  elapsedWork: number   // из них будних: по ним спрашивают продажи
+  workdays: number      // будних дней в неделе всего (пн–пт)
   closed: boolean
   current: boolean
   weight: number
