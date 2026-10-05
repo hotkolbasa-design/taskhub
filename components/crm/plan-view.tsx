@@ -423,8 +423,11 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
                   const shifted = !r.closed && draft.mode !== 'even' && Math.abs(shift) >= Math.max(1, planned * 0.02)
                   const factValue = r.fact[m.key]
                   const diff = factValue - planned
-                  // У идущей недели спрашиваем не весь её план, а долю по прошедшим дням
-                  const weekDue = r.closed ? planned : planned * (r.days > 0 ? r.elapsed / r.days : 0)
+                  // У идущей недели спрашиваем не весь её план, а долю по прошедшим дням.
+                  // Для продаж день считается только будний: в выходные их не бывает
+                  const unitsTotal = m.everyDay ? r.days : r.workdays
+                  const unitsPassed = m.everyDay ? r.elapsed : r.elapsedWork
+                  const weekDue = r.closed ? planned : planned * (unitsTotal > 0 ? unitsPassed / unitsTotal : 0)
                   const started = r.elapsed > 0
                   return (
                     <td key={r.key} className="px-3 py-2.5 text-right"
