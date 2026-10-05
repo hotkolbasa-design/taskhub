@@ -1,12 +1,14 @@
-import { sheetValues } from './sheets'
+import { sheetValues, sheetValuesFrom } from './sheets'
 import { serialToDateKey, dateKeyToSerial, entityIdFromLink, stripPipeline } from './utils'
 import type { SheetRow } from './types'
 
 // Columns: A=Date, B=Link, C=Title, D=Stage, E=Pipeline, ..., H=Amount, ..., L=Source, ..., N=Tags
-export async function readSheetRows(sheetName: string): Promise<SheetRow[]> {
+export async function readSheetRows(sheetName: string, spreadsheetId?: string): Promise<SheetRow[]> {
   let values: (string | number | boolean)[][] = []
   try {
-    values = await sheetValues(sheetName, 'A2:N')
+    values = spreadsheetId
+      ? await sheetValuesFrom(spreadsheetId, sheetName, 'A2:N')
+      : await sheetValues(sheetName, 'A2:N')
   } catch {
     return []
   }

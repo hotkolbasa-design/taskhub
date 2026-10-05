@@ -1,15 +1,25 @@
 import { sheetValues, updateRange, appendRow, deleteSheetRow } from './sheets'
+import { serialToDateKey } from './utils'
 
 const SHEET = 'Snapshots'
 const CHUNK = 45000          // stay well under 50 000-char cell limit
 const MAX_COLS = 26          // A–Z
+
+/**
+ * Ключ месяца в колонке A. Часть строк записана до перехода на RAW — там
+ * вместо «2026-09» лежит серийный номер даты (46266), такие тоже узнаём.
+ */
+function rowMonth(cell: string | number | boolean | undefined): string {
+  if (typeof cell === 'number' && cell > 1000) return serialToDateKey(cell).slice(0, 7)
+  return String(cell ?? '')
+}
 
 async function findRow(monthKey: string): Promise<number> {
   let values: (string | number | boolean)[][] = []
   // Read from row 1 (no assumed header row in Snapshots sheet)
   try { values = await sheetValues(SHEET, 'A1:A') } catch { return -1 }
   for (let i = 0; i < values.length; i++) {
-    if (String(values[i]?.[0] ?? '') === monthKey) return i + 1  // 1-indexed
+    if (rowMonth(values[i]?.[0]) === monthKey) return i + 1  // 1-indexed
   }
   return -1
 }
@@ -19,7 +29,7 @@ export async function readSnapshot(monthKey: string): Promise<Record<string, unk
   // Read from row 1 so we don't miss data written to the first row
   try { values = await sheetValues(SHEET, 'A1:Z') } catch { return null }
   for (const row of values) {
-    if (String(row[0] ?? '') !== monthKey) continue
+    if (rowMonth(row[0]) !== monthKey) continue
     // Columns D (index 3) onward hold JSON chunks
     const chunks = row
       .slice(3)
@@ -45,9 +55,11 @@ export async function writeSnapshot(monthKey: string, data: unknown): Promise<vo
   while (dataValues.length < MAX_COLS) dataValues.push(null)
   const rowValues = dataValues.slice(0, MAX_COLS)  // cap at Z
 
+  // Только RAW: с USER_ENTERED ключ «2026-09» Google превращает в дату (46266),
+  // строка перестаёт находиться по месяцу, и замороженный месяц пропадает из дашборда
   const row = await findRow(monthKey)
   if (row > 0) {
-    await updateRange(SHEET, `A${row}:Z${row}`, [rowValues as (string | number | null)[]])
+    await updateRange(SHEET, `A${row}:Z${row}`, [rowValues as (string | number | null)[]], 'RAW')
   } else {
     await appendRow(SHEET, rowValues as (string | number | null)[], 'RAW')
   }
