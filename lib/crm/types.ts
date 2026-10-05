@@ -115,6 +115,7 @@ export type DashData = {
   rateMap: Record<string, number>
   plan: MonthPlan
   frozen?: boolean
+  computedAt?: string   // когда данные посчитаны: ответ может прийти из кэша
 }
 
 export type MilestoneDef = {

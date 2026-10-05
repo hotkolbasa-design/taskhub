@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { readSheetRows } from './read-sheet'
 import { loadPipelineDefinitions, buildPipelineStats } from './pipelines'
 import { buildMarketingStats } from './marketing'
@@ -22,6 +23,28 @@ async function fetchUsdKztRate(): Promise<number> {
     return 0
   }
 }
+
+/**
+ * Тег кэша месяца. Любое сохранение (расход, курс, план, группы, источники)
+ * сбрасывает его — иначе правка не появилась бы на экране до истечения срока.
+ */
+export const crmCacheTag = (monthKey: string) => `crm:${monthKey}`
+
+/**
+ * Кэшированный расчёт месяца. Полный пересчёт читает «Лиды», «Сделки», расходы,
+ * курс и настройки, а затем строит воронку по дням и неделям для всех источников —
+ * это основная статья процессорного времени проекта. Без кэша он повторялся на
+ * каждое открытие вкладки, и пять сотрудников давали пять одинаковых пересчётов.
+ */
+export function getCachedDashboard(monthKey: string): Promise<DashData> {
+  return unstable_cache(
+    () => computeDashboardData(monthKey),
+    ['crm-dashboard', monthKey],
+    { revalidate: CRM_CACHE_SECONDS, tags: ['crm', crmCacheTag(monthKey)] },
+  )()
+}
+
+export const CRM_CACHE_SECONDS = 300
 
 export async function computeDashboardData(monthKey: string): Promise<DashData> {
   const [yearStr, monthStr] = monthKey.split('-')
@@ -73,6 +96,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     marketing,
     rateMap,
     plan,
+    computedAt: new Date().toISOString(),  // из кэша придёт время расчёта, а не ответа
   }
 }
 

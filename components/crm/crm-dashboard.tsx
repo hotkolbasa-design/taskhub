@@ -36,6 +36,7 @@ type DashData = {
   }
   rateMap: Record<string, number>
   plan: MonthPlan
+  computedAt?: string
 }
 
 // ─── CSS classes injected once on mount ──────────────────────────────────────
@@ -1170,9 +1171,10 @@ export default function CrmDashboard() {
       .catch(e => { setError(String(e)); setLoading(false) })
   }, [selectedMonth])
 
-  async function safeReload(month: string): Promise<DashData | null> {
+  async function safeReload(month: string, fresh = false): Promise<DashData | null> {
     try {
-      const d = await fetch(`/api/crm?action=data&month=${month}`).then(r => r.json())
+      const url = `/api/crm?action=data&month=${month}${fresh ? '&fresh=1' : ''}`
+      const d = await fetch(url).then(r => r.json())
       if (d?.error || !d?.marketing) return null
       return d as DashData
     } catch {
@@ -1261,7 +1263,7 @@ export default function CrmDashboard() {
   const handleReload = useCallback(async () => {
     if (!selectedMonth) return
     setLoading(true)
-    const d = await safeReload(selectedMonth)
+    const d = await safeReload(selectedMonth, true)
     if (d) setData(d)
     setLoading(false)
   }, [selectedMonth])
@@ -1325,6 +1327,17 @@ export default function CrmDashboard() {
 
         {/* Toolbar */}
         <div className="flex items-center gap-3">
+          {/* Цифры могут прийти из кэша — показываем, на какой момент они посчитаны */}
+          {data?.computedAt && !data.frozen && (
+            <button
+              onClick={handleReload}
+              title="Пересчитать сейчас"
+              className="text-xs px-2 py-1 rounded-lg"
+              style={{ color: 'var(--text2)', background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer' }}
+            >
+              данные на {new Date(data.computedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · обновить
+            </button>
+          )}
           {months.length > 0 && (
             <MonthDropdown months={months} value={selectedMonth} onChange={setSelectedMonth} />
           )}
