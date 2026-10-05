@@ -51,25 +51,6 @@ export async function getMonthPlans(): Promise<Record<string, MonthPlan>> {
   return {}
 }
 
-// Карта «месяц → id архивной таблицы». 4-го числа скрипт Битрикса уносит строки
-// прошлого месяца в отдельный файл «Архив B24 - <Месяц> <Год>», и в рабочих листах
-// их больше нет. Drive API сервисному аккаунту не открыт, поэтому id держим здесь.
-export async function getArchiveMap(): Promise<Record<string, string>> {
-  try {
-    const values = await sheetValues(SHEET, 'K4:L4')
-    if (values[0]?.[0] === 'monthArchives' && values[0]?.[1]) {
-      return JSON.parse(String(values[0][1]))
-    }
-  } catch {}
-  return {}
-}
-
-export async function saveArchiveId(monthKey: string, spreadsheetId: string): Promise<void> {
-  const map = await getArchiveMap()
-  map[monthKey] = spreadsheetId
-  await updateRange(SHEET, 'K4:L4', [['monthArchives', JSON.stringify(map)]], 'RAW')
-}
-
 export async function saveMonthPlan(monthKey: string, plan: MonthPlan): Promise<void> {
   const plans = await getMonthPlans()
   plans[monthKey] = normalizePlan(plan)

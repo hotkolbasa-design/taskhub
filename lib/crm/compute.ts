@@ -2,10 +2,10 @@ import { readSheetRows } from './read-sheet'
 import { loadPipelineDefinitions, buildPipelineStats } from './pipelines'
 import { buildMarketingStats } from './marketing'
 import { readSpendMap, readRateMap } from './spend'
-import { getMergedGroups, getMonthPlans, getArchiveMap } from './settings'
+import { getMergedGroups, getMonthPlans } from './settings'
 import { DEFAULT_PLAN } from './plan'
 import { getMonthDays, getWeekGroups, formatDay, formatWeek } from './utils'
-import type { DashData, SheetRow } from './types'
+import type { DashData } from './types'
 
 // Fetch USD→KZT rate from free CDN (fawazahmed0, no API key, updated daily)
 async function fetchUsdKztRate(): Promise<number> {
@@ -32,7 +32,9 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
   const weeks = getWeekGroups(days)
 
   // Fetch all data in parallel (including auto exchange rate)
-  const [pipelineDefs, liveLeads, liveDeals, spendMap, rateMap, groups, autoRate, monthPlans, archives] = await Promise.all([
+  // Прошлые месяцы живут снапшотами: 3-го числа их фиксирует /api/cron/freeze,
+  // 4-го скрипт Битрикса уносит строки в архив. Здесь — только рабочие листы
+  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap, groups, autoRate, monthPlans] = await Promise.all([
     loadPipelineDefinitions(),
     readSheetRows('Лиды'),
     readSheetRows('Сделки'),
@@ -41,17 +43,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     getMergedGroups(),
     fetchUsdKztRate(),
     getMonthPlans(),
-    getArchiveMap(),
   ])
-
-  // 4-го числа архивация уносит прошлый месяц из рабочих листов. Если его строк
-  // там уже нет, а архив известен — читаем оттуда, иначе месяц показал бы нули
-  const hasMonth = (rows: SheetRow[]) => rows.some(r => r.dateKey.startsWith(monthKey))
-  const archiveId = archives[monthKey]
-  const needArchive = Boolean(archiveId) && !hasMonth(liveLeads)
-  const [leadsRows, dealsRows] = needArchive
-    ? await Promise.all([readSheetRows('Лиды', archiveId), readSheetRows('Сделки', archiveId)])
-    : [liveLeads, liveDeals]
 
   const plan = monthPlans[monthKey] ?? DEFAULT_PLAN
 

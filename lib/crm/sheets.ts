@@ -51,17 +51,6 @@ export async function updateRange(
   })
 }
 
-/** Чтение из другой таблицы — архив месяца лежит отдельным файлом. */
-export async function sheetValuesFrom(spreadsheetId: string, name: string, range: string): Promise<(string | number | boolean)[][]> {
-  const sheets = getClient()
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `'${name}'!${range}`,
-    valueRenderOption: 'UNFORMATTED_VALUE',
-    dateTimeRenderOption: 'SERIAL_NUMBER',
-  })
-  return (res.data.values ?? []) as (string | number | boolean)[][]
-}
 
 export async function appendRow(name: string, values: (string | number | null)[], inputOption: 'USER_ENTERED' | 'RAW' = 'USER_ENTERED'): Promise<void> {
   const sheets = getClient()
