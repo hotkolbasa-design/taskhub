@@ -36,14 +36,31 @@ export async function updateCell(name: string, cell: string, value: string | num
   })
 }
 
-export async function updateRange(name: string, range: string, values: (string | number | null)[][]): Promise<void> {
+export async function updateRange(
+  name: string,
+  range: string,
+  values: (string | number | null)[][],
+  inputOption: 'USER_ENTERED' | 'RAW' = 'USER_ENTERED',
+): Promise<void> {
   const sheets = getClient()
   await sheets.spreadsheets.values.update({
     spreadsheetId: ID(),
     range: `'${name}'!${range}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: inputOption,
     requestBody: { values },
   })
+}
+
+/** Чтение из другой таблицы — архив месяца лежит отдельным файлом. */
+export async function sheetValuesFrom(spreadsheetId: string, name: string, range: string): Promise<(string | number | boolean)[][]> {
+  const sheets = getClient()
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${name}'!${range}`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
+    dateTimeRenderOption: 'SERIAL_NUMBER',
+  })
+  return (res.data.values ?? []) as (string | number | boolean)[][]
 }
 
 export async function appendRow(name: string, values: (string | number | null)[], inputOption: 'USER_ENTERED' | 'RAW' = 'USER_ENTERED'): Promise<void> {
