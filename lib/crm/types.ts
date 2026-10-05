@@ -123,7 +123,7 @@ export type MilestoneDef = {
   name: string | string[]
   label?: string
   source: 'leads' | 'deals'
-  pipeline?: string
+  pipeline?: string | string[]   // стадия может жить сразу в нескольких воронках
   noSourceFilter?: boolean
 }
 
