@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { computeDashboardData, getAvailableMonths } from '@/lib/crm/compute'
+import { revalidateTag } from 'next/cache'
+import { computeDashboardData, getCachedDashboard, getAvailableMonths, crmCacheTag } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
 import { saveSpendValue, saveRateValue } from '@/lib/crm/spend'
 import { getExcludedSources, saveExcludedSources, saveMergedGroups, saveMonthPlan } from '@/lib/crm/settings'
@@ -7,6 +8,18 @@ import { normalizePlan } from '@/lib/crm/plan'
 import { readSheetRows } from '@/lib/crm/read-sheet'
 import { getMonthDays, isTestTitle } from '@/lib/crm/utils'
 import { getStudentStats, syncStudentMoves } from '@/lib/crm/students'
+import { unstable_cache } from 'next/cache'
+
+// Синхронизация движений учеников ходит в Битрикс и пишет в базу. Раньше она
+// запускалась на каждое открытие вкладки — кэш делает её общей на десять минут
+const syncStudentsThrottled = unstable_cache(
+  async () => {
+    await syncStudentMoves()
+    return new Date().toISOString()
+  },
+  ['crm-students-sync'],
+  { revalidate: 600, tags: ['crm-students'] },
+)
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -22,9 +35,13 @@ export async function GET(req: NextRequest) {
       if (!month) return NextResponse.json({ error: 'month required' }, { status: 400 })
 
       const snapshot = await readSnapshot(month)
+      // fresh=1 — кнопка «Обновить»: считаем мимо кэша и обновляем его для остальных
+      const fresh = searchParams.get('fresh') === '1'
+      if (fresh) revalidateTag(crmCacheTag(month), 'max')
+
       const data = snapshot
         ? { ...snapshot, frozen: true }
-        : { ...(await computeDashboardData(month)), frozen: false }
+        : { ...(await getCachedDashboard(month)), frozen: false }
 
       const excludedSources = await getExcludedSources()
       return NextResponse.json({ ...data, excludedSources })
@@ -33,9 +50,10 @@ export async function GET(req: NextRequest) {
     if (action === 'students') {
       const month = searchParams.get('month') ?? new Date().toISOString().slice(0, 7)
       // Свежие движения подтягиваем при открытии вкладки: ночного прогона мало,
-      // если ученика зачислили час назад и это уже хотят видеть
+      // если ученика зачислили час назад и это уже хотят видеть.
+      // Но не на каждое открытие — не чаще раза в десять минут на всех
       if (searchParams.get('sync') !== '0') {
-        await syncStudentMoves().catch(e => console.error('[students] синхронизация:', e.message))
+        await syncStudentsThrottled().catch(e => console.error('[students] синхронизация:', e.message))
       }
       return NextResponse.json(await getStudentStats(month))
     }
@@ -76,33 +94,47 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { action } = body
 
+    // Любая правка делает кэш месяца устаревшим — сбрасываем, иначе человек
+    // сохранит значение и увидит на экране старое
+    const dropCache = (monthKey?: string) => {
+      if (monthKey) revalidateTag(crmCacheTag(monthKey), 'max')
+      else revalidateTag('crm', 'max')
+    }
+
     if (action === 'freeze') {
       const data = await computeDashboardData(body.monthKey)
       await writeSnapshot(body.monthKey, data)
+      dropCache(body.monthKey)
       return NextResponse.json({ ok: true })
     }
     if (action === 'unfreeze') {
       await deleteSnapshot(body.monthKey)
+      dropCache(body.monthKey)
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveSpend') {
       await saveSpendValue(body.dateIso, body.source, body.field, Number(body.value) || 0)
+      dropCache(String(body.dateIso ?? '').slice(0, 7))
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveRate') {
       await saveRateValue(body.dateIso, Number(body.rate) || 0)
+      dropCache(String(body.dateIso ?? '').slice(0, 7))
       return NextResponse.json({ ok: true })
     }
     if (action === 'savePlan') {
       await saveMonthPlan(body.monthKey, normalizePlan(body.plan))
+      dropCache(body.monthKey)
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveExcluded') {
       await saveExcludedSources(body.excluded ?? [])
+      dropCache()
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveGroups') {
       await saveMergedGroups(body.groups ?? [])
+      dropCache()
       return NextResponse.json({ ok: true })
     }
 
