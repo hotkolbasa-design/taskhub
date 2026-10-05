@@ -5,7 +5,7 @@ const MARKETING_MILESTONES: MilestoneDef[] = [
   { name: 'Новая заявка (WhatsApp)', source: 'leads' },
   { name: 'Собеседование назначено', source: 'leads' },
   { name: 'Собеседование проведено', source: 'deals', pipeline: 'Собеседование' },
-  { name: 'Предоплата получена', source: 'deals', pipeline: 'Собеседование' },
+  { name: 'Предоплата получена', source: 'deals', pipeline: ['Собеседование', 'Продажи'] },
   { name: 'Одобрен педсоветом', source: 'deals', pipeline: 'Продажи' },
   { name: 'Полная оплата есть', source: 'deals', pipeline: 'Продажи' },
 ]
@@ -14,7 +14,7 @@ const OVERALL_MILESTONES: MilestoneDef[] = [
   { name: ['Новая заявка (WhatsApp)', 'Новая заявка (Instagram)'], label: 'Новая заявка (WhatsApp)', source: 'leads' },
   { name: 'Собеседование назначено', source: 'leads' },
   { name: 'Собеседование проведено', source: 'deals', pipeline: 'Собеседование' },
-  { name: 'Предоплата получена', source: 'deals', pipeline: 'Собеседование' },
+  { name: 'Предоплата получена', source: 'deals', pipeline: ['Собеседование', 'Продажи'] },
   { name: 'Одобрен педсоветом', source: 'deals', pipeline: 'Продажи' },
   { name: 'Полная оплата есть', source: 'deals', pipeline: 'Продажи' },
 ]
@@ -45,6 +45,23 @@ function buildToSchoolMap(leadsRows: SheetRow[]): Map<string, number> {
  * заявка засчиталась авансом, а звонок показал, что клиент уже учится у нас.
  * Отметка до заявки не в счёт — такого лида вернули в работу, и он честно новый.
  */
+/**
+ * Лист «Сделки» — лог событий, а не список сделок: одна карточка даёт строку на
+ * каждое изменение стадии. Предоплату, например, отмечают в воронке «Собеседование»,
+ * а после перехода карточки — ещё раз в «Продажах». Считаем сделку один раз, по
+ * первому событию: предоплата получена тогда, когда получена, а не когда повторена.
+ */
+function uniqueDeals(rows: SheetRow[]): SheetRow[] {
+  const first = new Map<string, SheetRow>()
+  const withoutId: SheetRow[] = []
+  for (const r of rows) {
+    if (!r.id) { withoutId.push(r); continue }
+    const prev = first.get(r.id)
+    if (!prev || r.ts < prev.ts) first.set(r.id, r)
+  }
+  return [...first.values(), ...withoutId]
+}
+
 function uniqueLeads(rows: SheetRow[], toSchool: Map<string, number>, dropMovedToSchool: boolean): SheetRow[] {
   const firstByLead = new Map<string, SheetRow>()
   const withoutId: SheetRow[] = []
@@ -111,11 +128,15 @@ function buildMilestones(
   return list.map(m => {
     const rows = m.source === 'leads' ? leadsRows : dealsRows
     const names = Array.isArray(m.name) ? m.name : [m.name]
+    const pipelines = m.pipeline ? (Array.isArray(m.pipeline) ? m.pipeline : [m.pipeline]) : null
     let matching = rows.filter(r => {
-      const pipelineOk = m.pipeline ? r.pipeline === m.pipeline : true
+      const pipelineOk = pipelines ? pipelines.includes(r.pipeline) : true
       const sourceOk = m.noSourceFilter ? true : (sourceFilter ? sourceFilter(r) : true)
       return names.includes(r.stage) && pipelineOk && sourceOk && !isTestTitle(r.title)
     })
+    if (m.source === 'deals') {
+      matching = uniqueDeals(matching.filter(r => daySet.has(r.dateKey)))
+    }
     if (m.source === 'leads') {
       // Уникальность считаем внутри месяца: иначе лид, заходивший в прошлом месяце,
       // выпал бы из текущего, а цифры месяца зависели бы от соседнего
@@ -138,10 +159,10 @@ function buildRevenue(
   weeks: string[][],
   sourceFilter: ((r: SheetRow) => boolean) | null
 ): ValuesSet {
-  const matching = dealsRows.filter(r =>
+  const matching = uniqueDeals(dealsRows.filter(r =>
     r.stage === REVENUE_STAGE && r.pipeline === REVENUE_PIPELINE &&
     !isTestTitle(r.title) && (sourceFilter ? sourceFilter(r) : true)
-  )
+  ))
   const dayValues = days.map(d => sumAmountOnDay(matching, d))
   const weekValues = weeks.map(w => sumAmountForWeek(matching, w))
   return { dayValues, weekValues, total: dayValues.reduce((a, b) => a + b, 0) }
@@ -241,11 +262,11 @@ export function buildMarketingStats(
     toSchool,
     true,
   ).length
-  const totalSalesRows = dealsRows.filter(r =>
+  const totalSalesRows = uniqueDeals(dealsRows.filter(r =>
     monthDaySet.has(r.dateKey) &&
     r.stage === REVENUE_STAGE &&
     !isTestTitle(r.title)
-  )
+  ))
   const totalRevenue = totalSalesRows.reduce((s, r) => s + r.amount, 0)
 
   const overallMilestones = buildMilestones(leadsRows, dealsRows, days, weeks, null, OVERALL_MILESTONES, toSchool)
