@@ -289,6 +289,12 @@ export function buildWeekPlan(data: DashData, plan: MonthPlan, todayIso: string)
     fact: facts[i] ?? emptyMetrics(),
   }))
 
+  // Ручной вес принадлежит неделе, а не её состоянию: неделя с множителем 0,5
+  // держит свой половинный план и после закрытия, иначе задним числом окажется,
+  // что она провалила план, которого ей не ставили
+  const weightOf = (i: number) => rows[i].days * (plan.mode === 'manual' ? rows[i].weight : 1)
+  const weightSum = rows.reduce((s, _, i) => s + weightOf(i), 0)
+
   for (const { key } of PLAN_METRICS) {
     const total = metrics[key]
     weeks.forEach((days, i) => { rows[i].even[key] = total * (days.length / totalDays) })
@@ -301,12 +307,11 @@ export function buildWeekPlan(data: DashData, plan: MonthPlan, todayIso: string)
     let done = 0
     const open: number[] = []
     rows.forEach((r, i) => {
-      if (r.closed) { r.plan[key] = r.even[key]; done += r.fact[key] }
+      if (r.closed) { r.plan[key] = weightSum > 0 ? total * (weightOf(i) / weightSum) : r.even[key]; done += r.fact[key] }
       else open.push(i)
     })
 
     const rest = Math.max(0, total - done)
-    const weightOf = (i: number) => rows[i].days * (plan.mode === 'manual' ? rows[i].weight : 1)
     const wsum = open.reduce((s, i) => s + weightOf(i), 0)
     open.forEach(i => { rows[i].plan[key] = wsum > 0 ? rest * (weightOf(i) / wsum) : 0 })
   }
