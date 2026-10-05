@@ -5,7 +5,7 @@ const MARKETING_MILESTONES: MilestoneDef[] = [
   { name: 'Новая заявка (WhatsApp)', source: 'leads' },
   { name: 'Собеседование назначено', source: 'leads' },
   { name: 'Собеседование проведено', source: 'deals', pipeline: 'Собеседование' },
-  { name: 'Предоплата получена', source: 'deals', pipeline: ['Собеседование', 'Продажи'] },
+  { name: 'Предоплата получена', source: 'deals', pipeline: 'Собеседование' },
   { name: 'Одобрен педсоветом', source: 'deals', pipeline: 'Продажи' },
   { name: 'Полная оплата есть', source: 'deals', pipeline: 'Продажи' },
 ]
@@ -14,7 +14,10 @@ const OVERALL_MILESTONES: MilestoneDef[] = [
   { name: ['Новая заявка (WhatsApp)', 'Новая заявка (Instagram)'], label: 'Новая заявка (WhatsApp)', source: 'leads' },
   { name: 'Собеседование назначено', source: 'leads' },
   { name: 'Собеседование проведено', source: 'deals', pipeline: 'Собеседование' },
-  { name: 'Предоплата получена', source: 'deals', pipeline: ['Собеседование', 'Продажи'] },
+  // Только воронка «Собеседование»: менеджер ставит предоплату там, а дальше карточка
+  // уезжает в «Продажи» с той же стадией. Считать обе — значит посчитать одно событие
+  // дважды, и дедупликация тут не спасает: повторная отметка приходит другим месяцем
+  { name: 'Предоплата получена', source: 'deals', pipeline: 'Собеседование' },
   { name: 'Одобрен педсоветом', source: 'deals', pipeline: 'Продажи' },
   { name: 'Полная оплата есть', source: 'deals', pipeline: 'Продажи' },
 ]
