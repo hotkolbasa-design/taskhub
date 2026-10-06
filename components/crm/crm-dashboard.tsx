@@ -9,7 +9,7 @@ import StudentsView from './students-view'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-import type { MonthPlan } from '@/lib/crm/types'
+import type { MonthPlan, HunterStat } from '@/lib/crm/types'
 
 type MonthOption = { key: string; label: string; future?: boolean }
 type ValuesSet = { dayValues: number[]; weekValues: number[]; total: number }
@@ -36,6 +36,7 @@ type DashData = {
   }
   rateMap: Record<string, number>
   plan: MonthPlan
+  hunters: HunterStat[]
   computedAt?: string
 }
 

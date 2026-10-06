@@ -1,4 +1,4 @@
-import type { SheetRow, MilestoneDef, MilestoneStat, ValuesSet, SpendMetrics, SourceData, GroupSourceData, MergedGroup, SpendMap, RateMap } from './types'
+import type { SheetRow, Hunter, HunterStat, MilestoneDef, MilestoneStat, ValuesSet, SpendMetrics, SourceData, GroupSourceData, MergedGroup, SpendMap, RateMap } from './types'
 import { isTestTitle, safeDiv } from './utils'
 
 const MARKETING_MILESTONES: MilestoneDef[] = [
@@ -30,6 +30,10 @@ const TO_SCHOOL_STAGE = 'Перенести в зачисление'
 
 // Последняя отметка «Перенести в зачисление» по каждому лиду.
 // Туда колл-центр уводит тех, кто после звонка оказался нашим же учеником.
+export function buildToSchoolMapPublic(leadsRows: SheetRow[]): Map<string, number> {
+  return buildToSchoolMap(leadsRows)
+}
+
 function buildToSchoolMap(leadsRows: SheetRow[]): Map<string, number> {
   const latest = new Map<string, number>()
   for (const r of leadsRows) {
@@ -240,6 +244,45 @@ function collectSources(leadsRows: SheetRow[], dealsRows: SheetRow[]): string[] 
   for (const r of all) { if (r.source) set.add(r.source) }
   if (all.some(r => /instagram/i.test(r.tags))) set.add('Instagram')
   return Array.from(set).sort()
+}
+
+/**
+ * Разбивка работы хантеров. Заявка закрепляется за тем, кто значится
+ * ответственным в её первом событии, назначенное собеседование — за тем,
+ * кто стоит на строке назначения: это разные люди, если карточку передали.
+ * Считаем карточки, а не строки, иначе повторные касания раздуют цифры.
+ */
+export function buildHunterStats(
+  leadsRows: SheetRow[],
+  days: string[],
+  weeks: string[][],
+  hunters: Hunter[],
+  toSchool: Map<string, number>,
+): HunterStat[] {
+  const daySet = new Set(days)
+  const byPerson = (stages: string[], dropMovedToSchool: boolean) => (name: string) => {
+    const rows = leadsRows.filter(r =>
+      stages.includes(r.stage) &&
+      !isTestTitle(r.title) &&
+      String(r.responsible ?? '').trim() === name &&
+      daySet.has(r.dateKey)
+    )
+    return uniqueLeads(rows, toSchool, dropMovedToSchool)
+  }
+  const newRequests = byPerson(NEW_REQUEST_STAGES, true)
+  const appointments = byPerson(['Собеседование назначено'], false)
+
+  const toSet = (rows: SheetRow[]): ValuesSet => {
+    const dayValues = days.map(d => countOnDay(rows, d))
+    return { dayValues, weekValues: weeks.map(w => sumForWeek(rows, w)), total: dayValues.reduce((a, b) => a + b, 0) }
+  }
+
+  return hunters.map(h => ({
+    name: h.name,
+    share: h.share,
+    leads: toSet(newRequests(h.name)),
+    appointed: toSet(appointments(h.name)),
+  }))
 }
 
 export function buildMarketingStats(
