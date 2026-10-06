@@ -164,27 +164,34 @@ function MetricTile({ metric, plan, fact, due, showFact, editable, onEdit }: {
  * Спрашиваем две разные вещи: выполнение своей доли плана и конверсию —
  * вторая не зависит от того, сколько заявок человеку досталось.
  */
-function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
+function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future }: {
   hunters: HunterStat[]
   weeks: WeekPlanRow[]
   monthPlan: PlanMetrics
   due: PlanMetrics
   norm: number
+  heldNorm: number
   future: boolean
 }) {
   const shareSum = hunters.reduce((s, h) => s + h.share, 0) || 1
   const totalLeads = hunters.reduce((s, h) => s + h.leads.total, 0)
   const totalApp = hunters.reduce((s, h) => s + h.appointed.total, 0)
+  const totalBooked = hunters.reduce((s, h) => s + h.bookedDeals, 0)
+  const totalHeld = hunters.reduce((s, h) => s + h.heldDeals, 0)
 
   const cell = (fact: number, dueValue: number, planValue: number) => (
     <div className="flex flex-col items-end">
-      <div className="flex items-center gap-1.5">
-        {!future && <StatusMark status={metricStatus(fact, dueValue)} />}
-        <span className="text-sm" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{n(fact)}</span>
-      </div>
-      <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-        {future ? `план ${n(planValue)}` : `из ${n(dueValue)} · месяц ${n(planValue)}`}
+      <span className="text-sm" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+        {n(planValue)}
       </span>
+      {!future && (
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <StatusMark status={metricStatus(fact, dueValue)} />
+          <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+            {n(fact)} из {n(dueValue)}
+          </span>
+        </div>
+      )}
     </div>
   )
 
@@ -193,15 +200,15 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
       <SectionLabel n="03" label="Хантеры" />
 
       <p className="text-xs mb-3" style={{ color: 'var(--text2)' }}>
-        План месяца делится по долям ставки. Значок сравнивает с планом на сегодня, как и выше.
-        Конверсия от доли не зависит — это качество работы с теми заявками, что человеку достались.
+        Сверху план, под ним факт со значком — как в таблицах выше. План месяца делится по долям ставки,
+        а конверсия и доходимость от доли не зависят: это качество работы с теми заявками, что человеку достались.
       </p>
 
       <div className="rounded-2xl overflow-x-auto mb-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
           <thead>
             <tr>
-              {['Хантер', 'Доля', 'Заявки', 'Назначено', 'Конверсия', 'Должен был'].map((h, i) => (
+              {['Хантер', 'Доля', 'Заявки', 'Назначено', 'Конверсия', 'Дошли до собеса', 'Должен был'].map((h, i) => (
                 <th key={h} className={`px-3 py-2.5 text-[10px] uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-right'}`}
                   style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
@@ -212,6 +219,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
               const k = h.share / shareSum
               const conv = h.leads.total > 0 ? h.appointed.total / h.leads.total * 100 : 0
               const owed = h.leads.total * (norm / 100)
+              const reach = h.bookedDeals > 0 ? h.heldDeals / h.bookedDeals * 100 : 0
               return (
                 <tr key={h.name}>
                   <td className="px-3 py-2.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>{h.name}</td>
@@ -232,6 +240,16 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
                     <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>норма {pct(norm)}</div>
                   </td>
                   <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="text-sm font-semibold" style={{
+                      fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
+                      color: h.bookedDeals === 0 ? 'var(--text2)'
+                        : reach >= heldNorm ? 'var(--green)' : reach >= heldNorm * 0.8 ? 'var(--text)' : 'var(--red)',
+                    }}>{h.bookedDeals > 0 ? pct(reach) : '—'}</span>
+                    <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                      {h.bookedDeals > 0 ? `${n(h.heldDeals)} из ${n(h.bookedDeals)}` : 'нет назначений'}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
                     <span className="text-sm" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{n(owed)}</span>
                     <div className="text-[10px]" style={{ color: h.appointed.total >= owed ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--font-mono)' }}>
                       {h.appointed.total >= owed ? '+' : '−'}{n(Math.abs(h.appointed.total - owed))}
@@ -247,6 +265,9 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
               <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{n(totalApp)}</td>
               <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
                 {pct(totalLeads > 0 ? totalApp / totalLeads * 100 : 0)}
+              </td>
+              <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
+                {totalBooked > 0 ? pct(totalHeld / totalBooked * 100) : '—'}
               </td>
               <td className="px-3 py-2.5 text-right text-sm" style={{ background: 'var(--surface2)', color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
                 {n(totalLeads * (norm / 100))}
@@ -286,13 +307,15 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
                     return (
                       <td key={w.key} className="px-3 py-2.5 text-right"
                         style={{ borderBottom: '1px solid var(--border)', background: w.current ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'transparent' }}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          {started && !future && <StatusMark status={metricStatus(fact, dueWeek)} />}
-                          <span className="text-sm" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-                            {started ? n(fact) : '—'}
-                          </span>
+                        <div className="text-sm" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                          {n(planned)}
                         </div>
-                        <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>план {n(planned)}</div>
+                        {started && !future && (
+                          <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                            <StatusMark status={metricStatus(fact, dueWeek)} />
+                            <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{n(fact)}</span>
+                          </div>
+                        )}
                       </td>
                     )
                   })}
@@ -646,6 +669,7 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
           monthPlan={metrics}
           due={due}
           norm={draft.conv.lead2app}
+          heldNorm={draft.conv.app2held}
           future={future}
         />
       )}
