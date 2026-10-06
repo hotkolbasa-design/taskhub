@@ -1,9 +1,9 @@
 import { unstable_cache } from 'next/cache'
 import { readSheetRows } from './read-sheet'
 import { loadPipelineDefinitions, buildPipelineStats } from './pipelines'
-import { buildMarketingStats } from './marketing'
+import { buildMarketingStats, buildHunterStats, buildToSchoolMapPublic } from './marketing'
 import { readSpendMap, readRateMap } from './spend'
-import { getMergedGroups, getMonthPlans } from './settings'
+import { getMergedGroups, getMonthPlans, getHunters } from './settings'
 import { DEFAULT_PLAN } from './plan'
 import { getMonthDays, getWeekGroups, formatDay, formatWeek } from './utils'
 import type { DashData } from './types'
@@ -57,7 +57,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
   // Fetch all data in parallel (including auto exchange rate)
   // Прошлые месяцы живут снапшотами: 3-го числа их фиксирует /api/cron/freeze,
   // 4-го скрипт Битрикса уносит строки в архив. Здесь — только рабочие листы
-  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap, groups, autoRate, monthPlans] = await Promise.all([
+  const [pipelineDefs, leadsRows, dealsRows, spendMap, rateMap, groups, autoRate, monthPlans, hunterList] = await Promise.all([
     loadPipelineDefinitions(),
     readSheetRows('Лиды'),
     readSheetRows('Сделки'),
@@ -66,6 +66,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     getMergedGroups(),
     fetchUsdKztRate(),
     getMonthPlans(),
+    getHunters(),
   ])
 
   const plan = monthPlans[monthKey] ?? DEFAULT_PLAN
@@ -85,6 +86,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
   ]
 
   const marketing = buildMarketingStats(leadsRows, dealsRows, days, weeks, spendMap, rateMap, groups)
+  const hunters = buildHunterStats(leadsRows, days, weeks, hunterList, buildToSchoolMapPublic(leadsRows))
 
   return {
     monthKey,
@@ -94,6 +96,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
     weekDays: weeks,
     pipelines,
     marketing,
+    hunters,
     rateMap,
     plan,
     computedAt: new Date().toISOString(),  // из кэша придёт время расчёта, а не ответа

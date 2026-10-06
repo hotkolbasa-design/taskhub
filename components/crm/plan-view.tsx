@@ -5,7 +5,7 @@ import {
   PLAN_METRICS, planMetrics, throughput, buildWeekPlan, buildCapacity, neededHunters, neededSlots, planGap,
   applyMetricEdit, convDrift, monthFact, planToDate, metricStatus, forecastMonth, DEFAULT_PLAN,
 } from '@/lib/crm/plan'
-import type { DashData, MonthPlan, PlanMetricKey, MetricStatus } from '@/lib/crm/types'
+import type { DashData, MonthPlan, PlanMetricKey, PlanMetrics, MetricStatus, HunterStat, WeekPlanRow } from '@/lib/crm/types'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 const NF = new Intl.NumberFormat('ru-RU')
@@ -154,6 +154,154 @@ function MetricTile({ metric, plan, fact, due, showFact, editable, onEdit }: {
           </span>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Работа хантеров. План месяца делится между ними по долям ставки: у Айгуль
+ * половина времени уходит на собеседования, поэтому заявок ей положено меньше.
+ * Спрашиваем две разные вещи: выполнение своей доли плана и конверсию —
+ * вторая не зависит от того, сколько заявок человеку досталось.
+ */
+function HuntersSection({ hunters, weeks, monthPlan, due, norm, future }: {
+  hunters: HunterStat[]
+  weeks: WeekPlanRow[]
+  monthPlan: PlanMetrics
+  due: PlanMetrics
+  norm: number
+  future: boolean
+}) {
+  const shareSum = hunters.reduce((s, h) => s + h.share, 0) || 1
+  const totalLeads = hunters.reduce((s, h) => s + h.leads.total, 0)
+  const totalApp = hunters.reduce((s, h) => s + h.appointed.total, 0)
+
+  const cell = (fact: number, dueValue: number, planValue: number) => (
+    <div className="flex flex-col items-end">
+      <div className="flex items-center gap-1.5">
+        {!future && <StatusMark status={metricStatus(fact, dueValue)} />}
+        <span className="text-sm" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{n(fact)}</span>
+      </div>
+      <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+        {future ? `план ${n(planValue)}` : `из ${n(dueValue)} · месяц ${n(planValue)}`}
+      </span>
+    </div>
+  )
+
+  return (
+    <div>
+      <SectionLabel n="03" label="Хантеры" />
+
+      <p className="text-xs mb-3" style={{ color: 'var(--text2)' }}>
+        План месяца делится по долям ставки. Значок сравнивает с планом на сегодня, как и выше.
+        Конверсия от доли не зависит — это качество работы с теми заявками, что человеку достались.
+      </p>
+
+      <div className="rounded-2xl overflow-x-auto mb-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
+          <thead>
+            <tr>
+              {['Хантер', 'Доля', 'Заявки', 'Назначено', 'Конверсия', 'Должен был'].map((h, i) => (
+                <th key={h} className={`px-3 py-2.5 text-[10px] uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-right'}`}
+                  style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {hunters.map(h => {
+              const k = h.share / shareSum
+              const conv = h.leads.total > 0 ? h.appointed.total / h.leads.total * 100 : 0
+              const owed = h.leads.total * (norm / 100)
+              return (
+                <tr key={h.name}>
+                  <td className="px-3 py-2.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>{h.name}</td>
+                  <td className="px-3 py-2.5 text-right text-xs" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                    {String(Math.round(k * 100))} %
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
+                    {cell(h.leads.total, due.leads * k, monthPlan.leads * k)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
+                    {cell(h.appointed.total, due.app * k, monthPlan.app * k)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="text-sm font-semibold" style={{
+                      fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
+                      color: conv >= norm ? 'var(--green)' : conv >= norm * 0.7 ? 'var(--text)' : 'var(--red)',
+                    }}>{pct(conv)}</span>
+                    <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>норма {pct(norm)}</div>
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="text-sm" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{n(owed)}</span>
+                    <div className="text-[10px]" style={{ color: h.appointed.total >= owed ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--font-mono)' }}>
+                      {h.appointed.total >= owed ? '+' : '−'}{n(Math.abs(h.appointed.total - owed))}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+            <tr>
+              <td className="px-3 py-2.5 text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)' }}>Итого</td>
+              <td className="px-3 py-2.5 text-right text-xs" style={{ background: 'var(--surface2)', color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>100 %</td>
+              <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{n(totalLeads)}</td>
+              <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{n(totalApp)}</td>
+              <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
+                {pct(totalLeads > 0 ? totalApp / totalLeads * 100 : 0)}
+              </td>
+              <td className="px-3 py-2.5 text-right text-sm" style={{ background: 'var(--surface2)', color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
+                {n(totalLeads * (norm / 100))}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="rounded-2xl overflow-x-auto mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
+          <thead>
+            <tr>
+              <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider"
+                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+                Назначено по неделям
+              </th>
+              {weeks.map(w => (
+                <th key={w.key} className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider"
+                  style={{ color: 'var(--text2)', background: w.current ? 'color-mix(in srgb, var(--accent) 10%, var(--surface2))' : 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+                  {w.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {hunters.map(h => {
+              const k = h.share / shareSum
+              return (
+                <tr key={h.name}>
+                  <td className="px-3 py-2.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>{h.name}</td>
+                  {weeks.map((w, i) => {
+                    const planned = w.plan.app * k
+                    const dueWeek = w.closed ? planned : planned * (w.workdays > 0 ? w.elapsedWork / w.workdays : 0)
+                    const fact = h.appointed.weekValues[i] ?? 0
+                    const started = w.elapsed > 0
+                    return (
+                      <td key={w.key} className="px-3 py-2.5 text-right"
+                        style={{ borderBottom: '1px solid var(--border)', background: w.current ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'transparent' }}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {started && !future && <StatusMark status={metricStatus(fact, dueWeek)} />}
+                          <span className="text-sm" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                            {started ? n(fact) : '—'}
+                          </span>
+                        </div>
+                        <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>план {n(planned)}</div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -490,8 +638,20 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
         расходится с планом месяца ровно на величину недобора.
       </div>
 
-      {/* ── 03 · Хватит ли мощности ────────────────────────────────────────── */}
-      <SectionLabel n="03" label="Хватит ли мощности" />
+      {/* ── 03 · Хантеры ───────────────────────────────────────────────────── */}
+      {data.hunters?.length > 0 && (
+        <HuntersSection
+          hunters={data.hunters}
+          weeks={rows}
+          monthPlan={metrics}
+          due={due}
+          norm={draft.conv.lead2app}
+          future={future}
+        />
+      )}
+
+      {/* ── 04 · Хватит ли мощности ────────────────────────────────────────── */}
+      <SectionLabel n="04" label="Хватит ли мощности" />
 
       <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>

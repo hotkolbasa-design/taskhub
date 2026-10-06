@@ -44,6 +44,7 @@ export async function readSheetRows(sheetName: string): Promise<SheetRow[]> {
       // Strip "(воронка)" suffix from pipeline name for consistent comparison
       pipeline: stripPipeline(String(row[4] ?? '')),
       amount: Number(row[7]) || 0,
+      responsible: String(row[8] ?? '').trim(),
       source: String(row[11] ?? '').trim(),
       tags: String(row[13] ?? ''),
     })

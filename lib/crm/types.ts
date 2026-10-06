@@ -6,6 +6,7 @@ export type SheetRow = {
   stage: string
   pipeline: string
   amount: number
+  responsible: string   // колонка «Ответственный» — по ней считается работа хантеров
   source: string
   tags: string
 }
@@ -88,6 +89,17 @@ export type WeekPlanRow = {
 
 export type MetricStatus = 'ok' | 'near' | 'behind' | null
 
+/** Хантер и его доля ставки: у Айгуль половина времени уходит на собеседования. */
+export type Hunter = { name: string; share: number }
+
+export type HunterStat = {
+  name: string
+  share: number
+  leads: ValuesSet        // заявки, закреплённые за ним
+  appointed: ValuesSet    // назначенные им собеседования
+}
+
+
 export type CapacityRow = {
   key: string
   label: string
@@ -115,6 +127,7 @@ export type DashData = {
   }
   rateMap: Record<string, number>
   plan: MonthPlan
+  hunters: HunterStat[]
   frozen?: boolean
   computedAt?: string   // когда данные посчитаны: ответ может прийти из кэша
 }

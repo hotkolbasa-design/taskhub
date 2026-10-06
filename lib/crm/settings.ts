@@ -4,7 +4,7 @@
 // K2 = "mergedGroups", L2 = JSON array string
 import { sheetValues, updateRange } from './sheets'
 import { normalizePlan } from './plan'
-import type { MergedGroup, MonthPlan } from './types'
+import type { MergedGroup, MonthPlan, Hunter } from './types'
 
 const SHEET = 'МаркетингРасходы'
 
@@ -49,6 +49,33 @@ export async function getMonthPlans(): Promise<Record<string, MonthPlan>> {
     }
   } catch {}
   return {}
+}
+
+// Доля ставки: у Айгуль половина времени уходит на собеседования, поэтому
+// заявок ей положено меньше — план между хантерами делится по этим долям
+const DEFAULT_HUNTERS: Hunter[] = [
+  { name: 'Камшат Балтабай', share: 1 },
+  { name: 'Акберды Култай', share: 1 },
+  { name: 'Айгуля Шарипова', share: 0.375 },
+]
+
+export async function getHunters(): Promise<Hunter[]> {
+  try {
+    const values = await sheetValues(SHEET, 'K5:L5')
+    if (values[0]?.[0] === 'hunters' && values[0]?.[1]) {
+      const raw = JSON.parse(String(values[0][1]))
+      if (Array.isArray(raw) && raw.length) {
+        return raw
+          .filter((h: Hunter) => h && typeof h.name === 'string' && h.name.trim())
+          .map((h: Hunter) => ({ name: h.name.trim(), share: Number(h.share) > 0 ? Number(h.share) : 1 }))
+      }
+    }
+  } catch {}
+  return DEFAULT_HUNTERS
+}
+
+export async function saveHunters(hunters: Hunter[]): Promise<void> {
+  await updateRange(SHEET, 'K5:L5', [['hunters', JSON.stringify(hunters)]], 'RAW')
 }
 
 export async function saveMonthPlan(monthKey: string, plan: MonthPlan): Promise<void> {
