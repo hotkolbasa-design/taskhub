@@ -199,10 +199,17 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
     <div>
       <SectionLabel n="03" label="Хантеры" />
 
-      <p className="text-xs mb-3" style={{ color: 'var(--text2)' }}>
+      <p className="text-xs mb-4" style={{ color: 'var(--text2)' }}>
         Сверху план, под ним факт со значком — как в таблицах выше. План месяца делится по долям ставки,
         а конверсия и доходимость от доли не зависят: это качество работы с теми заявками, что человеку достались.
       </p>
+
+      <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>С начала месяца</h3>
+        <span className="text-[11px]" style={{ color: 'var(--text2)' }}>
+          «из N» — сколько должно быть к сегодняшнему дню, «месяц N» — за весь месяц
+        </span>
+      </div>
 
       <div className="rounded-2xl overflow-x-auto mb-3" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
@@ -277,13 +284,20 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
         </table>
       </div>
 
+      <div className="flex items-baseline justify-between gap-3 mb-2 mt-5 flex-wrap">
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>По неделям</h3>
+        <span className="text-[11px]" style={{ color: 'var(--text2)' }}>
+          назначенные собеседования · у будущих недель стоит только план, факт появится с её началом
+        </span>
+      </div>
+
       <div className="rounded-2xl overflow-x-auto mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
           <thead>
             <tr>
               <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider"
                 style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
-                Назначено по неделям
+                Хантер
               </th>
               {weeks.map(w => (
                 <th key={w.key} className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider"
