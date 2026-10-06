@@ -86,7 +86,7 @@ export async function computeDashboardData(monthKey: string): Promise<DashData> 
   ]
 
   const marketing = buildMarketingStats(leadsRows, dealsRows, days, weeks, spendMap, rateMap, groups)
-  const hunters = buildHunterStats(leadsRows, days, weeks, hunterList, buildToSchoolMapPublic(leadsRows))
+  const hunters = buildHunterStats(leadsRows, dealsRows, days, weeks, hunterList, buildToSchoolMapPublic(leadsRows))
 
   return {
     monthKey,

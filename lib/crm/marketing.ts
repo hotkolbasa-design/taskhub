@@ -254,6 +254,7 @@ function collectSources(leadsRows: SheetRow[], dealsRows: SheetRow[]): string[] 
  */
 export function buildHunterStats(
   leadsRows: SheetRow[],
+  dealsRows: SheetRow[],
   days: string[],
   weeks: string[][],
   hunters: Hunter[],
@@ -277,12 +278,24 @@ export function buildHunterStats(
     return { dayValues, weekValues: weeks.map(w => sumForWeek(rows, w)), total: dayValues.reduce((a, b) => a + b, 0) }
   }
 
-  return hunters.map(h => ({
-    name: h.name,
-    share: h.share,
-    leads: toSet(newRequests(h.name)),
-    appointed: toSet(appointments(h.name)),
-  }))
+  // Доходимость считаем по сделкам: только там есть обе стадии на одной карточке
+  const dealsInMonth = dealsRows.filter(r => daySet.has(r.dateKey) && !isTestTitle(r.title) && r.pipeline === 'Собеседование')
+  const heldIds = new Set(dealsInMonth.filter(r => r.stage === 'Собеседование проведено').map(r => r.id))
+  const bookedBy = (name: string) => new Set(
+    dealsInMonth.filter(r => r.stage === 'Собеседование назначено' && r.responsible === name).map(r => r.id)
+  )
+
+  return hunters.map(h => {
+    const booked = bookedBy(h.name)
+    return {
+      name: h.name,
+      share: h.share,
+      leads: toSet(newRequests(h.name)),
+      appointed: toSet(appointments(h.name)),
+      bookedDeals: booked.size,
+      heldDeals: [...booked].filter(id => heldIds.has(id)).length,
+    }
+  })
 }
 
 export function buildMarketingStats(
