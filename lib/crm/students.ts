@@ -15,6 +15,42 @@ const EXPEL_STAGE = 'C6:NEW'
 const PAID_STAGE = 'WON'
 
 /**
+ * Стадии, на которых человек числится учеником. Уход с них в «Запросили отчисление» —
+ * настоящее отчисление, всё остальное — наведение порядка в карточках.
+ *
+ * Зачем список. 7–8 октября 2026 в отчисление разом отправили 40 старых сделок из
+ * «Выбышие должники» и получили −47 учеников за два дня: эти люди давно не учились,
+ * а часть из них уже проходила «Запросили отчисление» в 2025 году. Счётчик вычитал тех,
+ * кого никогда не прибавлял. Поэтому список белый: незнакомая стадия ученика не убавляет,
+ * а попадает в таблицу с причиной — так ошибка видна, а цифра не врёт.
+ */
+const STUDYING_STAGES = new Set([
+  // Воронка «Все ученики» — человек числится учащимся, даже если с ним проблемы
+  'C10:NEW',            // Все ученики
+  'C10:UC_4H8JFQ',      // Перевод в школу
+  'C10:UC_UX15KV',      // Проблема выявлена
+  'C10:UC_PLVD7F',      // НЕ платят но учится
+  'C10:UC_VOAXD6',      // Другая проблема
+  'C10:UC_FJ1KSC',      // Кунделик проблемы
+  'C10:UC_LY04JC',      // Проблема с Документами
+  'C10:UC_V0349I',      // Хронические должники
+  'C10:FINAL_INVOICE',  // Контроль Троечники
+  'C10:UC_A8KV1C',      // Троечник хронические
+  'C10:WON',            // Сделка успешна
+  // Воронка «Зачисление в школу» — начиная с регистрации на платформе
+  'C4:PREPARATION',     // Зарегистрировать на платформу
+  'C4:EXECUTING',       // Запросили талон у школы
+  'C4:FINAL_INVOICE',   // Талон отправлен родителю
+  'C4:PREPAYMENT_INVOICE', // Логин и пароль выданы (платформа)
+  'C4:UC_NKHND2',       // Загрузили скан документов
+  'C4:UC_2XOB6S',       // Документы в дороге
+  'C4:UC_5EE2XE',       // Документы и талон получены
+  'C4:UC_WX35SX',       // Документы доставлены в школу
+  'C4:UC_K2P3QE',       // Ученик прикреплен в школу
+  'C4:WON',             // Зачисление завершено
+])
+
+/**
  * Поля «ФИО ученика 1…4» в сделке. В портале полно полей-дублей с теми же подписями,
  * поэтому коды зафиксированы явно, а не подбираются по названию.
  */
@@ -96,6 +132,83 @@ function originOf(item: { ID: number; OWNER_ID: number }, history: Map<string, H
   return idx > 0 ? list[idx - 1].STAGE_ID : null
 }
 
+/** Была ли по этой сделке отметка об отчислении раньше — после последнего зачисления. */
+function expelledBefore(item: { ID: number; OWNER_ID: number }, history: Map<string, HistoryItem[]>): boolean {
+  const list = (history.get(String(item.OWNER_ID)) ?? []).slice().sort((a, b) => a.ID - b.ID)
+  const idx = list.findIndex(x => x.ID === item.ID)
+  if (idx <= 0) return false
+  const before = list.slice(0, idx)
+  const lastEnroll = before.map(x => x.STAGE_ID).lastIndexOf(ENROLL_STAGE)
+  return before.slice(lastEnroll + 1).some(x => x.STAGE_ID === EXPEL_STAGE)
+}
+
+/** Человеческие названия стадий — чтобы в причине стояло «Выбышие должники», а не код. */
+let stageNamesCache: Map<string, string> | null = null
+async function stageNames(): Promise<Map<string, string>> {
+  if (stageNamesCache) return stageNamesCache
+  const map = new Map<string, string>()
+  for (const entity of ['DEAL_STAGE', 'DEAL_STAGE_2', 'DEAL_STAGE_4', 'DEAL_STAGE_6', 'DEAL_STAGE_10']) {
+    try {
+      const body = await bitrix<{ result?: { STATUS_ID: string; NAME: string }[] }>(
+        'crm.status.list', { 'filter[ENTITY_ID]': entity },
+      )
+      for (const s of body.result ?? []) map.set(s.STATUS_ID, s.NAME)
+    } catch {
+      // Названия — украшение причины, из-за них синхронизация падать не должна
+    }
+  }
+  stageNamesCache = map
+  return map
+}
+
+type Decision = { counted: boolean; reason: string | null }
+
+/**
+ * Идёт ли движение в счёт. Правило несимметрично по смыслу, но симметрично по сути:
+ * прибавляем только пришедших из оплаты, вычитаем только тех, кто до этого числился учеником.
+ */
+function decideMove(
+  kind: 'enroll' | 'expel',
+  opts: {
+    deal: BitrixDeal | undefined
+    names: string[]
+    origin: string | null
+    repeated: boolean
+    active: Set<string>
+    names2label: Map<string, string>
+  },
+): Decision {
+  const { deal, names, origin, repeated, active, names2label } = opts
+  const label = (code: string) => names2label.get(code) ?? code
+
+  if (!deal) return { counted: false, reason: 'сделка удалена или объединена' }
+  if (names.length === 0) return { counted: false, reason: 'в сделке не заполнено ни одного ФИО ученика' }
+
+  if (kind === 'enroll') {
+    if (origin !== PAID_STAGE) {
+      return {
+        counted: false,
+        reason: origin
+          ? `сделка пришла из «${label(origin)}», а не из «Полная оплата есть»`
+          : 'у сделки нет предыдущей стадии — не из оплаты',
+      }
+    }
+    if (names.every(n => active.has(normalizeName(n)))) {
+      return { counted: false, reason: 'эти ученики уже числятся — похоже, дубль сделки' }
+    }
+    return { counted: true, reason: null }
+  }
+
+  // Отчисление. Если ученика прибавляли мы сами — вычитаем без оглядки на стадии
+  if (names.some(n => active.has(normalizeName(n)))) return { counted: true, reason: null }
+  if (!origin) return { counted: false, reason: 'у сделки нет предыдущей стадии — неизвестно, числился ли учеником' }
+  if (!STUDYING_STAGES.has(origin)) {
+    return { counted: false, reason: `пришёл из «${label(origin)}» — там ученик уже не числится` }
+  }
+  if (repeated) return { counted: false, reason: 'отчисление по этой сделке уже отмечали раньше' }
+  return { counted: true, reason: null }
+}
+
 async function dealsByIds(ids: string[]): Promise<Map<string, BitrixDeal>> {
   const map = new Map<string, BitrixDeal>()
   for (let i = 0; i < ids.length; i += 50) {
@@ -114,11 +227,22 @@ function normalizeName(name: string): string {
   return name.toLowerCase().replace(/\s+/g, ' ').trim()
 }
 
+/**
+ * ФИО детей из сделки, без повторов: одно и то же имя нередко вписано в два поля
+ * (так «Ахметова Айжан» считалась за двоих), а два ребёнка с совпадающим ФИО не встречаются.
+ */
 function studentsOf(deal: BitrixDeal | undefined): string[] {
   if (!deal) return []
+  const seen = new Set<string>()
   return FIO_FIELDS
     .map(f => String(deal[f] ?? '').trim())
-    .filter(Boolean)
+    .filter(name => {
+      if (!name) return false
+      const key = normalizeName(name)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
 }
 
 /**
@@ -156,8 +280,10 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
 
     const dealIds = [...new Set(fresh.map(i => String(i.OWNER_ID)))]
     const deals = await dealsByIds(dealIds)
-    // Для зачислений важно, откуда сделка пришла: учеников прибавляет только оплата
-    const history = kind === 'enroll' ? await historyOfDeals(dealIds) : new Map<string, HistoryItem[]>()
+    // Откуда сделка пришла, важно в обе стороны: прибавляет только оплата,
+    // убавляет только уход с тех стадий, где человек числился учеником
+    const history = await historyOfDeals(dealIds)
+    const labels = await stageNames()
 
     // Кто уже числится зачисленным: по этим именам повторный приход — дубль сделки,
     // а не второй ученик. В Битриксе дубли создаются и объединяются постоянно
@@ -180,30 +306,13 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
       .map(i => {
         const deal = deals.get(String(i.OWNER_ID))
         const names = studentsOf(deal)
-        const origin = kind === 'enroll' ? originOf(i, history) : null
+        const origin = originOf(i, history)
 
-        let counted = true
-        let skipReason: string | null = null
-
-        if (kind === 'enroll' && origin !== PAID_STAGE) {
-          counted = false
-          skipReason = origin
-            ? 'сделка пришла не из «Полная оплата есть»'
-            : 'у сделки нет предыдущей стадии — не из оплаты'
-        } else if (!deal) {
-          // Сделку удалили или объединили с другой, пока событие шло к нам
-          counted = false
-          skipReason = 'сделка удалена'
-        } else if (names.length === 0) {
-          counted = false
-          skipReason = 'в сделке не заполнено ни одного ФИО ученика'
-        } else if (kind === 'enroll' && names.every(n => active.has(normalizeName(n)))) {
-          counted = false
-          skipReason = 'эти ученики уже числятся — похоже, дубль сделки'
-        } else if (kind === 'expel' && names.every(n => !active.has(normalizeName(n)))) {
-          counted = false
-          skipReason = 'эти ученики уже не числятся'
-        }
+        const { counted, reason: skipReason } = decideMove(kind, {
+          deal, names, origin,
+          repeated: kind === 'expel' && expelledBefore(i, history),
+          active, names2label: labels,
+        })
 
         if (counted) {
           for (const n of names) {
@@ -239,57 +348,73 @@ export async function syncStudentMoves(): Promise<{ enroll: number; expel: numbe
 }
 
 /**
- * Перепроверяет недавние движения: сделку могли удалить или объединить уже ПОСЛЕ того,
- * как мы записали её переход. Такое движение перестаёт идти в счёт, но остаётся в истории.
+ * Пересчитывает все движения после отметки по текущим правилам.
+ *
+ * Нужна по двум причинам. Первая: сделку могли удалить или объединить уже ПОСЛЕ того,
+ * как мы записали её переход. Вторая: правила меняются, и записанное вчера должно
+ * пересчитаться сегодня — иначе в счёте остаются цифры по старому правилу.
+ *
+ * Идём строго по времени: решение по отчислению зависит от того, числится ли ученик,
+ * а это зависит от предыдущих движений. Движений здесь немного — счёт ведётся от отметки.
  */
-async function reviewRecentMoves(days = 45): Promise<void> {
+export async function reviewRecentMoves(): Promise<void> {
   const admin = createAdminClient()
-  const since = new Date(Date.now() - days * 86400_000).toISOString()
 
-  const { data: recent } = await admin
+  const { data: baseline } = await admin
+    .from('student_baseline')
+    .select('as_of')
+    .order('as_of', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const since = baseline?.as_of ? `${baseline.as_of}T00:00:00+05:00` : '2026-09-30T00:00:00+05:00'
+
+  const { data: recorded } = await admin
     .from('student_moves')
-    .select('history_id, deal_id, kind, counted, student_names')
+    .select('history_id, deal_id, kind, counted, students, skip_reason, origin_stage')
     .gte('happened_at', since)
-  if (!recent || recent.length === 0) return
+    .order('happened_at', { ascending: true })
+  if (!recorded || recorded.length === 0) return
 
-  const rows = recent as { history_id: number; deal_id: number; kind: string; counted: boolean; student_names: string[] }[]
+  type Row = {
+    history_id: number; deal_id: number; kind: 'enroll' | 'expel'
+    counted: boolean; students: number; skip_reason: string | null; origin_stage: string | null
+  }
+  const rows = recorded as Row[]
   const dealIds = [...new Set(rows.map(r => String(r.deal_id)))]
   const alive = await dealsByIds(dealIds)
   const history = await historyOfDeals(dealIds)
+  const labels = await stageNames()
+
+  const active = new Set<string>()
 
   for (const r of rows) {
     const deal = alive.get(String(r.deal_id))
-    const origin = r.kind === 'enroll'
-      ? originOf({ ID: r.history_id, OWNER_ID: r.deal_id }, history)
-      : null
+    const names = studentsOf(deal)
+    const item = { ID: r.history_id, OWNER_ID: r.deal_id }
+    const origin = originOf(item, history)
 
-    let counted = true
-    let reason: string | null = null
+    const { counted, reason } = decideMove(r.kind, {
+      deal, names, origin,
+      repeated: r.kind === 'expel' && expelledBefore(item, history),
+      active, names2label: labels,
+    })
 
-    if (r.kind === 'enroll' && origin !== PAID_STAGE) {
-      counted = false
-      reason = origin ? 'сделка пришла не из «Полная оплата есть»' : 'у сделки нет предыдущей стадии — не из оплаты'
-    } else if (!deal) {
-      counted = false
-      reason = 'сделка удалена или объединена'
-    } else if (studentsOf(deal).length === 0) {
-      counted = false
-      reason = 'в сделке не заполнено ни одного ФИО ученика'
+    if (counted) {
+      for (const n of names) {
+        if (r.kind === 'enroll') active.add(normalizeName(n))
+        else active.delete(normalizeName(n))
+      }
     }
 
-    if (r.counted !== counted) {
-      await admin
-        .from('student_moves')
-        .update({
-          counted,
-          students: counted ? studentsOf(deal).length : 0,
-          skip_reason: reason,
-          origin_stage: origin,
-        })
-        .eq('history_id', r.history_id)
-    } else if (r.kind === 'enroll') {
-      await admin.from('student_moves').update({ origin_stage: origin }).eq('history_id', r.history_id)
-    }
+    const students = counted ? names.length : 0
+    const changed = r.counted !== counted || r.students !== students
+      || r.skip_reason !== reason || r.origin_stage !== origin
+    if (!changed) continue
+
+    await admin
+      .from('student_moves')
+      .update({ counted, students, student_names: names, skip_reason: reason, origin_stage: origin })
+      .eq('history_id', r.history_id)
   }
 }
 
