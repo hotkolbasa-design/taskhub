@@ -41,7 +41,9 @@ function LoginForm() {
       return
     }
 
-    window.location.href = '/dashboard'
+    // Только внутренний путь: «/x», но не «//host» — иначе ссылкой можно увести на чужой сайт
+    const next = searchParams.get('next')
+    window.location.href = next && /^\/[a-z]/.test(next) ? next : '/dashboard'
   }
 
   return (
