@@ -164,6 +164,15 @@ async function stageNames(): Promise<Map<string, string>> {
 type Decision = { counted: boolean; reason: string | null }
 
 /**
+ * Решение, проставленное руками после сверки с выгрузкой платформы, сильнее автоматики:
+ * стадия Битрикса говорит, где лежала карточка, а не учился ли человек на самом деле.
+ */
+function applyManual(auto: Decision, manual: boolean | null | undefined, manualReason: string | null): Decision {
+  if (manual === null || manual === undefined) return auto
+  return { counted: manual, reason: manual ? null : (manualReason ?? 'снято вручную после сверки') }
+}
+
+/**
  * Идёт ли движение в счёт. Правило несимметрично по смыслу, но симметрично по сути:
  * прибавляем только пришедших из оплаты, вычитаем только тех, кто до этого числился учеником.
  */
@@ -370,7 +379,7 @@ export async function reviewRecentMoves(): Promise<void> {
 
   const { data: recorded } = await admin
     .from('student_moves')
-    .select('history_id, deal_id, kind, counted, students, skip_reason, origin_stage')
+    .select('history_id, deal_id, kind, counted, students, skip_reason, origin_stage, manual_counted')
     .gte('happened_at', since)
     .order('happened_at', { ascending: true })
   if (!recorded || recorded.length === 0) return
@@ -378,6 +387,7 @@ export async function reviewRecentMoves(): Promise<void> {
   type Row = {
     history_id: number; deal_id: number; kind: 'enroll' | 'expel'
     counted: boolean; students: number; skip_reason: string | null; origin_stage: string | null
+    manual_counted: boolean | null
   }
   const rows = recorded as Row[]
   const dealIds = [...new Set(rows.map(r => String(r.deal_id)))]
@@ -393,11 +403,15 @@ export async function reviewRecentMoves(): Promise<void> {
     const item = { ID: r.history_id, OWNER_ID: r.deal_id }
     const origin = originOf(item, history)
 
-    const { counted, reason } = decideMove(r.kind, {
-      deal, names, origin,
-      repeated: r.kind === 'expel' && expelledBefore(item, history),
-      active, names2label: labels,
-    })
+    const { counted, reason } = applyManual(
+      decideMove(r.kind, {
+        deal, names, origin,
+        repeated: r.kind === 'expel' && expelledBefore(item, history),
+        active, names2label: labels,
+      }),
+      r.manual_counted,
+      r.skip_reason,
+    )
 
     if (counted) {
       for (const n of names) {
