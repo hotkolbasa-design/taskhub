@@ -1,6 +1,6 @@
 // Общая логика подсказчика для двух входов: /podskazchik (аккаунт TaskHub) и /api/podskazchik?h=<код>.
 // Кто открыл — решает вызывающий маршрут; здесь только страница, журнал и ИИ-подбор.
-import { loadBaza, writeLog, type Baza } from './baza'
+import { addSuggestion, loadBaza, mySuggestions, writeLog, type Baza } from './baza'
 import { aiAnswer, aiKey } from './ai'
 import { PAGE_HTML } from './page'
 
@@ -46,6 +46,14 @@ export async function respond(p: URLSearchParams, baza: Baza, who: { name: strin
     return json({ ok: true })
   }
 
+  if (p.get('mine') === '1') {
+    try {
+      return json({ ok: true, items: await mySuggestions(who.name) })
+    } catch {
+      return json({ ok: false, error: 'Список предложений временно недоступен.' })
+    }
+  }
+
   const said = p.get('ai')
   if (said) {
     const key = await aiKey().catch(() => null)
@@ -65,4 +73,23 @@ export async function respond(p: URLSearchParams, baza: Baza, who: { name: strin
   void _hunters
   const payload = JSON.stringify({ ...data, hunter: who, ai }).replace(/</g, '\\u003c')
   return new Response(PAGE_HTML.replace('/*DATA*/null/*END*/', payload), { status: 200, headers: HTML_HEADERS })
+}
+
+// POST {act:'suggest', gde, pole, lang, frag, variant, comment} — предложение правки скрипта
+export async function respondPost(req: Request, who: { name: string }) {
+  let b: Record<string, unknown>
+  try { b = await req.json() } catch { return json({ ok: false, error: 'Не удалось прочитать запрос.' }, 400) }
+  const str = (k: string, max: number) => String(b[k] ?? '').trim().slice(0, max)
+  if (b.act !== 'suggest') return json({ ok: false, error: 'Неизвестное действие.' }, 400)
+  const variant = str('variant', 2000)
+  if (!variant) return json({ ok: false, error: 'Напишите, как, по-вашему, лучше сказать.' }, 400)
+  try {
+    const n = await addSuggestion({
+      hunter: who.name, gde: str('gde', 200), pole: str('pole', 60), lang: str('lang', 4) === 'kz' ? 'kz' : 'ru',
+      frag: str('frag', 2000), variant, comment: str('comment', 1000),
+    }, almaty())
+    return json({ ok: true, n })
+  } catch {
+    return json({ ok: false, error: 'Не удалось сохранить — попробуйте ещё раз через минуту.' }, 502)
+  }
 }

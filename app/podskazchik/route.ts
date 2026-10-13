@@ -3,24 +3,37 @@
 // Страница самостоятельная (не в layout дашборда): хантер держит её во вкладке рядом с Битриксом.
 import { createClient } from '@/lib/supabase/server'
 import { canAccessCrm } from '@/lib/utils/crm-access'
-import { getBaza, message, respond } from '@/lib/podskazchik/handler'
+import { getBaza, message, respond, respondPost } from '@/lib/podskazchik/handler'
 
-export async function GET(req: Request) {
+async function whoAmI() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return Response.redirect(new URL('/login?next=/podskazchik', req.url), 307)
+  if (!user) return null
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, login, role, status, position, department')
     .eq('id', user.id)
     .maybeSingle()
-  if (!profile || profile.status !== 'active' || !canAccessCrm(profile)) {
+  if (!profile || profile.status !== 'active' || !canAccessCrm(profile)) return 'denied' as const
+  return { name: profile.full_name || profile.login || 'без имени', code: '' }
+}
+
+export async function GET(req: Request) {
+  const who = await whoAmI()
+  if (!who) return Response.redirect(new URL('/login?next=/podskazchik', req.url), 307)
+  if (who === 'denied') {
     return message('Подсказчик открыт отделу продаж и маркетингу. Попросите администратора указать в вашем профиле отдел «Отдел продаж».', 403)
   }
 
   const p = new URL(req.url).searchParams
   const baza = await getBaza(p.get('fresh') === '1')
   if (baza instanceof Response) return baza
-  return respond(p, baza, { name: profile.full_name || profile.login || 'без имени', code: '' })
+  return respond(p, baza, who)
+}
+
+export async function POST(req: Request) {
+  const who = await whoAmI()
+  if (!who || who === 'denied') return new Response('{"ok":false,"error":"Нет доступа."}', { status: 403 })
+  return respondPost(req, who)
 }
