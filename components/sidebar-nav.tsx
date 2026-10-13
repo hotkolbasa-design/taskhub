@@ -53,6 +53,17 @@ const podskazchikItem = {
   ),
 }
 
+const predlozheniyaItem = {
+  href: '/predlozheniya',
+  label: 'Предложения',
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 13l1-3.5L10.5 3a1.4 1.4 0 012 2L6 11.5 3 13z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      <path d="M9.5 4l2.5 2.5" stroke="currentColor" strokeWidth="1.4"/>
+    </svg>
+  ),
+}
+
 const navItems = [
   {
     href: '/dashboard',
@@ -284,7 +295,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
         {(() => {
           const isAdmin = profile?.role === 'admin'
           const extra = [
-            ...(canAccessCrm(profile ?? {}) ? [crmItem, podskazchikItem] : []),
+            ...(canAccessCrm(profile ?? {}) ? [crmItem, podskazchikItem, predlozheniyaItem] : []),
             ...(isAdmin ? [adminItem] : []),
           ]
           return [...navItems, ...extra] as { href: string; label: string; icon: ReactNode; newTab?: boolean }[]
