@@ -146,3 +146,27 @@ export async function writeLog(row: (string | number)[]): Promise<void> {
     requestBody: { values: [row] },
   })
 }
+
+// Предложения правок от хантеров: лист «Предложения». Статус: новое → одобрено/отказано → внесено.
+// Разбирает Claude по просьбе Марлена (скилл podskazchik-baza), решение — в колонке «Решение».
+export async function addSuggestion(f: { hunter: string; gde: string; pole: string; lang: string; frag: string; variant: string; comment: string }, time: string) {
+  const s = client()
+  const col = await s.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: "'Предложения'!A2:A5000" })
+  const n = (col.data.values?.length ?? 0) + 1
+  await s.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: "'Предложения'!A1",
+    valueInputOption: 'RAW',
+    requestBody: { values: [[n, time, f.hunter, f.gde, f.pole, f.lang, f.frag, f.variant, f.comment, 'новое', '', '']] },
+  })
+  return n
+}
+
+export async function mySuggestions(hunter: string) {
+  const res = await client().spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: "'Предложения'!A1:L5000" })
+  return rows(res.data.values as unknown[][] | undefined)
+    .filter(r => r['Хантер'] === hunter)
+    .reverse()
+    .slice(0, 50)
+    .map(r => ({ n: r['№'], time: r['Время'], gde: r['Где'], frag: r['Фрагмент'], variant: r['Вариант хантера'], status: r['Статус'], reshenie: r['Решение'] }))
+}
