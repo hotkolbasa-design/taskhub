@@ -10,7 +10,8 @@
 - Supabase project ID: `zsmhyuvxldwedshjmvjg`
 - Время задач — всегда **минуты** (integer) в БД. Конвертация: `lib/utils/time.ts`
 - `middleware.ts` → переименован в `proxy.ts` (экспортирует `proxy`, не `middleware`)
-- Маршрут без авторизации → обязательно в `publicRoutes` (`proxy.ts`), иначе редирект на `/login`. Восстановление пароля — в CLAUDE_REFERENCE.md
+- Маршрут без авторизации → обязательно в `publicRoutes` (`proxy.ts`), иначе редирект на `/login`.
+- `/api/*` proxy не проверяет. `/api/zvonok?id=&k=` — публичная страница расшифровки звонка Globalos (ссылки из таблицы «Интеграция B24 звонки»); данные берёт у Apps Script-просмотрщика, подпись `k` проверяет он Восстановление пароля — в CLAUDE_REFERENCE.md
 
 ## Запреты UI
 - Нативный `<select>` — **ЗАПРЕЩЁН** → кастомный дропдаун (паттерн в CLAUDE_REFERENCE.md)
