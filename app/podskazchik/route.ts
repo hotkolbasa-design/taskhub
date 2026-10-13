@@ -12,11 +12,11 @@ async function whoAmI() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, login, role, status, position, department')
+    .select('id, full_name, login, role, status, position, department')
     .eq('id', user.id)
     .maybeSingle()
   if (!profile || profile.status !== 'active' || !canAccessCrm(profile)) return 'denied' as const
-  return { name: profile.full_name || profile.login || 'без имени', code: '' }
+  return { id: profile.id as string, name: profile.full_name || profile.login || 'без имени', code: '' }
 }
 
 export async function GET(req: Request) {
