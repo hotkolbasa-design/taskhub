@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
@@ -36,6 +36,19 @@ const crmItem = {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M2 11.5l3-4 2.5 3 3.5-5.5 2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+    </svg>
+  ),
+}
+
+// Открывается в новой вкладке: хантер держит подсказчик рядом с Битриксом во время звонка
+const podskazchikItem = {
+  href: '/podskazchik',
+  label: 'Подсказчик',
+  newTab: true,
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2.5 3.5a1 1 0 011-1h9a1 1 0 011 1v6a1 1 0 01-1 1H7l-3 2.5v-2.5h-.5a1 1 0 01-1-1v-6z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      <path d="M5.5 6h5M5.5 8h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
     </svg>
   ),
 }
@@ -271,16 +284,17 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
         {(() => {
           const isAdmin = profile?.role === 'admin'
           const extra = [
-            ...(canAccessCrm(profile ?? {}) ? [crmItem] : []),
+            ...(canAccessCrm(profile ?? {}) ? [crmItem, podskazchikItem] : []),
             ...(isAdmin ? [adminItem] : []),
           ]
-          return [...navItems, ...extra]
-        })().map(({ href, label, icon }) => {
+          return [...navItems, ...extra] as { href: string; label: string; icon: ReactNode; newTab?: boolean }[]
+        })().map(({ href, label, icon, newTab }) => {
           const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
           return (
             <Link
               key={href}
               href={href}
+              {...(newTab ? { target: '_blank', rel: 'noopener', prefetch: false } : {})}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
               style={{
                 color: isActive ? 'var(--accent)' : 'var(--text2)',

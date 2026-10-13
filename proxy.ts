@@ -15,7 +15,9 @@ export async function proxy(request: NextRequest) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        return NextResponse.redirect(new URL('/login', request.url))
+        // Вернуть на подсказчик после входа — хантеры держат эту ссылку в закладках
+        const next = pathname === '/podskazchik' ? '?next=/podskazchik' : ''
+        return NextResponse.redirect(new URL('/login' + next, request.url))
       }
     } catch {
       return NextResponse.redirect(new URL('/login', request.url))
