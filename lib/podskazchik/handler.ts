@@ -82,12 +82,12 @@ export async function respondPost(req: Request, who: { name: string; id?: string
   try { b = await req.json() } catch { return json({ ok: false, error: 'Не удалось прочитать запрос.' }, 400) }
   const str = (k: string, max: number) => String(b[k] ?? '').trim().slice(0, max)
   if (b.act !== 'suggest') return json({ ok: false, error: 'Неизвестное действие.' }, 400)
-  const variant = str('variant', 2000)
+  const variant = str('variant', 8000)
   if (!variant) return json({ ok: false, error: 'Напишите, как, по-вашему, лучше сказать.' }, 400)
   try {
     const n = await addSuggestion({
       authorId: who.id ?? null, authorName: who.name, gde: str('gde', 200), pole: str('pole', 60),
-      lang: str('lang', 4) === 'kz' ? 'kz' : 'ru', frag: str('frag', 2000), variant, comment: str('comment', 1000),
+      lang: str('lang', 4) === 'kz' ? 'kz' : 'ru', frag: str('frag', 2000), variant, comment: str('comment', 2000),
     })
     return json({ ok: true, n })
   } catch {

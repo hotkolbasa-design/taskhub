@@ -14,6 +14,7 @@ export type Suggestion = {
   comment: string
   status: SuggestionStatus
   decision: string
+  plan: string
   decided_by: string | null
   decided_at: string | null
 }
