@@ -127,8 +127,15 @@ function Card({ s, canDecide, onDecide }: {
         </div>
       )}
       <div className="text-sm" style={{ color: 'var(--text)' }}>
-        <span className="text-xs uppercase tracking-wide mr-2" style={{ color: 'var(--green)' }}>Предложено</span>{s.variant}
+        <span className="text-xs uppercase tracking-wide mr-2" style={{ color: 'var(--green)' }}>Предложено</span><span style={{ whiteSpace: 'pre-line' }}>{s.variant}</span>
       </div>
+      {s.plan && (
+        <div className="text-sm rounded-lg px-3 py-2"
+          style={{ background: 'rgba(247,192,79,0.08)', border: '1px solid rgba(247,192,79,0.3)', color: 'var(--text)', whiteSpace: 'pre-line' }}>
+          <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--yellow)' }}>Как внести — предлагает Claude</div>
+          {s.plan}
+        </div>
+      )}
       {s.comment && (
         <div className="text-sm" style={{ color: 'var(--text2)' }}>
           <span className="text-xs uppercase tracking-wide mr-2">Почему</span>{s.comment}
