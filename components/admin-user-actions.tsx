@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 type Option = { value: string; label: string; color: string; bg: string }
 
@@ -98,6 +99,7 @@ function Dropdown({ options, value, saving, onChange }: {
   const [pos, setPos] = useState({ top: 0, right: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, menuRef, btnRef)
   const current = options.find(o => o.value === value) ?? options[0]
 
   useEffect(() => {

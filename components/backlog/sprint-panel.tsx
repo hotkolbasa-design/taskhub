@@ -14,6 +14,7 @@ import { updateTask, moveBackToBacklog, updateSprintPeriod, deleteSprint, remove
 import { getTasksMissingData, fixSprint, unfixSprint, closeSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import TaskCard from './task-card'
 import CreateTaskModal from './create-task-modal'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS_SHORT = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -418,6 +419,7 @@ function EfficiencyStat({ overall, rows }: { overall: number; rows: EffRow[] }) 
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, popRef, triggerRef)
 
   useEffect(() => {
     if (!open) return

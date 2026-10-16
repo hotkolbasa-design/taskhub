@@ -20,6 +20,7 @@
 - Нативный `<select>` — **ЗАПРЕЩЁН** → кастомный дропдаун (паттерн в CLAUDE_REFERENCE.md)
 - `<input type="date">` — **ЗАПРЕЩЁН** → кастомный DatePicker (`components/backlog/create-task-modal.tsx`)
 - Дропдауны внутри `overflow`-контейнеров → **обязательно** `createPortal` + `position: fixed`
+- Любой дропдаун в портале → **обязательно** `useKeepInView(open, dropRef, triggerRef)` (`components/common/use-keep-in-view.ts`): у карточки внизу экрана список уходил за край, а прокрутить его нельзя — он вне потока страницы и закрывается на скролл
 - Любая кнопка/кликабельный элемент → `cursor: pointer`
 - При любой новой функции → индикатор загрузки (кнопки: `disabled` + спиннер, навигация: `NavigationLoader`)
 - Оптимистичные обновления: UI меняется мгновенно, сервер обновляется фоном, rollback при ошибке

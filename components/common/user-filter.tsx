@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { useKeepInView } from './use-keep-in-view'
 
 export type FilterUser = { id: string; full_name: string | null; login: string; avatar_url?: string | null }
 
@@ -35,6 +36,7 @@ export default function UserFilter({
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
 
   useEffect(() => {
     if (!open) return

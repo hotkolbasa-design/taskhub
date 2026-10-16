@@ -9,6 +9,7 @@ import { deleteTask, moveToSprint } from '@/app/(dashboard)/projects/[id]/backlo
 import { minutesToDisplay } from '@/lib/utils/time'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import type { BacklogTask } from '@/types'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -40,6 +41,7 @@ function PriorityBadgeDropdown({ priority, taskId, onChange }: {
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const current = PRIORITY_OPTIONS.find(o => o.value === priority) ?? PRIORITY_OPTIONS[0]
 
   useEffect(() => {
@@ -164,6 +166,7 @@ function WorkflowBadgeDropdown({ status, taskId, onChange }: { status: string; t
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const cfg = WORKFLOW_CONFIG[status] ?? WORKFLOW_CONFIG.new
   const DROP_HEIGHT = 200 // примерная высота дропдауна
 
@@ -288,6 +291,7 @@ function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
   const [viewDate, setViewDate] = useState(() => deadline ? new Date(deadline + 'T00:00:00') : new Date())
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const DROP_HEIGHT = 300
 
   useEffect(() => {
@@ -488,6 +492,7 @@ function TimePickerInline({ minutes, taskId, onChange }: {
   const [mins, setMins] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const DROP_HEIGHT = 130
 
   useEffect(() => {
@@ -691,6 +696,7 @@ export default function TaskCard({
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
   const menuBtnRef = useRef<HTMLButtonElement>(null)
   const menuDropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(menuOpen, menuDropRef, menuBtnRef)
 
   useEffect(() => {
     if (!menuOpen) return

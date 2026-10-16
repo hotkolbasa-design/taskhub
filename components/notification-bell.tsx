@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { getNotifications, markAsRead, markAllAsRead, type AppNotification } from '@/app/(dashboard)/notifications/actions'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 const TYPE_LABEL: Record<string, string> = {
   task_assigned:    'Вас назначили на задачу',
@@ -66,6 +67,7 @@ export default function NotificationBell() {
   const [markingAll, setMarkingAll] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, menuRef, btnRef)
   const router = useRouter()
 
   const unreadCount = notifications.filter(n => !n.is_read).length

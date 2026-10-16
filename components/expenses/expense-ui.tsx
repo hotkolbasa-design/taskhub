@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { ExpenseCategory, ExpenseRequest, ExpenseStatus } from '@/types'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 export const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'equipment', label: 'Оборудование' },
@@ -65,6 +66,7 @@ export function Dropdown<T extends string>({ value, options, onChange, disabled,
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, menuRef, btnRef)
 
   useEffect(() => {
     if (!open) return
@@ -167,6 +169,7 @@ export function DatePicker({ value, onChange, placeholder = 'Не указана
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, popRef, triggerRef)
   const today = new Date()
   const [calYear, setCalYear] = useState(value ? parseInt(value.slice(0, 4)) : today.getFullYear())
   const [calMonth, setCalMonth] = useState(value ? parseInt(value.slice(5, 7)) - 1 : today.getMonth())

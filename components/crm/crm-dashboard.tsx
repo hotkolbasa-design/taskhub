@@ -10,6 +10,7 @@ import StudentsView from './students-view'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 import type { MonthPlan, HunterStat } from '@/lib/crm/types'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 type MonthOption = { key: string; label: string; future?: boolean }
 type ValuesSet = { dayValues: number[]; weekValues: number[]; total: number }
@@ -98,6 +99,7 @@ function MonthDropdown({ months, value, onChange }: {
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, menuRef, btnRef)
   const cur = months.find(m => m.key === value)
 
   useEffect(() => {
