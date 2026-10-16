@@ -10,6 +10,7 @@ import UserFilter from '@/components/common/user-filter'
 import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import { getTaskForDrawer, fetchTasksForUsers, updateTaskWorkflowStatus, updateTaskPriority } from '@/app/(dashboard)/my-tasks/actions'
 import type { BacklogTask, WorkflowStatus } from '@/types'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 type Profile = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
@@ -68,6 +69,7 @@ function ProjectDropdown({
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const selected = projects.find(p => p.id === value)
 
   useEffect(() => {

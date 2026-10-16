@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { MyTask } from '@/lib/queries/my-tasks'
 import type { WorkflowStatus } from '@/types'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 const AVATAR_COLORS = ['#7C5CF6', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
 
@@ -43,6 +44,7 @@ function PriorityDropdown({
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const cfg = PRIORITY_CONFIG[value ?? 'none']
 
   useEffect(() => {
@@ -149,6 +151,7 @@ function StatusDropdown({
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
   const wf = WORKFLOW_CONFIG[value] ?? WORKFLOW_CONFIG.new
 
   useEffect(() => {

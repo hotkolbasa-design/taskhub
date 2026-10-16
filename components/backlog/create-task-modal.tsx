@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import type { BacklogTask } from '@/types'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
@@ -131,6 +132,7 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, menuRef, btnRef)
   const selected = options.find(o => o.id === value)
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { setRole, setStatus, updateUserProfile, resetUserPassword, setCanApproveExpenses, setCanPayExpenses } from '@/app/(dashboard)/admin/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 const ROLES = [
   { value: 'employee', label: 'Employee', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
@@ -60,6 +61,7 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxH: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
 
   useEffect(() => {
     if (!open) return
@@ -583,6 +585,7 @@ function BadgeDropdown({ options, value, disabled, onChange }: {
   const [pos, setPos]   = useState({ top: 0, left: 0 })
   const btnRef  = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, menuRef, btnRef)
   const current = options.find(o => o.value === value) ?? options[0]
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { SprintTask } from '@/types'
 import { minutesToDisplay } from '@/lib/utils/time'
+import { useKeepInView } from '@/components/common/use-keep-in-view'
 
 const AVATAR_COLORS = ['#7C5CF6', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
 
@@ -38,6 +39,7 @@ function usePortalDropdown() {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
+  useKeepInView(open, dropRef, triggerRef)
 
   useEffect(() => {
     if (!open) return
