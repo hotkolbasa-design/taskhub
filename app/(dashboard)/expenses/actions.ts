@@ -424,21 +424,5 @@ export async function createExpenseComment(requestId: string, text: string, atta
   revalidatePath('/expenses')
 }
 
-export async function uploadExpenseAttachment(formData: FormData): Promise<ExpenseAttachment> {
-  await requireCaller()
-  const file = formData.get('file') as File
-  if (!file) throw new Error('Файл не передан')
-
-  const admin = createAdminClient()
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const ext = file.name.split('.').pop() || 'bin'
-  const path = `expenses/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-
-  const { error } = await admin.storage
-    .from('task-attachments')
-    .upload(path, buffer, { contentType: file.type || 'application/octet-stream' })
-  if (error) throw new Error(error.message)
-
-  const { data: { publicUrl } } = admin.storage.from('task-attachments').getPublicUrl(path)
-  return { url: publicUrl, name: file.name, size: file.size }
-}
+// Загрузка файлов идёт мимо server actions: Vercel режет тело функции на 4.5 МБ.
+// Клиент берёт подпись в app/actions/storage.ts и кладёт файл в хранилище сам.

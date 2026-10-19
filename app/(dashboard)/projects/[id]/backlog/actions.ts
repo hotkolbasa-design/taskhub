@@ -270,29 +270,8 @@ export async function getComments(taskId: string) {
   return data ?? []
 }
 
-export async function uploadAttachment(formData: FormData): Promise<string> {
-  const file = formData.get('file') as File
-  const taskId = formData.get('taskId') as string
-  if (!file || !taskId) throw new Error('Missing file or taskId')
-
-  const admin = createAdminClient()
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
-  const ext = file.name.split('.').pop() || 'png'
-  const path = `${taskId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-
-  const { error } = await admin.storage
-    .from('task-attachments')
-    .upload(path, buffer, { contentType: file.type || 'application/octet-stream' })
-
-  if (error) throw new Error(error.message)
-
-  const { data: { publicUrl } } = admin.storage
-    .from('task-attachments')
-    .getPublicUrl(path)
-
-  return publicUrl
-}
+// Загрузка файлов идёт мимо server actions: Vercel режет тело функции на 4.5 МБ.
+// Клиент берёт подпись в app/actions/storage.ts и кладёт файл в хранилище сам.
 
 export async function createComment(
   taskId: string,

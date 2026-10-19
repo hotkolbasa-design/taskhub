@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { createExpenseRequest, updateExpenseRequest, uploadExpenseAttachment } from '@/app/(dashboard)/expenses/actions'
+import { createExpenseRequest, updateExpenseRequest } from '@/app/(dashboard)/expenses/actions'
+import { uploadFile } from '@/lib/storage/upload'
 import { CATEGORIES, Dropdown, DatePicker, Spinner, money } from './expense-ui'
 import type { ExpenseAttachment, ExpenseCategory, ExpenseRequest } from '@/types'
 
@@ -38,9 +39,7 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
     setError(null)
     try {
       for (const file of Array.from(files)) {
-        const fd = new FormData()
-        fd.append('file', file)
-        const uploaded = await uploadExpenseAttachment(fd)
+        const uploaded = await uploadFile(file, 'expenses')
         setAttachments(prev => [...prev, uploaded])
       }
     } catch (e) {

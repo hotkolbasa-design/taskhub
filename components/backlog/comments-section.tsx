@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { createComment, getComments, uploadAttachment, getActivities } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { createComment, getComments, getActivities } from '@/app/(dashboard)/projects/[id]/backlog/actions'
+import { uploadFile, FileTooLargeError } from '@/lib/storage/upload'
 
 type Attachment = { url: string; name: string; size: number }
 
@@ -349,20 +350,19 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
     })
   }
 
-  async function uploadFiles(files: PendingFile[]): Promise<Attachment[]> {
-    const results: Attachment[] = []
+  async function uploadFiles(files: PendingFile[]): Promise<{ ok: Attachment[]; tooLarge: boolean }> {
+    const ok: Attachment[] = []
+    let tooLarge = false
     for (const { file } of files) {
       try {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('taskId', taskId)
-        const url = await uploadAttachment(formData)
-        results.push({ url, name: file.name || 'image.png', size: file.size })
+        const up = await uploadFile(file, 'tasks', taskId)
+        ok.push({ url: up.url, name: file.name || 'image.png', size: file.size })
       } catch (err) {
+        if (err instanceof FileTooLargeError) tooLarge = true
         console.error('Upload error:', err)
       }
     }
-    return results
+    return { ok, tooLarge }
   }
 
   async function handleSend() {
@@ -389,14 +389,18 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
 
     try {
       setUploading(filesToUpload.length > 0)
-      const attachments = filesToUpload.length > 0 ? await uploadFiles(filesToUpload) : []
+      const { ok: attachments, tooLarge } = filesToUpload.length > 0
+        ? await uploadFiles(filesToUpload)
+        : { ok: [] as Attachment[], tooLarge: false }
       setUploading(false)
 
       if (filesToUpload.length > 0 && attachments.length < filesToUpload.length) {
         setComments(prev => prev.filter(c => c.id !== tempId))
         setText(messageText)
         setPendingFiles(filesToUpload)
-        setUploadError('Не удалось загрузить файл. Проверьте размер (макс. 25 МБ).')
+        setUploadError(tooLarge
+          ? 'Файл больше 25 МБ — такой не загрузится.'
+          : 'Не удалось загрузить файл. Попробуйте ещё раз.')
         return
       }
 

@@ -16,6 +16,8 @@
 - Подсказчик: POST `{act:'suggest'}` — предложение правки скрипта хантером → таблица `script_suggestions` (миграция `20261013210000`), раздел **`/predlozheniya`** (видят как CRM, решают админы: new/approved/rejected/applied + решение для хантера; `plan` — план правки от Claude, вносится только после «Одобрить»), `?mine=1` — свои предложения в подсказчике
 - `/podskazchik` — подсказчик хантера Globalos под аккаунтом (доступ как к CRM: `canAccessCrm`), открывается из меню в новой вкладке; без входа proxy уводит на `/login?next=/podskazchik`, login возвращает на `next` (только внутренний путь). Запасной вход без аккаунта — `/api/podskazchik?h=<код>` (скрипт звонка и ответы на возражения). База — Google-таблица `16ylUmoP7g8V71bz3I6vN10AKgw1ez07waWjLh1KTYV4` (сервисный аккаунт — редактор), коды хантеров — лист «Хантеры», журнал — «Журнал». `lib/podskazchik/page.ts` генерируется скриптом `v_taskhub.py` из `~/Desktop/Globalos/Отдел продаж и маркетинг/Подсказчик хантера/Исходники/страница.html` — руками не править. ИИ-подбор включается ключом `app_settings.anthropic_api_key`
 
+- **Файлы НИКОГДА не передавать телом server action** — Vercel режет тело функции на 4.5 МБ и отвечает `413 FUNCTION_PAYLOAD_TOO_LARGE`; `serverActions.bodySizeLimit` это не обходит, он про лимит самого Next. Снимок экрана с ретины весит больше, и вложения в комментариях молча не отправлялись. Загрузка — только через `uploadFile()` (`lib/storage/upload.ts`): сервер подписывает путь (`app/actions/storage.ts`), файл уходит в Supabase Storage напрямую из браузера
+
 ## Запреты UI
 - Нативный `<select>` — **ЗАПРЕЩЁН** → кастомный дропдаун (паттерн в CLAUDE_REFERENCE.md)
 - `<input type="date">` — **ЗАПРЕЩЁН** → кастомный DatePicker (`components/backlog/create-task-modal.tsx`)
