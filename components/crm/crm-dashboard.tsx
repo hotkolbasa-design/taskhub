@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { OverviewView } from './overview-view'
 import { PlanView } from './plan-view'
 import { ChannelsView } from './channels-table'
+import { HuntersView } from './hunters-view'
 import StudentsView from './students-view'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1132,7 +1133,7 @@ export default function CrmDashboard() {
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'obzor' | 'plan' | 'kanaly' | 'voronki' | 'marketing' | 'ucheniki'>('obzor')
+  const [tab, setTab] = useState<'obzor' | 'plan' | 'hantery' | 'kanaly' | 'voronki' | 'marketing' | 'ucheniki'>('obzor')
   const [freezing, setFreezing] = useState(false)
   const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig | null>(null)
 
@@ -1398,7 +1399,7 @@ export default function CrmDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-2 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        {(['obzor', 'plan', 'kanaly', 'voronki', 'marketing', 'ucheniki'] as const).map(t => (
+        {(['obzor', 'plan', 'hantery', 'kanaly', 'voronki', 'marketing', 'ucheniki'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className="px-3 py-1.5 rounded-lg text-sm font-medium"
             style={{
@@ -1408,7 +1409,7 @@ export default function CrmDashboard() {
               cursor: 'pointer',
             }}
           >
-            {t === 'obzor' ? 'Обзор' : t === 'plan' ? 'План' : t === 'kanaly' ? 'Каналы' : t === 'voronki' ? 'Воронки' : t === 'marketing' ? 'Маркетинг' : 'Ученики'}
+            {t === 'obzor' ? 'Обзор' : t === 'plan' ? 'План' : t === 'hantery' ? 'Хантеры' : t === 'kanaly' ? 'Каналы' : t === 'voronki' ? 'Воронки' : t === 'marketing' ? 'Маркетинг' : 'Ученики'}
           </button>
         ))}
       </div>
@@ -1425,6 +1426,7 @@ export default function CrmDashboard() {
             {tab === 'obzor' && <OverviewView data={data} onGoMarketing={() => setTab('marketing')} onGoPlan={() => setTab('plan')} />}
             {tab === 'plan' && <PlanView data={data} onSavePlan={handleSavePlan} />}
             {tab === 'kanaly' && <ChannelsView data={data} excluded={excluded} />}
+            {tab === 'hantery' && <HuntersView monthKey={selectedMonth} />}
             {tab === 'voronki' && <VoronkiView data={data} />}
             {tab === 'ucheniki' && <StudentsView monthKey={selectedMonth} />}
             {tab === 'marketing' && <MarketingView data={data} excluded={excluded} onToggleExcluded={handleToggleExcluded} onSave={handleSaveSpend} onSaveRate={handleSaveRate} onReload={handleReload} />}

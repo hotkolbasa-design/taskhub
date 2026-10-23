@@ -92,6 +92,33 @@ export type MetricStatus = 'ok' | 'near' | 'behind' | null
 /** Хантер и его доля ставки: у хантера-эксперта половина времени уходит на собеседования. */
 export type Hunter = { name: string; share: number }
 
+export type HunterDay = {
+  date: string
+  calls: number        // наборов номера
+  talks: number        // из них состоявшихся разговоров
+  minutes: number
+  leads: number        // заявок закреплено
+  booked: number       // назначено собеседований
+  held: number         // из назначенных им — состоялось
+  reactWork: number | null   // медиана минут до первого набора в рабочее время
+  reactOff: number | null    // то же вне графика: смотрим, но не спрашиваем
+  score: number | null       // балл за скрипт, 0–5
+}
+
+export type HunterReport = {
+  monthKey: string
+  days: string[]
+  weeks: string[][]
+  computedAt: string
+  hunters: { name: string; short: string; share: number; days: HunterDay[] }[]
+}
+
+/** План хантера: дневные нормы и нормативы качества. */
+export type HunterPlan = {
+  leads: number; calls: number; talks: number; minutes: number; booked: number
+  dozvon: number; conv1: number; conv2: number; reactWork: number; score: number
+}
+
 export type HunterStat = {
   name: string
   share: number

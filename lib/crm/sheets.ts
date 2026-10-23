@@ -79,3 +79,15 @@ export async function deleteSheetRow(name: string, rowIndex: number): Promise<vo
     },
   })
 }
+
+/** Чтение из другой таблицы: звонки и прогресс хантеров живут отдельными файлами. */
+export async function sheetValuesFrom(spreadsheetId: string, name: string, range: string): Promise<(string | number | boolean)[][]> {
+  const sheets = getClient()
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${name}'!${range}`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
+    dateTimeRenderOption: 'SERIAL_NUMBER',
+  })
+  return (res.data.values ?? []) as (string | number | boolean)[][]
+}

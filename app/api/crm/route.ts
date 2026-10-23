@@ -5,6 +5,8 @@ import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots
 import { saveSpendValue, saveRateValue } from '@/lib/crm/spend'
 import { getExcludedSources, saveExcludedSources, saveMergedGroups, saveMonthPlan } from '@/lib/crm/settings'
 import { normalizePlan } from '@/lib/crm/plan'
+import { getHunterReport } from '@/lib/crm/hunters'
+import { getHunterPlans, saveHunterPlans } from '@/lib/crm/settings'
 import { readSheetRows } from '@/lib/crm/read-sheet'
 import { getMonthDays, isTestTitle } from '@/lib/crm/utils'
 import { getStudentStats, syncStudentMoves } from '@/lib/crm/students'
@@ -45,6 +47,14 @@ export async function GET(req: NextRequest) {
 
       const excludedSources = await getExcludedSources()
       return NextResponse.json({ ...data, excludedSources })
+    }
+
+    if (action === 'hunters') {
+      const month = searchParams.get('month')
+      if (!month) return NextResponse.json({ error: 'month required' }, { status: 400 })
+      if (searchParams.get('fresh') === '1') revalidateTag(`crm-hunters:${month}`, 'max')
+      const [report, plans] = await Promise.all([getHunterReport(month), getHunterPlans()])
+      return NextResponse.json({ ...report, plans })
     }
 
     if (action === 'students') {
@@ -130,6 +140,10 @@ export async function POST(req: NextRequest) {
     if (action === 'saveExcluded') {
       await saveExcludedSources(body.excluded ?? [])
       dropCache()
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'saveHunterPlans') {
+      await saveHunterPlans(body.plans ?? {})
       return NextResponse.json({ ok: true })
     }
     if (action === 'saveGroups') {
