@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getExpenseFeed } from '@/lib/queries/expenses'
 import { createNotifications } from '@/lib/notifications'
 import type { ExpenseAttachment, ExpenseCategory, ExpenseStatus } from '@/types'
+import { t, tc } from '@/lib/i18n'
 
 type Caller = {
   id: string
@@ -52,20 +53,20 @@ async function getCaller(): Promise<Caller | null> {
 
 async function requireCaller(): Promise<Caller> {
   const caller = await getCaller()
-  if (!caller) throw new Error('Не авторизован')
+  if (!caller) throw new Error(t('Не авторизован'))
   return caller
 }
 
 async function requireApprover(): Promise<Caller> {
   const caller = await requireCaller()
-  if (!caller.canApprove) throw new Error('Нет прав решать по заявкам')
+  if (!caller.canApprove) throw new Error(tc('expenses', 'Нет прав решать по заявкам'))
   return caller
 }
 
 /** Отметка об оплате — право бухгалтерии, поэтому проверка мягче, чем у решений. */
 async function requirePayer(): Promise<Caller> {
   const caller = await requireCaller()
-  if (!caller.canPay) throw new Error('Нет прав отмечать оплату')
+  if (!caller.canPay) throw new Error(t('Нет прав отмечать оплату'))
   return caller
 }
 
@@ -150,8 +151,8 @@ export async function createExpenseRequest(input: {
 }) {
   const caller = await requireCaller()
   const title = input.title.trim()
-  if (!title) throw new Error('Укажите, что нужно купить')
-  if (!(input.amount >= 0)) throw new Error('Сумма указана неверно')
+  if (!title) throw new Error(t('Укажите, что нужно купить'))
+  if (!(input.amount >= 0)) throw new Error(t('Сумма указана неверно'))
 
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -196,12 +197,12 @@ export async function updateExpenseRequest(requestId: string, input: {
     .select('requester_id, status, amount')
     .eq('id', requestId)
     .maybeSingle()
-  if (!current) throw new Error('Заявка не найдена')
+  if (!current) throw new Error(tc('expenses', 'Заявка не найдена'))
 
   const isOwner = current.requester_id === caller.id
   const editableByOwner = current.status === 'pending' || current.status === 'needs_info'
   if (!caller.canApprove && !(isOwner && editableByOwner)) {
-    throw new Error('Заявку уже нельзя менять')
+    throw new Error(tc('expenses', 'Заявку уже нельзя менять'))
   }
 
   // Заявку вернули на доработку, автор её поправил — она снова просится на рассмотрение,
@@ -250,7 +251,7 @@ export async function decideExpenseRequest(
     .select('status, requester_id, title, number')
     .eq('id', requestId)
     .maybeSingle()
-  if (!current) throw new Error('Заявка не найдена')
+  if (!current) throw new Error(tc('expenses', 'Заявка не найдена'))
 
   const { error } = await admin
     .from('expense_requests')
@@ -298,10 +299,10 @@ export async function cancelExpenseRequest(requestId: string) {
     .select('requester_id, status')
     .eq('id', requestId)
     .maybeSingle()
-  if (!current) throw new Error('Заявка не найдена')
-  if (current.requester_id !== caller.id && !caller.canApprove) throw new Error('Это не ваша заявка')
+  if (!current) throw new Error(tc('expenses', 'Заявка не найдена'))
+  if (current.requester_id !== caller.id && !caller.canApprove) throw new Error(tc('expenses', 'Это не ваша заявка'))
   if (current.status !== 'pending' && current.status !== 'needs_info') {
-    throw new Error('По заявке уже есть решение')
+    throw new Error(tc('expenses', 'По заявке уже есть решение'))
   }
 
   const { error } = await admin
@@ -325,8 +326,8 @@ export async function markExpensePaid(requestId: string, paidAmount: number, not
     .select('status, requester_id, title, number, amount')
     .eq('id', requestId)
     .maybeSingle()
-  if (!current) throw new Error('Заявка не найдена')
-  if (current.status !== 'approved') throw new Error('Оплатить можно только одобренную заявку')
+  if (!current) throw new Error(tc('expenses', 'Заявка не найдена'))
+  if (current.status !== 'approved') throw new Error(tc('expenses', 'Оплатить можно только одобренную заявку'))
 
   const amount = paidAmount >= 0 ? paidAmount : Number(current.amount)
   const { error } = await admin
@@ -372,8 +373,8 @@ export async function fetchExpenseFeed(requestId: string) {
     .select('requester_id')
     .eq('id', requestId)
     .maybeSingle()
-  if (!request) throw new Error('Заявка не найдена')
-  if (request.requester_id !== caller.id && !caller.canViewAll) throw new Error('Нет доступа к заявке')
+  if (!request) throw new Error(tc('expenses', 'Заявка не найдена'))
+  if (request.requester_id !== caller.id && !caller.canViewAll) throw new Error(tc('expenses', 'Нет доступа к заявке'))
 
   return getExpenseFeed(requestId)
 }
@@ -381,7 +382,7 @@ export async function fetchExpenseFeed(requestId: string) {
 export async function createExpenseComment(requestId: string, text: string, attachments: ExpenseAttachment[]) {
   const caller = await requireCaller()
   const trimmed = text.trim()
-  if (!trimmed && attachments.length === 0) throw new Error('Пустой комментарий')
+  if (!trimmed && attachments.length === 0) throw new Error(t('Пустой комментарий'))
 
   const admin = createAdminClient()
   const { data: request } = await admin
@@ -389,8 +390,8 @@ export async function createExpenseComment(requestId: string, text: string, atta
     .select('requester_id, title, number')
     .eq('id', requestId)
     .maybeSingle()
-  if (!request) throw new Error('Заявка не найдена')
-  if (request.requester_id !== caller.id && !caller.canViewAll) throw new Error('Нет доступа к заявке')
+  if (!request) throw new Error(tc('expenses', 'Заявка не найдена'))
+  if (request.requester_id !== caller.id && !caller.canViewAll) throw new Error(tc('expenses', 'Нет доступа к заявке'))
 
   const { error } = await admin.from('expense_request_comments').insert({
     request_id: requestId,

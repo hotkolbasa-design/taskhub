@@ -6,6 +6,7 @@ import AdminUserDrawer, { type DrawerUser } from './admin-user-drawer'
 import AdminInviteModal from './admin-invite-modal'
 import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { t } from '@/lib/i18n'
 
 type UserRow = {
   id: string
@@ -32,9 +33,9 @@ const ROLES = [
   { value: 'admin',    label: 'Admin',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)'  },
 ]
 const STATUSES = [
-  { value: 'active',   label: 'Активен',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
-  { value: 'inactive', label: 'Неактивен', color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
-  { value: 'pending',  label: 'Ожидает',   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
+  { value: 'active',   label: t('Активен'),   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
+  { value: 'inactive', label: t('Неактивен'), color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
+  { value: 'pending',  label: t('Ожидает'),   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
 ]
 
 export default function AdminUsersClient({ users: initial, emailMap, currentUserId, superAdminId }: Props) {
@@ -79,7 +80,7 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
     <>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Пользователи</h1>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('Пользователи')}</h1>
         <button
           onClick={() => setInviteOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
@@ -90,14 +91,14 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1.5v11M1.5 7h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
           </svg>
-          Добавить пользователя
+          {t('Добавить пользователя')}
         </button>
       </div>
 
       {pending.length > 0 && (
         <section className="mb-6">
           <h2 className="text-sm font-medium mb-3" style={{ color: 'var(--text2)' }}>
-            Ожидают подтверждения — {pending.length}
+            {t('Ожидают подтверждения — {n}', { n: pending.length })}
           </h2>
           <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
             {pending.map((u, i) => (
@@ -112,10 +113,10 @@ export default function AdminUsersClient({ users: initial, emailMap, currentUser
 
       <section>
         <h2 className="text-sm font-medium mb-3" style={{ color: 'var(--text2)' }}>
-          Все пользователи — {users.length}
+          {t('Все пользователи — {n}', { n: users.length })}
         </h2>
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
-          {rest.length === 0 && <p className="px-5 py-4 text-sm" style={{ color: 'var(--text2)' }}>Пусто</p>}
+          {rest.length === 0 && <p className="px-5 py-4 text-sm" style={{ color: 'var(--text2)' }}>{t('Пусто')}</p>}
           {rest.map((u, i) => (
             <Row key={u.id} user={u} email={emailMap[u.id]} currentUserId={currentUserId}
               superAdminId={superAdminId} isLast={i === rest.length - 1}
@@ -159,7 +160,7 @@ function Row({ user, email, currentUserId, superAdminId, isLast, onClick, onUpda
 
   const roleOpt   = ROLES.find(r => r.value === user.role)   ?? ROLES[0]
   const statusOpt = STATUSES.find(s => s.value === user.status) ?? STATUSES[0]
-  const STATUS_LABEL: Record<string, string> = { active: 'Активен', inactive: 'Неактивен', pending: 'Ожидает' }
+  const STATUS_LABEL: Record<string, string> = { active: t('Активен'), inactive: t('Неактивен'), pending: t('Ожидает') }
 
   async function handleRoleChange(next: string) {
     onUpdated({ role: next })
@@ -228,7 +229,7 @@ function Row({ user, email, currentUserId, superAdminId, isLast, onClick, onUpda
           </>
         )}
         <span className="text-xs w-7 text-right" style={{ color: 'var(--text2)' }}>
-          {isSelf ? 'вы' : ''}
+          {isSelf ? t('вы') : ''}
         </span>
       </div>
     </div>

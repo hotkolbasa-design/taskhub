@@ -6,6 +6,7 @@ import { createTask } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import type { BacklogTask } from '@/types'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
@@ -97,7 +98,7 @@ function EpicDropdown({ value, onChange, options }: { value: string; onChange: (
       >
         {selected ? (
           <span className="flex-1 truncate">{selected.title}</span>
-        ) : <span className="flex-1">Без эпика</span>}
+        ) : <span className="flex-1">{t('Без эпика')}</span>}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -110,7 +111,7 @@ function EpicDropdown({ value, onChange, options }: { value: string; onChange: (
             style={{ color: !value ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          >Без эпика</button>
+          >{t('Без эпика')}</button>
           {options.map(opt => (
             <button key={opt.id} type="button" onClick={() => { onChange(opt.id); setOpen(false) }}
               className="w-full flex items-center px-3 py-2 text-sm text-left"
@@ -169,7 +170,7 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
             </span>
             <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
           </>
-        ) : <span className="flex-1">Не назначено</span>}
+        ) : <span className="flex-1">{t('Не назначено')}</span>}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -194,7 +195,7 @@ function UserDropdown({ value, onChange, options }: { value: string; onChange: (
             style={{ color: !value ? 'var(--accent)' : 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          >Не назначено</button>
+          >{t('Не назначено')}</button>
           {options.map(opt => (
             <button key={opt.id} type="button" onClick={() => { onChange(opt.id); setOpen(false) }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
@@ -237,7 +238,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
   }, [open])
 
   const displayValue = value
-    ? new Date(value + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(value + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })
     : ''
 
   const year = viewDate.getFullYear()
@@ -284,7 +285,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
           <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
           <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
         </svg>
-        <span className="flex-1">{displayValue || 'Выберите дату'}</span>
+        <span className="flex-1">{displayValue || t('Выберите дату')}</span>
         {value && (
           <span onClick={e => { e.stopPropagation(); onChange('') }}
             className="p-0.5 rounded transition-colors"
@@ -315,7 +316,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
               </svg>
             </button>
             <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-              {MONTHS[month]} {year}
+              {t(MONTHS[month])} {year}
             </span>
             <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))}
               className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
@@ -332,7 +333,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
           {/* Дни недели */}
           <div className="grid grid-cols-7 mb-1">
             {WEEKDAYS.map(d => (
-              <div key={d} className="flex items-center justify-center h-7 text-xs font-medium" style={{ color: 'var(--text2)' }}>{d}</div>
+              <div key={d} className="flex items-center justify-center h-7 text-xs font-medium" style={{ color: 'var(--text2)' }}>{t(d)}</div>
             ))}
           </div>
 
@@ -371,13 +372,13 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
               style={{ color: 'var(--text2)' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-            >Очистить</button>
+            >{t('Очистить')}</button>
             <button type="button" onClick={setToday}
               className="text-xs px-2 py-1 rounded-md transition-colors"
               style={{ color: 'var(--accent)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >Сегодня</button>
+            >{t('Сегодня')}</button>
           </div>
         </div>
       )}
@@ -420,7 +421,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim()) { setError('Введите название'); return }
+    if (!title.trim()) { setError(t('Введите название')); return }
     setLoading(true); setError('')
     try {
       const h = parseInt(hours) || 0
@@ -462,7 +463,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
       onCreated(optimistic)
       onClose()
     } catch (e: any) {
-      setError(e.message || 'Ошибка при создании')
+      setError(e.message || t('Ошибка при создании'))
       setLoading(false)
     }
   }
@@ -474,7 +475,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
       <div className="w-full max-w-lg rounded-2xl p-6 flex flex-col gap-5"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Новая задача</h2>
+          <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('Новая задача')}</h2>
           <button onClick={onClose} className="p-1.5 rounded-md" style={{ color: 'var(--text2)' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -488,25 +489,25 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Тип */}
           <div className="flex gap-2">
-            {(['task', 'epic'] as const).map(t => (
-              <button key={t} type="button" onClick={() => setType(t)}
+            {(['task', 'epic'] as const).map(tp => (
+              <button key={tp} type="button" onClick={() => setType(tp)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{
-                  background: type === t ? (t === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(124,92,246,0.15)') : 'var(--surface2)',
-                  color: type === t ? (t === 'epic' ? 'var(--yellow)' : 'var(--accent)') : 'var(--text2)',
-                  border: `1px solid ${type === t ? 'transparent' : 'var(--border)'}`,
+                  background: type === tp ? (tp === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(124,92,246,0.15)') : 'var(--surface2)',
+                  color: type === tp ? (tp === 'epic' ? 'var(--yellow)' : 'var(--accent)') : 'var(--text2)',
+                  border: `1px solid ${type === tp ? 'transparent' : 'var(--border)'}`,
                 }}
               >
-                {t === 'epic' ? 'Эпик' : 'Задача'}
+                {tp === 'epic' ? t('Эпик') : t('Задача')}
               </button>
             ))}
           </div>
 
           {/* Название */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Название *</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{tc('task', 'Название *')}</label>
             <input ref={titleRef} value={title} onChange={e => setTitle(e.target.value)}
-              placeholder="Введите название задачи"
+              placeholder={t('Введите название задачи')}
               className="px-3 py-2 rounded-lg text-sm outline-none transition-colors"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -516,12 +517,12 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
 
           {/* Описание */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Описание</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Описание')}</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={3}
-              placeholder="Добавьте описание..."
+              placeholder={t('Добавьте описание...')}
               className="px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -531,33 +532,33 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
 
           {/* Исполнитель */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Исполнитель</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Исполнитель')}</label>
             <UserDropdown value={assigneeId} onChange={setAssigneeId} options={members} />
           </div>
 
           {/* Дедлайн + время */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Дедлайн</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Дедлайн')}</label>
               <DatePicker value={deadline} onChange={setDeadline} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Оценка времени</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Оценка времени')}</label>
               <div className="flex gap-3">
-                <NumberStepper value={hours} onChange={setHours} min={0} suffix="ч" />
-                <NumberStepper value={minutes} onChange={setMinutes} min={0} max={59} suffix="мин" />
+                <NumberStepper value={hours} onChange={setHours} min={0} suffix={t('ч')} />
+                <NumberStepper value={minutes} onChange={setMinutes} min={0} max={59} suffix={t('мин')} />
               </div>
             </div>
           </div>
 
           {/* Приоритет */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Приоритет</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Приоритет')}</label>
             <div className="flex gap-2">
               {([
-                { value: null,     label: 'Нет',     color: 'var(--text2)',  bg: 'var(--surface2)',            border: 'var(--border)' },
-                { value: 'medium', label: 'Средний', color: '#F7A84F',       bg: 'rgba(247,168,79,0.14)',      border: 'rgba(247,168,79,0.4)' },
-                { value: 'high',   label: 'Высокий', color: '#F75C6E',       bg: 'rgba(247,92,110,0.14)',      border: 'rgba(247,92,110,0.4)' },
+                { value: null,     label: tc('priority', 'Нет'),     color: 'var(--text2)',  bg: 'var(--surface2)',            border: 'var(--border)' },
+                { value: 'medium', label: t('Средний'), color: '#F7A84F',       bg: 'rgba(247,168,79,0.14)',      border: 'rgba(247,168,79,0.4)' },
+                { value: 'high',   label: t('Высокий'), color: '#F75C6E',       bg: 'rgba(247,92,110,0.14)',      border: 'rgba(247,92,110,0.4)' },
               ] as const).map(opt => {
                 const isSelected = priority === opt.value
                 return (
@@ -586,7 +587,7 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
           {/* Родительский эпик */}
           {type === 'task' && epics.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Эпик (необязательно)</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Эпик (необязательно)')}</label>
               <EpicDropdown value={parentId} onChange={setParentId} options={epics} />
             </div>
           )}
@@ -598,13 +599,13 @@ export default function CreateTaskModal({ projectId, members, epics, defaultAssi
               style={{ color: 'var(--text2)' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-            >Отмена</button>
+            >{t('Отмена')}</button>
             <button type="submit" disabled={loading || !title.trim()}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-opacity"
               style={{ background: 'var(--accent)', color: '#fff' }}
             >
               {loading && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-              Создать
+              {t('Создать')}
             </button>
           </div>
         </form>

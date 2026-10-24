@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { setRole, setStatus } from '@/app/(dashboard)/admin/actions'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t } from '@/lib/i18n'
 
 type Option = { value: string; label: string; color: string; bg: string }
 
@@ -13,9 +14,9 @@ const ROLES: Option[] = [
 ]
 
 const STATUSES: Option[] = [
-  { value: 'active',   label: 'Активен',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
-  { value: 'inactive', label: 'Неактивен', color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
-  { value: 'pending',  label: 'Ожидает',   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
+  { value: 'active',   label: t('Активен'),   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
+  { value: 'inactive', label: t('Неактивен'), color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
+  { value: 'pending',  label: t('Ожидает'),   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
 ]
 
 type Props = {
@@ -68,7 +69,7 @@ export default function AdminUserActions({ userId, status, role, isSelf, isProte
           : <StaticBadge info={statusInfo} />}
       </div>
       <span className="text-xs" style={{ width: 28, color: 'var(--text2)' }}>
-        {isSelf ? 'вы' : ''}
+        {isSelf ? t('вы') : ''}
       </span>
     </div>
   )

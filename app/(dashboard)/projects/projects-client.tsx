@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ProjectCard from '@/components/projects/project-card'
 import CreateProjectModal from '@/components/projects/create-project-modal'
 import type { ProjectWithMeta } from '@/types'
+import { t } from '@/lib/i18n'
 
 export default function ProjectsClient({ projects }: { projects: ProjectWithMeta[] }) {
   const [showModal, setShowModal] = useState(false)
@@ -14,10 +15,10 @@ export default function ProjectsClient({ projects }: { projects: ProjectWithMeta
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>
-            Проекты
+            {t('Проекты')}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>
-            Все проекты — {projects.length}
+            {t('Все проекты — {n}', { n: projects.length })}
           </p>
         </div>
         <button
@@ -28,7 +29,7 @@ export default function ProjectsClient({ projects }: { projects: ProjectWithMeta
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-          Новый проект
+          {t('Новый проект')}
         </button>
       </div>
 
@@ -44,17 +45,17 @@ export default function ProjectsClient({ projects }: { projects: ProjectWithMeta
             <path d="M12 20h6M12 26h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
           <p className="text-sm font-medium" style={{ color: 'var(--text2)' }}>
-            Проектов пока нет
+            {t('Проектов пока нет')}
           </p>
           <p className="text-xs" style={{ color: 'var(--text2)', opacity: 0.6 }}>
-            Создай первый проект чтобы начать работу
+            {t('Создай первый проект чтобы начать работу')}
           </p>
           <button
             onClick={() => setShowModal(true)}
             className="mt-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
             style={{ background: 'var(--accent)', color: '#fff' }}
           >
-            Создать проект
+            {t('Создать проект')}
           </button>
         </div>
       ) : (

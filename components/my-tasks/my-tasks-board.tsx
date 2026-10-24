@@ -11,6 +11,7 @@ import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import { getTaskForDrawer, fetchTasksForUsers, updateTaskWorkflowStatus, updateTaskPriority } from '@/app/(dashboard)/my-tasks/actions'
 import type { BacklogTask, WorkflowStatus } from '@/types'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t } from '@/lib/i18n'
 
 type Profile = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 
@@ -25,12 +26,12 @@ type RoleFilter = 'assignee' | 'creator'
 type ColumnKey = 'overdue' | 'today' | 'this_week' | 'next_week' | 'no_deadline' | 'completed'
 
 const COLUMNS: { key: ColumnKey; label: string; color: string; bg: string }[] = [
-  { key: 'overdue',    label: 'Просрочены',          color: '#F75C6E', bg: 'rgba(247,92,110,0.12)' },
-  { key: 'today',      label: 'На сегодня',           color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)' },
-  { key: 'this_week',  label: 'На этой неделе',       color: '#4F8EF7', bg: 'rgba(79,142,247,0.12)' },
-  { key: 'next_week',  label: 'На следующей неделе',  color: '#8892A4', bg: 'rgba(136,146,164,0.10)' },
-  { key: 'no_deadline',label: 'Без срока',            color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
-  { key: 'completed',  label: 'Выполненные',          color: '#2DD4A0', bg: 'rgba(45,212,160,0.08)' },
+  { key: 'overdue',    label: t('Просрочены'),          color: '#F75C6E', bg: 'rgba(247,92,110,0.12)' },
+  { key: 'today',      label: t('На сегодня'),           color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)' },
+  { key: 'this_week',  label: t('На этой неделе'),       color: '#4F8EF7', bg: 'rgba(79,142,247,0.12)' },
+  { key: 'next_week',  label: t('На следующей неделе'),  color: '#8892A4', bg: 'rgba(136,146,164,0.10)' },
+  { key: 'no_deadline',label: t('Без срока'),            color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  { key: 'completed',  label: t('Выполненные'),          color: '#2DD4A0', bg: 'rgba(45,212,160,0.08)' },
 ]
 
 function getColumnKey(deadline: string | null, workflowStatus: string): ColumnKey {
@@ -111,7 +112,7 @@ function ProjectDropdown({
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M1 4.5h10M1 4.5V9a1.5 1.5 0 001.5 1.5h7A1.5 1.5 0 0011 9V4.5M1 4.5V3A1.5 1.5 0 012.5 1.5H5l1 1h3.5A1.5 1.5 0 0111 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-            Все проекты
+            {t('Все проекты')}
           </>
         )}
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.5 }}>
@@ -144,7 +145,7 @@ function ProjectDropdown({
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
           >
-            Все проекты
+            {t('Все проекты')}
             {!value && <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
           </button>
           {projects.map(p => (
@@ -299,7 +300,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
-              Мои задачи
+              {t('Мои задачи')}
               {targetDisplayName && (
                 <span className="ml-2 text-sm font-normal" style={{ color: 'var(--text2)' }}>
                   — {targetDisplayName}
@@ -307,7 +308,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
               )}
             </h1>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>
-              {filteredTasks.length} задач из всех проектов
+              {t('{n} задач из всех проектов', { n: filteredTasks.length })}
             </p>
           </div>
 
@@ -323,7 +324,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                   cursor: 'pointer',
                 }}
               >
-                Исполнитель
+                {t('Исполнитель')}
               </button>
               <button
                 onClick={() => toggleRole('creator')}
@@ -334,7 +335,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                   cursor: 'pointer',
                 }}
               >
-                Постановщик
+                {t('Постановщик')}
               </button>
             </div>
 
@@ -354,7 +355,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                   setSelectedUsers(ids.length ? ids : [currentUserId])
                   setProjectFilter(null)
                 }}
-                placeholder="Мои задачи"
+                placeholder={t('Мои задачи')}
               />
             )}
           </div>
@@ -404,7 +405,7 @@ export default function MyTasksBoard({ tasks: initialTasks, currentUserId, isAdm
                       className="flex items-center justify-center text-xs rounded-xl"
                       style={{ height: 64, color: 'var(--text2)', border: '1px dashed var(--border)', opacity: 0.5 }}
                     >
-                      Нет задач
+                      {t('Нет задач')}
                     </div>
                   ) : (
                     colTasks.map(task => (

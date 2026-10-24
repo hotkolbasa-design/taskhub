@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import ArticleEditor from './article-editor'
 import { CATEGORIES, CATEGORY_LABEL, StatusBadge, RequiredBadge } from './article-ui'
 import type { Article } from '@/types'
+import { t } from '@/lib/i18n'
 
 export default function ArticlesClient({ articles, isAdmin, departments }: {
   articles: Article[]
@@ -42,9 +43,9 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
     <div className="p-6 flex flex-col gap-5 h-full">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Инструкции</h1>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('Инструкции')}</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text2)' }}>
-            Как всё устроено в компании и в TaskHub
+            {t('Как всё устроено в компании и в TaskHub')}
           </p>
         </div>
         <button onClick={() => setEditorOpen(true)}
@@ -53,7 +54,7 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
           </svg>
-          Написать инструкцию
+          {t('Написать инструкцию')}
         </button>
       </div>
 
@@ -61,7 +62,7 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
         <div className="px-4 py-3 rounded-xl flex items-center gap-3"
           style={{ background: 'rgba(247,92,110,0.08)', border: '1px solid rgba(247,92,110,0.25)' }}>
           <span className="text-sm" style={{ color: 'var(--text)' }}>
-            Нужно прочитать: <b>{mustRead.length}</b>
+            {t('Нужно прочитать: ')}<b>{mustRead.length}</b>
           </span>
           <span className="text-sm" style={{ color: 'var(--text2)' }}>
             {mustRead.slice(0, 2).map(a => a.title).join(' · ')}{mustRead.length > 2 ? ' …' : ''}
@@ -69,13 +70,13 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
           <button onClick={() => router.push(`/articles/${mustRead[0].id}`)}
             className="ml-auto px-3 py-1.5 rounded-lg text-sm"
             style={{ background: '#F75C6E', color: '#fff', cursor: 'pointer' }}>
-            Открыть
+            {t('Открыть')}
           </button>
         </div>
       )}
 
       <div className="flex items-center gap-1 flex-wrap">
-        <TabButton active={category === 'all'} onClick={() => setCategory('all')}>Все</TabButton>
+        <TabButton active={category === 'all'} onClick={() => setCategory('all')}>{t('Все')}</TabButton>
         {CATEGORIES.map(c => (
           <TabButton key={c.value} active={category === c.value} onClick={() => setCategory(c.value)}>
             {c.label}
@@ -86,9 +87,9 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
       <div className="flex-1 overflow-auto flex flex-col gap-6">
         {visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-2">
-            <span className="text-sm" style={{ color: 'var(--text2)' }}>Здесь пока нет инструкций</span>
+            <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('Здесь пока нет инструкций')}</span>
             <button onClick={() => setEditorOpen(true)} className="text-sm" style={{ color: 'var(--accent)', cursor: 'pointer' }}>
-              Написать первую
+              {t('Написать первую')}
             </button>
           </div>
         ) : (
@@ -105,7 +106,7 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{a.title}</span>
                       {a.status === 'published' && a.is_read && (
-                        <span className="text-xs shrink-0" style={{ color: '#2DD4A0' }}>✓ прочитано</span>
+                        <span className="text-xs shrink-0" style={{ color: '#2DD4A0' }}>{t('✓ прочитано')}</span>
                       )}
                     </div>
                     {a.summary && (
@@ -120,7 +121,7 @@ export default function ArticlesClient({ articles, isAdmin, departments }: {
                         </span>
                       )}
                       {isAdmin && a.status === 'published' && a.is_required && (
-                        <span className="text-xs" style={{ color: 'var(--text2)' }}>прочитали: {a.read_count}</span>
+                        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('прочитали: {n}', { n: a.read_count })}</span>
                       )}
                     </div>
                   </button>

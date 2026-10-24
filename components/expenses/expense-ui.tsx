@@ -4,37 +4,38 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { ExpenseCategory, ExpenseRequest, ExpenseStatus } from '@/types'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, INTL_LOCALE, numericDate } from '@/lib/i18n'
 
 export const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
-  { value: 'equipment', label: 'Оборудование' },
-  { value: 'software',  label: 'ПО и подписки' },
-  { value: 'services',  label: 'Услуги' },
-  { value: 'office',    label: 'Хознужды' },
-  { value: 'marketing', label: 'Маркетинг' },
-  { value: 'other',     label: 'Прочее' },
+  { value: 'equipment', label: t('Оборудование') },
+  { value: 'software',  label: t('ПО и подписки') },
+  { value: 'services',  label: t('Услуги') },
+  { value: 'office',    label: t('Хознужды') },
+  { value: 'marketing', label: t('Маркетинг') },
+  { value: 'other',     label: t('Прочее') },
 ]
 
 export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(CATEGORIES.map(c => [c.value, c.label]))
 
 export const STATUS_META: Record<ExpenseStatus, { label: string; color: string; bg: string }> = {
-  pending:   { label: 'На рассмотрении', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
-  approved:  { label: 'Одобрено',        color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)' },
-  rejected:  { label: 'Отклонено',       color: '#F75C6E', bg: 'rgba(247,92,110,0.15)' },
-  needs_info:{ label: 'На доработку',    color: '#4F8EF7', bg: 'rgba(79,142,247,0.15)' },
-  cancelled: { label: 'Отозвано',        color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  pending:   { label: t('На рассмотрении'), color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
+  approved:  { label: t('Одобрено'),        color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)' },
+  rejected:  { label: t('Отклонено'),       color: '#F75C6E', bg: 'rgba(247,92,110,0.15)' },
+  needs_info:{ label: t('На доработку'),    color: '#4F8EF7', bg: 'rgba(79,142,247,0.15)' },
+  cancelled: { label: t('Отозвано'),        color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
 }
 
-export const PAID_META = { label: 'Оплачено', color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' }
+export const PAID_META = { label: t('Оплачено'), color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' }
 
 export function money(value: number, currency = 'KZT'): string {
   const sign = currency === 'KZT' ? '₸' : currency
-  return `${Math.round(value).toLocaleString('ru-RU').replace(/,/g, ' ')} ${sign}`
+  return `${Math.round(value).toLocaleString(INTL_LOCALE).replace(/,/g, ' ')} ${sign}`
 }
 
 export function formatDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+  return numericDate(`${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`, d, true)
 }
 
 export function personName(p: { full_name: string | null; login: string } | null): string {
@@ -101,7 +102,7 @@ export function Dropdown<T extends string>({ value, options, onChange, disabled,
           cursor: disabled ? 'default' : 'pointer',
         }}
       >
-        <span className="truncate">{current?.label ?? placeholder ?? 'Выберите'}</span>
+        <span className="truncate">{current?.label ?? placeholder ?? t('Выберите')}</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -160,7 +161,7 @@ function buildCalendar(year: number, month: number) {
  * input type="date" в проекте запрещён — свой календарь.
  * Рендерится порталом с position: fixed, иначе его срезает край модалки с overflow.
  */
-export function DatePicker({ value, onChange, placeholder = 'Не указана' }: {
+export function DatePicker({ value, onChange, placeholder = t('Не указана') }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
@@ -232,14 +233,14 @@ export function DatePicker({ value, onChange, placeholder = 'Не указана
               className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
-            <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>{MONTHS[calMonth]} {calYear}</span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>{t(MONTHS[calMonth])} {calYear}</span>
             <button type="button" onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
               className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           </div>
           <div className="grid grid-cols-7 mb-1">
-            {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-6 text-xs" style={{ color: 'var(--text2)' }}>{d}</div>)}
+            {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-6 text-xs" style={{ color: 'var(--text2)' }}>{t(d)}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((cell, i) => {
@@ -260,7 +261,7 @@ export function DatePicker({ value, onChange, placeholder = 'Не указана
             <button type="button" onClick={() => { onChange(''); setOpen(false) }}
               className="w-full mt-2 pt-2 text-xs text-left"
               style={{ borderTop: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>
-              Очистить
+              {t('Очистить')}
             </button>
           )}
         </div>,

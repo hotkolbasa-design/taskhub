@@ -5,6 +5,7 @@ import BacklogBoard from './backlog-board'
 import UserFilter from '@/components/common/user-filter'
 import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import type { BacklogTask, Sprint, SprintTask } from '@/types'
+import { t } from '@/lib/i18n'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 type SprintPanelData = { sprint: Sprint; tasks: SprintTask[] }
@@ -38,7 +39,7 @@ export default function BacklogView({ project, members, ...board }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 rounded-full shrink-0" style={{ background: project.color }} />
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Бэклог</h1>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('Бэклог')}</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -50,21 +51,21 @@ export default function BacklogView({ project, members, ...board }: Props) {
               <rect x="1" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
               <rect x="6.5" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
             </svg>
-            Спринт
+            {t('Спринт')}
           </Link>
           <Link href={`/projects/${project.id}/sprints`} className={navLink.className} style={navLink.style}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               <circle cx="6" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.2" />
             </svg>
-            История
+            {t('История')}
           </Link>
           <Link href={`/projects/${project.id}/settings`} className={navLink.className} style={navLink.style}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
               <path d="M6 1.5v.5M6 10v.5M1.5 6h.5M10 6h.5M2.9 2.9l.35.35M8.75 8.75l.35.35M8.75 2.9l-.35.35M3.25 8.75l-.35.35" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-            Настройки
+            {t('Настройки')}
           </Link>
         </div>
       </div>

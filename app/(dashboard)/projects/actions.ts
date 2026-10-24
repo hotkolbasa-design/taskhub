@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateTag } from 'next/cache'
+import { t } from '@/lib/i18n'
 
 export async function createProject(formData: {
   name: string
@@ -13,7 +14,7 @@ export async function createProject(formData: {
   const admin = createAdminClient()
 
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Не авторизован')
+  if (!session) throw new Error(t('Не авторизован'))
 
   const userId = session.user.id
 
@@ -49,7 +50,7 @@ export async function deleteProject(projectId: string) {
   const admin = createAdminClient()
 
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Не авторизован')
+  if (!session) throw new Error(t('Не авторизован'))
 
   // Удаляем в правильном порядке (с учётом FK)
   const { data: tasks } = await admin

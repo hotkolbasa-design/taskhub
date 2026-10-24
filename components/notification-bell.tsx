@@ -5,25 +5,26 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { getNotifications, markAsRead, markAllAsRead, type AppNotification } from '@/app/(dashboard)/notifications/actions'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t } from '@/lib/i18n'
 
 const TYPE_LABEL: Record<string, string> = {
-  task_assigned:    'Вас назначили на задачу',
-  assignee_changed: 'Изменён исполнитель',
-  creator_changed:  'Изменён постановщик',
-  status_changed:   'Изменён статус задачи',
-  comment_added:    'Новый комментарий',
-  deadline_soon:    'Дедлайн завтра',
-  deadline_overdue: 'Дедлайн просрочен',
+  task_assigned:    t('Вас назначили на задачу'),
+  assignee_changed: t('Изменён исполнитель'),
+  creator_changed:  t('Изменён постановщик'),
+  status_changed:   t('Изменён статус задачи'),
+  comment_added:    t('Новый комментарий'),
+  deadline_soon:    t('Дедлайн завтра'),
+  deadline_overdue: t('Дедлайн просрочен'),
 }
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1) return 'только что'
-  if (m < 60) return `${m} мин назад`
+  if (m < 1) return t('только что')
+  if (m < 60) return t('{m} мин назад', { m })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h} ч назад`
-  return `${Math.floor(h / 24)} дн назад`
+  if (h < 24) return t('{h} ч назад', { h })
+  return t('{d} дн назад', { d: Math.floor(h / 24) })
 }
 
 function TypeIcon({ type }: { type: string }) {
@@ -136,7 +137,7 @@ export default function NotificationBell() {
         style={{ color: 'var(--text)', cursor: 'pointer', background: 'rgba(255,255,255,0.06)' }}
         onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
         onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-        title="Уведомления"
+        title={t('Уведомления')}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M8 1.5A4.5 4.5 0 003.5 6v2.5l-1 2h11l-1-2V6A4.5 4.5 0 008 1.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
@@ -178,7 +179,7 @@ export default function NotificationBell() {
           {/* Заголовок */}
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
             <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              Уведомления {unreadCount > 0 && <span style={{ color: 'var(--text2)' }}>· {unreadCount}</span>}
+              {t('Уведомления')} {unreadCount > 0 && <span style={{ color: 'var(--text2)' }}>· {unreadCount}</span>}
             </span>
             {unreadCount > 0 && (
               <button
@@ -187,7 +188,7 @@ export default function NotificationBell() {
                 className="text-xs transition-colors disabled:opacity-50"
                 style={{ color: 'var(--accent)', cursor: 'pointer' }}
               >
-                {markingAll ? 'Отмечаю…' : 'Прочитать все'}
+                {markingAll ? t('Отмечаю…') : t('Прочитать все')}
               </button>
             )}
           </div>
@@ -196,7 +197,7 @@ export default function NotificationBell() {
           <div style={{ maxHeight: 420, overflowY: 'auto' }}>
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text2)' }}>
-                Нет уведомлений
+                {t('Нет уведомлений')}
               </div>
             ) : (
               notifications.map(n => (

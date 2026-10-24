@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import type { DashData, SourceData, GroupSourceData } from '@/lib/crm/types'
+import { t, tc, plural, INTL_LOCALE, LOCALE } from '@/lib/i18n'
 
 /** Раздел «Каналы»: сводка эффективности источников за выбранный месяц. */
 export function ChannelsView({ data, excluded }: { data: DashData; excluded: Set<string> }) {
@@ -13,7 +14,7 @@ export function ChannelsView({ data, excluded }: { data: DashData; excluded: Set
     <div>
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--text2)', opacity: 0.6 }}>
-          Эффективность каналов
+          {t('Эффективность каналов')}
         </span>
         <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
       </div>
@@ -45,22 +46,14 @@ type Row = {
 type Totals = { leads: number; paid: number; spent: number; revenue: number; toPaid: number; cpl: number; cac: number }
 type SortKey = 'leads' | 'paid' | 'toPaid' | 'cac' | 'romi' | 'spent' | 'revenue'
 
-const NF = new Intl.NumberFormat('ru-RU')
+const NF = new Intl.NumberFormat(INTL_LOCALE)
+const DEC = LOCALE === 'en' ? '.' : ','
 const n = (v: number) => NF.format(Math.round(v))
-const pct = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',') + ' %'
-const usd = (v: number) => '$' + (v >= 100 ? n(v) : String(Math.round(v * 100) / 100).replace('.', ','))
+const pct = (v: number) => String(Math.round(v * 10) / 10).replace('.', DEC) + ' %'
+const usd = (v: number) => '$' + (v >= 100 ? n(v) : String(Math.round(v * 100) / 100).replace('.', DEC))
 
-function plural(v: number, one: string, few: string, many: string): string {
-  const abs = Math.abs(Math.round(v)) % 100
-  const last = abs % 10
-  if (abs > 10 && abs < 20) return many
-  if (last > 1 && last < 5) return few
-  if (last === 1) return one
-  return many
-}
-
-const leadsWord = (v: number) => `${n(v)} ${plural(v, 'заявка', 'заявки', 'заявок')}`
-const paidWord = (v: number) => `${n(v)} ${plural(v, 'оплата', 'оплаты', 'оплат')}`
+const leadsWord = (v: number) => `${n(v)} ${plural(Math.round(v), 'заявка', 'заявки', 'заявок', 'crm')}`
+const paidWord = (v: number) => `${n(v)} ${plural(Math.round(v), 'оплата', 'оплаты', 'оплат', 'crm')}`
 
 // Источник иногда приходит вместе с текстом звонка — в таблице нужна только первая строка
 function shortName(s: string): string {
@@ -242,16 +235,16 @@ export function ChannelsTable({ sources, groups, overall }: {
 
       <div className="rounded-2xl px-4 py-3 flex flex-wrap items-baseline gap-x-6 gap-y-1"
         style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Всего за месяц</span>
-        <Stat label="заявки" value={n(totals.leads)} />
-        <Stat label="оплаты" value={n(totals.paid)} />
-        <Stat label="сквозная" value={pct(totals.toPaid)} />
-        {totals.spent > 0 && <Stat label="расход" value={usd(totals.spent)} />}
+        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('Всего за месяц')}</span>
+        <Stat label={tc('crm', 'заявки')} value={n(totals.leads)} />
+        <Stat label={tc('crm', 'оплаты')} value={n(totals.paid)} />
+        <Stat label={tc('crm', 'сквозная')} value={pct(totals.toPaid)} />
+        {totals.spent > 0 && <Stat label={tc('crm', 'расход')} value={usd(totals.spent)} />}
         {totals.cpl > 0 && <Stat label="CPL" value={usd(totals.cpl)} />}
-        {totals.cac > 0 && <Stat label="клиент" value={usd(totals.cac)} />}
-        {totals.revenue > 0 && <Stat label="выручка" value={n(totals.revenue / 1000) + 'к ₸'} />}
+        {totals.cac > 0 && <Stat label={tc('crm', 'клиент')} value={usd(totals.cac)} />}
+        {totals.revenue > 0 && <Stat label={tc('crm', 'выручка')} value={n(totals.revenue / 1000) + tc('crm', 'к') + ' ₸'} />}
         <span className="text-[11px] w-full" style={{ color: 'var(--text2)', opacity: 0.8 }}>
-          Здесь CPL и клиент считаются на весь поток заявок — те же цифры, что в разделе «Маркетинг».
+          {tc('crm', 'Здесь CPL и клиент считаются на весь поток заявок — те же цифры, что в разделе «Маркетинг».')}
         </span>
       </div>
     </div>
@@ -288,11 +281,11 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
     <div className="mb-6">
       <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
         <div>
-          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>{title}</h3>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{subtitle}</p>
+          <h3 className="font-semibold" style={{ color: 'var(--text)' }}>{t(title)}</h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{t(subtitle)}</p>
         </div>
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
-          зелёным — лучше средней по месяцу ({pct(avgToPaid)}), красным — заметно хуже
+          {t('зелёным — лучше средней по месяцу ({avg}), красным — заметно хуже', { avg: pct(avgToPaid) })}
         </span>
       </div>
 
@@ -302,10 +295,10 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
             <tr>
               <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider sticky left-0"
                 style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', minWidth: 210, zIndex: 1 }}>
-                {title === 'Группы каналов' ? 'Группа' : 'Источник'}
+                {title === 'Группы каналов' ? tc('crm', 'Группа') : tc('crm', 'Источник')}
               </th>
               {COLUMNS.map(c => (
-                <th key={c.label} title={c.hint}
+                <th key={c.label} title={c.hint && tc('crm', c.hint)}
                   onClick={c.key ? () => onSort(c.key!) : undefined}
                   className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider whitespace-nowrap"
                   style={{
@@ -314,7 +307,7 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
                     cursor: c.key ? 'pointer' : 'default', fontWeight: c.key && sort === c.key ? 700 : 500,
                   }}
                 >
-                  {c.label}{c.key && sort === c.key ? (asc ? ' ↑' : ' ↓') : ''}
+                  {tc('crm', c.label)}{c.key && sort === c.key ? (asc ? ' ↑' : ' ↓') : ''}
                 </th>
               ))}
             </tr>
@@ -327,7 +320,7 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
                     <span className="text-sm" style={{ color: 'var(--text)' }}>{r.name}</span>
                     {r.grouped && r.parts > 0 && (
                       <span className="text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap" style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>
-                        {r.parts} {plural(r.parts, 'источник', 'источника', 'источников')}
+                        {r.parts} {plural(r.parts, 'источник', 'источника', 'источников', 'crm')}
                       </span>
                     )}
                   </div>
@@ -336,7 +329,7 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
                       <div className="h-1 rounded flex-1" style={{ background: 'var(--border)', maxWidth: 90 }}>
                         <div className="h-full rounded" style={{ width: `${Math.min(100, r.share)}%`, background: 'var(--accent)' }} />
                       </div>
-                      <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{pct(r.share)} оплат</span>
+                      <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{t('{pct} оплат', { pct: pct(r.share) })}</span>
                     </div>
                   )}
                 </td>
@@ -348,7 +341,7 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
                 <Num v={r.spent ? usd(r.spent) : '—'} muted={!r.spent} />
                 <Num v={r.cpl ? usd(r.cpl) : '—'} muted={!r.cpl} />
                 <Num v={r.cac ? usd(r.cac) : '—'} color={cacColor(r.cac)} muted={!r.cac} />
-                <Num v={r.revenue ? n(r.revenue / 1000) + 'к' : '—'} muted={!r.revenue} />
+                <Num v={r.revenue ? n(r.revenue / 1000) + tc('crm', 'к') : '—'} muted={!r.revenue} />
                 <Num v={r.spent ? pct(r.romi) : '—'} color={romiColor(r.romi, r.spent)} muted={!r.spent} />
               </tr>
             ))}
@@ -356,8 +349,8 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
             {rest && (
               <tr>
                 <td className="px-3 py-2.5 sticky left-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', zIndex: 1 }}>
-                  <span className="text-sm" style={{ color: 'var(--text2)' }}>Без источника и мелкие</span>
-                  <div className="text-[10px] mt-0.5" style={{ color: 'var(--text2)', opacity: 0.8 }}>заявки без метки и каналы меньше 5 заявок</div>
+                  <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('Без источника и мелкие')}</span>
+                  <div className="text-[10px] mt-0.5" style={{ color: 'var(--text2)', opacity: 0.8 }}>{tc('crm', 'заявки без метки и каналы меньше 5 заявок')}</div>
                 </td>
                 <Num v={n(rest.leads)} muted />
                 <Num v="—" muted />
@@ -367,14 +360,14 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
                 <Num v={rest.spent ? usd(rest.spent) : '—'} muted />
                 <Num v="—" muted />
                 <Num v="—" muted />
-                <Num v={rest.revenue ? n(rest.revenue / 1000) + 'к' : '—'} muted />
+                <Num v={rest.revenue ? n(rest.revenue / 1000) + tc('crm', 'к') : '—'} muted />
                 <Num v="—" muted />
               </tr>
             )}
 
             <tr>
               <td className="px-3 py-2.5 sticky left-0 text-sm font-semibold"
-                style={{ background: 'var(--surface2)', color: 'var(--text)', zIndex: 1 }}>{footerLabel}</td>
+                style={{ background: 'var(--surface2)', color: 'var(--text)', zIndex: 1 }}>{t(footerLabel)}</td>
               <Num v={n(footer.leads)} bold total />
               <Num v="" total />
               <Num v="" total />
@@ -383,15 +376,14 @@ function ChannelBlock({ title, subtitle, rows, footer, footerLabel, sort, asc, o
               <Num v={footer.spent ? usd(footer.spent) : '—'} total />
               <Num v={footer.cpl ? usd(footer.cpl) : '—'} total />
               <Num v={footer.cac ? usd(footer.cac) : '—'} total />
-              <Num v={footer.revenue ? n(footer.revenue / 1000) + 'к' : '—'} total />
+              <Num v={footer.revenue ? n(footer.revenue / 1000) + tc('crm', 'к') : '—'} total />
               <Num v="" total />
             </tr>
           </tbody>
         </table>
       </div>
       <p className="text-[11px] mt-1.5" style={{ color: 'var(--text2)' }}>
-        Подытог считает все строки блока{rest ? ', включая «Без источника и мелкие»' : ''}. CPL и цена клиента в нём —
-        только по каналам с расходом, бесплатные заявки их не разбавляют.
+        {tc('crm', 'Подытог считает все строки блока{rest}. CPL и цена клиента в нём — только по каналам с расходом, бесплатные заявки их не разбавляют.', { rest: rest ? t(', включая «Без источника и мелкие»') : '' })}
       </p>
     </div>
   )
@@ -419,27 +411,27 @@ function Findings({ rows, avgToPaid, avgCac }: { rows: Row[]; avgToPaid: number;
   const cards = [
     cheapest && {
       tone: 'var(--green)',
-      label: 'Дешевле всего клиент',
+      label: t('Дешевле всего клиент'),
       name: cheapest.name,
       value: usd(cheapest.cac),
-      note: `${paidWord(cheapest.paid)} при расходе ${usd(cheapest.spent)}` +
-        (avgCac > 0 ? ` · в ${String(Math.round(avgCac / cheapest.cac * 10) / 10).replace('.', ',')} раза дешевле средней` : ''),
+      note: t('{paid} при расходе {spent}', { paid: paidWord(cheapest.paid), spent: usd(cheapest.spent) }) +
+        (avgCac > 0 ? t(' · в {x} раза дешевле средней', { x: String(Math.round(avgCac / cheapest.cac * 10) / 10).replace('.', DEC) }) : ''),
     },
     best && {
       tone: 'var(--accent)',
-      label: 'Лучше всех доводит до оплаты',
+      label: t('Лучше всех доводит до оплаты'),
       name: best.name,
       value: pct(best.toPaid),
-      note: `${leadsWord(best.leads)} → ${paidWord(best.paid)} · средняя по месяцу ${pct(avgToPaid)}`,
+      note: t('{leads} → {paid} · средняя по месяцу {avg}', { leads: leadsWord(best.leads), paid: paidWord(best.paid), avg: pct(avgToPaid) }),
     },
     weak && {
       tone: 'var(--red)',
-      label: weak.paid === 0 ? 'Поток без единой оплаты' : 'Деньги уходят впустую',
+      label: weak.paid === 0 ? t('Поток без единой оплаты') : t('Деньги уходят впустую'),
       name: weak.name,
       value: weak.paid === 0 ? leadsWord(weak.leads) : usd(weak.cac),
       note: weak.paid === 0
-        ? `конверсия в назначенное собеседование ${pct(weak.toApp)} — проверить, что это за поток`
-        : `сквозная ${pct(weak.toPaid)} при средней ${pct(avgToPaid)} · расход ${usd(weak.spent)}`,
+        ? t('конверсия в назначенное собеседование {pct} — проверить, что это за поток', { pct: pct(weak.toApp) })
+        : t('сквозная {conv} при средней {avg} · расход {spent}', { conv: pct(weak.toPaid), avg: pct(avgToPaid), spent: usd(weak.spent) }),
     },
   ].filter(Boolean) as { tone: string; label: string; name: string; value: string; note: string }[]
 

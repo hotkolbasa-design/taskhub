@@ -11,24 +11,24 @@ type Cell = string | number | boolean
 type Grid = Cell[][]
 
 const HUNTERS = [
-  { name: 'Мадина Нурланова', share: 1 },
-  { name: 'Тимур Беков', share: 1 },
-  { name: 'Камила Рахимова', share: 0.375 },
+  { name: 'Madina Nurlanova', share: 1 },
+  { name: 'Timur Bekov', share: 1 },
+  { name: 'Kamila Rakhimova', share: 0.375 },
 ]
-const EXPERTS = ['Ерлан Касымов', 'Сабина Ергалиева', 'Жанар Ибраева']
+const EXPERTS = ['Yerlan Kassymov', 'Sabina Yergaliyeva', 'Zhanar Ibrayeva']
 
 // источник лида → доля; Instagram особый: заявка идёт стадией «(Instagram)» с тегом instagram
 const SOURCES: [string, number][] = [
-  ['Facebook — ЕНТ', 30], ['Facebook — Начальная школа', 18], ['Instagram', 17], ['Google Ads', 10],
-  ['TikTok', 8], ['Сайт — форма', 8], ['Рекомендация', 6], ['Входящий звонок', 3],
+  ['Facebook — UNT prep', 30], ['Facebook — Primary school', 18], ['Instagram', 17], ['Google Ads', 10],
+  ['TikTok', 8], ['Website form', 8], ['Referral', 6], ['Inbound call', 3],
 ]
 // расход ведётся по каналу; два источника Facebook сведены в группу «Facebook»
 const PAID: [string, number, number][] = [['Facebook', 34, 52], ['Instagram', 14, 24], ['Google Ads', 11, 19], ['TikTok', 7, 13]]
-const OLD_SOURCE = 'Старая лид-форма'
+const OLD_SOURCE = 'Legacy lead form'
 
-const NAMES = ['Айжан', 'Алихан', 'Амина', 'Ансар', 'Айсулу', 'Батыр', 'Дамир', 'Дарина', 'Ержан', 'Жасмин',
-  'Ильяс', 'Лейла', 'Мирас', 'Нурай', 'Рамазан', 'Сафия', 'Тамерлан', 'Томирис', 'Эмир', 'Ясмина', 'Алина',
-  'Артём', 'София', 'Аян', 'Медина', 'Нурсултан', 'Аиша', 'Санжар', 'Ева', 'Адель']
+const NAMES = ['Aizhan', 'Alikhan', 'Amina', 'Ansar', 'Aisulu', 'Batyr', 'Damir', 'Darina', 'Yerzhan', 'Jasmine',
+  'Ilyas', 'Leila', 'Miras', 'Nurai', 'Ramazan', 'Safiya', 'Tamerlan', 'Tomiris', 'Emir', 'Yasmina', 'Alina',
+  'Artyom', 'Sofia', 'Ayan', 'Medina', 'Nursultan', 'Aisha', 'Sanzhar', 'Eva', 'Adel']
 
 const LINK = 'https://demo.bitrix24.kz/crm'
 const DAY = 86400000
@@ -102,7 +102,7 @@ function generate(): Map<string, Grid> {
       const source = pick(SOURCES)
       const insta = source === 'Instagram'
       const tags = insta ? 'instagram' : ''
-      const title = `${NAMES[int(0, NAMES.length - 1)]}, ${int(1, 11)} класс`
+      const title = `${NAMES[int(0, NAMES.length - 1)]}, grade ${int(1, 11)}`
       const id = leadSeq++
       const hunter = pick(hunterPick)
       const newStage = insta ? 'Новая заявка (Instagram)' : 'Новая заявка (WhatsApp)'
@@ -169,11 +169,11 @@ function generate(): Map<string, Grid> {
     // повторные обращения, тестовые заявки и «шумный» источник — то, что расчёт обязан отсеять
     if (rnd() < 0.3) {
       const t = at(day, 10, 20)
-      if (t <= now) leads.push(leadRow(t, leadSeq++, 'Тестовая заявка', 'Новая заявка (WhatsApp)', 'Новое обращение', HUNTERS[0].name, 'Facebook — ЕНТ', ''))
+      if (t <= now) leads.push(leadRow(t, leadSeq++, 'Test lead', 'Новая заявка (WhatsApp)', 'Новое обращение', HUNTERS[0].name, 'Facebook — UNT prep', ''))
     }
     if (wd === 2) {
       const t = at(day, 10, 20)
-      if (t <= now) leads.push(leadRow(t, leadSeq++, `${NAMES[int(0, NAMES.length - 1)]}, ${int(1, 11)} класс`, 'Новая заявка (WhatsApp)', 'Новое обращение', pick(hunterPick), OLD_SOURCE, ''))
+      if (t <= now) leads.push(leadRow(t, leadSeq++, `${NAMES[int(0, NAMES.length - 1)]}, grade ${int(1, 11)}`, 'Новая заявка (WhatsApp)', 'Новое обращение', pick(hunterPick), OLD_SOURCE, ''))
     }
   }
   // повторная заявка того же лида через несколько дней
@@ -239,7 +239,7 @@ function generate(): Map<string, Grid> {
   })
   const settings: [string, string][] = [
     ['excludedSources', JSON.stringify([OLD_SOURCE])],
-    ['mergedGroups', JSON.stringify([{ name: 'Facebook', sources: ['Facebook — ЕНТ', 'Facebook — Начальная школа'] }])],
+    ['mergedGroups', JSON.stringify([{ name: 'Facebook', sources: ['Facebook — UNT prep', 'Facebook — Primary school'] }])],
     ['monthPlans', JSON.stringify({ [month(-1)]: plan(120), [month(0)]: plan(130), [month(1)]: plan(140) })],
     ['', ''],
     ['hunters', JSON.stringify(HUNTERS)],

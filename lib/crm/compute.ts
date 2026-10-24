@@ -7,6 +7,7 @@ import { getMergedGroups, getMonthPlans, getHunters } from './settings'
 import { DEFAULT_PLAN } from './plan'
 import { getMonthDays, getWeekGroups, formatDay, formatWeek } from './utils'
 import type { DashData } from './types'
+import { t } from '@/lib/i18n'
 
 // Fetch USD→KZT rate from free CDN (fawazahmed0, no API key, updated daily)
 async function fetchUsdKztRate(): Promise<number> {
@@ -120,7 +121,7 @@ export function getAvailableMonths(): { key: string; label: string; future?: boo
     const future = i < 0
     months.push({
       key: `${y}-${String(m + 1).padStart(2, '0')}`,
-      label: `${MONTH_NAMES_RU[m]} ${y}${future ? ' · план' : ''}`,
+      label: `${t(MONTH_NAMES_RU[m])} ${y}${future ? t(' · план') : ''}`,
       ...(future ? { future: true } : {}),
     })
   }

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import type { MyTask } from '@/lib/queries/my-tasks'
 import type { WorkflowStatus } from '@/types'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 const AVATAR_COLORS = ['#7C5CF6', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
 
@@ -15,11 +16,11 @@ function getAvatarColor(str: string) {
 }
 
 export const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  new:         { label: 'Новая',       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  in_progress: { label: 'В работе',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
-  review:      { label: 'На проверке', color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
-  done:        { label: 'Выполнена',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
-  cancelled:   { label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  new:         { label: t('Новая'),       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  in_progress: { label: t('В работе'),    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
+  review:      { label: t('На проверке'), color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
+  done:        { label: t('Выполнена'),   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
+  cancelled:   { label: t('Отменена'),    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 }
 
 const WORKFLOW_ORDER: WorkflowStatus[] = ['new', 'in_progress', 'review', 'done', 'cancelled']
@@ -27,9 +28,9 @@ const WORKFLOW_ORDER: WorkflowStatus[] = ['new', 'in_progress', 'review', 'done'
 type Priority = 'medium' | 'high' | null
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  none:   { label: 'Нет',     color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
-  medium: { label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
-  high:   { label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
+  none:   { label: tc('priority', 'Нет'),     color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  medium: { label: t('Средний'), color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
+  high:   { label: t('Высокий'), color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
 }
 const PRIORITY_ORDER: (Priority)[] = [null, 'medium', 'high']
 
@@ -81,7 +82,7 @@ function PriorityDropdown({
           cursor: 'pointer',
           border: `1px solid ${open ? cfg.color : 'transparent'}`,
         }}
-        title="Сменить приоритет"
+        title={t('Сменить приоритет')}
       >
         <svg width="8" height="9" viewBox="0 0 8 9" fill="none">
           <path d="M4 1v4M4 6.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
@@ -188,7 +189,7 @@ function StatusDropdown({
           cursor: 'pointer',
           border: `1px solid ${open ? wf.color : 'transparent'}`,
         }}
-        title="Сменить статус"
+        title={t('Сменить статус')}
       >
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wf.color }} />
         {wf.label}
@@ -263,7 +264,7 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
     : false
 
   const deadlineLabel = task.deadline
-    ? new Date(task.deadline + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    ? new Date(task.deadline + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' })
     : null
 
   const assigneeName = task.assignee?.full_name || task.assignee?.login
@@ -305,7 +306,7 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
         </span>
         {isEpic && (
           <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(247,192,79,0.12)', color: 'var(--yellow)' }}>
-            Эпик
+            {t('Эпик')}
           </span>
         )}
       </div>
@@ -332,7 +333,7 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
           onChange={(v) => onPriorityChange(task.id, v)}
         />
         {task.is_recurring && (
-          <span className="text-xs" style={{ color: 'var(--text2)' }} title="Повторяющаяся">
+          <span className="text-xs" style={{ color: 'var(--text2)' }} title={t('Повторяющаяся')}>
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
               <path d="M9 5.5a3.5 3.5 0 11-1-2.449M9 1.5v2h-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -383,7 +384,7 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
                 color: '#fff',
                 outline: '2px solid var(--surface)',
               }}
-              title={`Постановщик: ${creatorName}`}
+              title={t('Постановщик: {name}', { name: String(creatorName) })}
             >
               {task.creator.avatar_url
                 ? <img src={task.creator.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
@@ -399,7 +400,7 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
                 color: '#fff',
                 outline: '2px solid var(--surface)',
               }}
-              title={`Исполнитель: ${assigneeName}`}
+              title={t('Исполнитель: {name}', { name: String(assigneeName) })}
             >
               {task.assignee.avatar_url
                 ? <img src={task.assignee.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
@@ -408,7 +409,7 @@ export default function MyTaskCard({ task, currentUserId, onClick, onStatusChang
             </div>
           )}
           <span className="ml-1.5 text-xs" style={{ color: 'var(--text2)', opacity: 0.7 }}>
-            {isAssignee && isCreator ? 'я' : isAssignee ? 'исп.' : isCreator ? 'пост.' : ''}
+            {isAssignee && isCreator ? t('я') : isAssignee ? t('исп.') : isCreator ? t('пост.') : ''}
           </span>
         </div>
       </div>

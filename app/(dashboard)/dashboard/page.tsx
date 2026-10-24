@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { t } from '@/lib/i18n'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>
-        Добро пожаловать в Task Hub
+        {t('Добро пожаловать в Task Hub')}
       </h1>
       {displayName && (
         <p className="mt-2 text-base" style={{ color: 'var(--text2)' }}>

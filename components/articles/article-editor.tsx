@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { createArticle, updateArticle } from '@/app/(dashboard)/articles/actions'
 import { CATEGORIES, AI_PROMPT, Markdown, Spinner } from './article-ui'
 import type { Article, ArticleCategory } from '@/types'
+import { t } from '@/lib/i18n'
 
 type Props = {
   article?: Article | null
@@ -40,14 +41,14 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
       setPromptCopied(true)
       setTimeout(() => setPromptCopied(false), 2500)
     } catch {
-      setError('Не удалось скопировать — выделите текст промпта вручную')
+      setError(t('Не удалось скопировать — выделите текст промпта вручную'))
     }
   }
 
   async function handleSave() {
     setError(null)
-    if (!title.trim()) { setError('Напишите заголовок'); return }
-    if (!content.trim()) { setError('Инструкция пустая'); return }
+    if (!title.trim()) { setError(t('Напишите заголовок')); return }
+    if (!content.trim()) { setError(t('Инструкция пустая')); return }
 
     setSaving(true)
     try {
@@ -65,7 +66,7 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
       }
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить')
+      setError(e instanceof Error ? e.message : t('Не удалось сохранить'))
       setSaving(false)
     }
   }
@@ -80,7 +81,7 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
       }}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-            {editing ? 'Редактирование инструкции' : 'Новая инструкция'}
+            {editing ? t('Редактирование инструкции') : t('Новая инструкция')}
           </span>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer' }}>
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -94,10 +95,9 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
           <div className="flex items-start gap-3 px-4 py-3 rounded-xl"
             style={{ background: 'rgba(124,92,246,0.07)', border: '1px solid rgba(124,92,246,0.2)' }}>
             <div className="flex-1">
-              <div className="text-sm font-medium mb-0.5" style={{ color: 'var(--text)' }}>Пишете через ИИ?</div>
+              <div className="text-sm font-medium mb-0.5" style={{ color: 'var(--text)' }}>{t('Пишете через ИИ?')}</div>
               <div className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
-                Скопируйте промпт, вставьте в Claude или другой ИИ, опишите процесс своими словами —
-                и вставьте готовый текст в поле ниже.
+                {t('Скопируйте промпт, вставьте в Claude или другой ИИ, опишите процесс своими словами — и вставьте готовый текст в поле ниже.')}
               </div>
             </div>
             <button type="button" onClick={copyPrompt}
@@ -107,18 +107,18 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
                 border: '1px solid var(--border)',
                 color: promptCopied ? '#2DD4A0' : 'var(--text)', cursor: 'pointer',
               }}>
-              {promptCopied ? 'Скопировано' : 'Скопировать промпт'}
+              {promptCopied ? t('Скопировано') : t('Скопировать промпт')}
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Заголовок">
+            <Field label={t('Заголовок')}>
               <input value={title} onChange={e => setTitle(e.target.value)} autoFocus
-                placeholder="Как поставить задачу в проекте"
+                placeholder={t('Как поставить задачу в проекте')}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
             </Field>
-            <Field label="Раздел">
+            <Field label={t('Раздел')}>
               <div className="flex gap-1.5 flex-wrap">
                 {CATEGORIES.map(c => (
                   <button key={c.value} type="button" onClick={() => setCategory(c.value)}
@@ -135,30 +135,30 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
             </Field>
           </div>
 
-          <Field label="О чём инструкция — одной строкой">
+          <Field label={t('О чём инструкция — одной строкой')}>
             <input value={summary} onChange={e => setSummary(e.target.value)}
-              placeholder="Кому ставить, как выбрать исполнителя и срок"
+              placeholder={t('Кому ставить, как выбрать исполнителя и срок')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
           </Field>
 
           <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
-            {(['write', 'preview'] as const).map(t => (
-              <button key={t} type="button" onClick={() => setTab(t)}
+            {(['write', 'preview'] as const).map(tabKey => (
+              <button key={tabKey} type="button" onClick={() => setTab(tabKey)}
                 className="px-3 py-2 text-sm"
                 style={{
-                  color: tab === t ? '#7C5CF6' : 'var(--text2)',
-                  borderBottom: tab === t ? '2px solid #7C5CF6' : '2px solid transparent',
+                  color: tab === tabKey ? '#7C5CF6' : 'var(--text2)',
+                  borderBottom: tab === tabKey ? '2px solid #7C5CF6' : '2px solid transparent',
                   cursor: 'pointer',
                 }}>
-                {t === 'write' ? 'Текст' : 'Предпросмотр'}
+                {tabKey === 'write' ? t('Текст') : t('Предпросмотр')}
               </button>
             ))}
           </div>
 
           {tab === 'write' ? (
             <textarea value={content} onChange={e => setContent(e.target.value)}
-              placeholder={'## Заголовок раздела\n\nАбзац текста.\n\n1. Первый шаг\n2. Второй шаг\n\n**Важно:** предупреждение.'}
+              placeholder={t('## Заголовок раздела\n\nАбзац текста.\n\n1. Первый шаг\n2. Второй шаг\n\n**Важно:** предупреждение.')}
               className="w-full px-3 py-3 rounded-lg text-sm outline-none resize-none"
               style={{
                 background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)',
@@ -167,7 +167,7 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
           ) : (
             <div className="px-4 py-3 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', minHeight: 320 }}>
               {content.trim() ? <Markdown>{content}</Markdown>
-                : <span className="text-sm" style={{ color: 'var(--text2)' }}>Пока пусто — напишите текст на вкладке «Текст»</span>}
+                : <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('Пока пусто — напишите текст на вкладке «Текст»')}</span>}
             </div>
           )}
 
@@ -175,11 +175,11 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
             <div className="flex flex-col gap-3 px-4 py-3 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
               <label className="flex items-center gap-2.5 text-sm" style={{ color: 'var(--text)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={isRequired} onChange={e => setIsRequired(e.target.checked)} style={{ cursor: 'pointer' }} />
-                Обязательна к прочтению — у людей будет висеть напоминание, пока не откроют
+                {t('Обязательна к прочтению — у людей будет висеть напоминание, пока не откроют')}
               </label>
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs" style={{ color: 'var(--text2)' }}>Кому показывать (ничего не выбрано — всем)</span>
+                <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('Кому показывать (ничего не выбрано — всем)')}</span>
                 <div className="flex gap-1.5 flex-wrap">
                   {departments.map(d => {
                     const on = chosenDepts.includes(d)
@@ -202,7 +202,7 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
               {editing && article?.status === 'published' && (
                 <label className="flex items-center gap-2.5 text-sm" style={{ color: 'var(--text)', cursor: 'pointer' }}>
                   <input type="checkbox" checked={bumpVersion} onChange={e => setBumpVersion(e.target.checked)} style={{ cursor: 'pointer' }} />
-                  Существенная правка — попросить всех перечитать заново
+                  {t('Существенная правка — попросить всех перечитать заново')}
                 </label>
               )}
             </div>
@@ -216,11 +216,11 @@ export default function ArticleEditor({ article, isAdmin, departments, onClose, 
             className="px-5 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
             style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
             {saving && <Spinner />}
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? t('Сохранение…') : t('Сохранить')}
           </button>
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>
-            Отмена
+            {t('Отмена')}
           </button>
         </div>
       </div>

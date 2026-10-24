@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { inviteUser } from '@/app/(dashboard)/admin/actions'
+import { t } from '@/lib/i18n'
 
 const ROLES = [
   { value: 'employee', label: 'Employee' },
@@ -45,14 +46,14 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim()) { setError('Укажите email'); return }
+    if (!email.trim()) { setError(t('Укажите email')); return }
     setError('')
     setLoading(true)
     try {
       await inviteUser({ email: email.trim(), full_name: fullName.trim(), role, position: position.trim(), department: department.trim() })
       onDone()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ошибка при отправке приглашения')
+      setError(err instanceof Error ? err.message : t('Ошибка при отправке приглашения'))
     } finally {
       setLoading(false)
     }
@@ -71,7 +72,7 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Пригласить пользователя</h2>
+          <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('Пригласить пользователя')}</h2>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -96,12 +97,12 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
             />
           </Field>
 
-          <Field label="Полное имя">
+          <Field label={t('Полное имя')}>
             <input
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              placeholder="Иванов Иван"
+              placeholder={t('Иванов Иван')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -109,12 +110,12 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
             />
           </Field>
 
-          <Field label="Должность">
+          <Field label={t('Должность')}>
             <input
               type="text"
               value={position}
               onChange={e => setPosition(e.target.value)}
-              placeholder="Менеджер проектов"
+              placeholder={t('Менеджер проектов')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -122,12 +123,12 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
             />
           </Field>
 
-          <Field label="Отдел">
+          <Field label={t('Отдел')}>
             <input
               type="text"
               value={department}
               onChange={e => setDepartment(e.target.value)}
-              placeholder="Маркетинг"
+              placeholder={t('Маркетинг')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -135,7 +136,7 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
             />
           </Field>
 
-          <Field label="Роль">
+          <Field label={t('Роль')}>
             <button
               ref={roleBtnRef}
               type="button"
@@ -158,13 +159,13 @@ export default function AdminInviteModal({ onClose, onDone }: Props) {
             <button type="button" onClick={onClose}
               className="flex-1 py-2 rounded-lg text-sm"
               style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
-            >Отмена</button>
+            >{t('Отмена')}</button>
             <button type="submit" disabled={loading}
               className="flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
             >
               {loading && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-              {loading ? 'Отправка…' : 'Отправить приглашение'}
+              {loading ? t('Отправка…') : t('Отправить приглашение')}
             </button>
           </div>
         </form>

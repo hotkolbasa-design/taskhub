@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
+import { t, INTL_LOCALE } from '@/lib/i18n'
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -26,7 +27,7 @@ function DatePicker({ value, onChange, label }: { value: string; onChange: (v: s
   }, [open])
 
   const displayValue = value
-    ? new Date(value + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(value + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })
     : ''
 
   const year = viewDate.getFullYear()
@@ -66,7 +67,7 @@ function DatePicker({ value, onChange, label }: { value: string; onChange: (v: s
           <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
           <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
         </svg>
-        <span className="flex-1">{displayValue || 'Выберите дату'}</span>
+        <span className="flex-1">{displayValue || t('Выберите дату')}</span>
       </button>
 
       {open && (
@@ -81,7 +82,7 @@ function DatePicker({ value, onChange, label }: { value: string; onChange: (v: s
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
-            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{MONTHS[month]} {year}</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t(MONTHS[month])} {year}</span>
             <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))}
               className="p-1 rounded-md" style={{ color: 'var(--text2)' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
@@ -93,7 +94,7 @@ function DatePicker({ value, onChange, label }: { value: string; onChange: (v: s
 
           <div className="grid grid-cols-7 gap-0.5 mb-1">
             {WEEKDAYS.map(d => (
-              <div key={d} className="text-center text-xs py-1" style={{ color: 'var(--text2)' }}>{d}</div>
+              <div key={d} className="text-center text-xs py-1" style={{ color: 'var(--text2)' }}>{t(d)}</div>
             ))}
           </div>
 
@@ -127,7 +128,7 @@ function DatePicker({ value, onChange, label }: { value: string; onChange: (v: s
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              Сегодня
+              {t('Сегодня')}
             </button>
           </div>
         </div>
@@ -145,27 +146,27 @@ type Props = {
 
 export default function CreateSprintView({ projectId, canManage }: Props) {
   const router = useRouter()
-  const [name, setName] = useState('Спринт 1')
+  const [name, setName] = useState(t('Спринт {n}', { n: 1 }))
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [mode, setMode] = useState<'weekdays' | 'custom'>('weekdays')
   const [customCols, setCustomCols] = useState<CustomCol[]>([
-    { name: 'Новые', color: '#7C5CF6' },
-    { name: 'В работе', color: '#A78BFA' },
-    { name: 'Готово', color: '#2DD4A0' },
+    { name: t('Новые'), color: '#7C5CF6' },
+    { name: t('В работе'), color: '#A78BFA' },
+    { name: t('Готово'), color: '#2DD4A0' },
   ])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!dateFrom || !dateTo) { setError('Укажите даты'); return }
-    if (mode === 'custom' && customCols.some(c => !c.name.trim())) { setError('Заполните названия колонок'); return }
+    if (!dateFrom || !dateTo) { setError(t('Укажите даты')); return }
+    if (mode === 'custom' && customCols.some(c => !c.name.trim())) { setError(t('Заполните названия колонок')); return }
     setSaving(true)
     setError('')
     try {
       await createSprint(projectId, {
-        name: name.trim() || 'Спринт',
+        name: name.trim() || t('Спринт'),
         dateFrom,
         dateTo,
         mode,
@@ -202,8 +203,8 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
               <path d="M8 7V5a4 4 0 018 0v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </div>
-          <p className="text-base font-medium mb-1" style={{ color: 'var(--text)' }}>Нет активного спринта</p>
-          <p className="text-sm" style={{ color: 'var(--text2)' }}>Руководитель проекта создаст спринт</p>
+          <p className="text-base font-medium mb-1" style={{ color: 'var(--text)' }}>{t('Нет активного спринта')}</p>
+          <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('Руководитель проекта создаст спринт')}</p>
         </div>
       </div>
     )
@@ -212,12 +213,12 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
   return (
     <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-2xl p-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <h2 className="text-base font-semibold mb-5" style={{ color: 'var(--text)' }}>Создать спринт</h2>
+        <h2 className="text-base font-semibold mb-5" style={{ color: 'var(--text)' }}>{t('Создать спринт')}</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Название */}
           <div>
-            <label className="block text-xs mb-1.5" style={{ color: 'var(--text2)' }}>Название</label>
+            <label className="block text-xs mb-1.5" style={{ color: 'var(--text2)' }}>{t('Название')}</label>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
@@ -230,13 +231,13 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
 
           {/* Даты */}
           <div className="grid grid-cols-2 gap-3">
-            <DatePicker value={dateFrom} onChange={setDateFrom} label="Начало" />
-            <DatePicker value={dateTo} onChange={setDateTo} label="Конец" />
+            <DatePicker value={dateFrom} onChange={setDateFrom} label={t('Начало')} />
+            <DatePicker value={dateTo} onChange={setDateTo} label={t('Конец')} />
           </div>
 
           {/* Режим колонок */}
           <div>
-            <label className="block text-xs mb-2" style={{ color: 'var(--text2)' }}>Колонки</label>
+            <label className="block text-xs mb-2" style={{ color: 'var(--text2)' }}>{t('Колонки')}</label>
             <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
               {(['weekdays', 'custom'] as const).map(m => (
                 <button key={m} type="button"
@@ -247,7 +248,7 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
                     color: mode === m ? '#fff' : 'var(--text2)',
                   }}
                 >
-                  {m === 'weekdays' ? 'Дни недели' : 'Свои статусы'}
+                  {m === 'weekdays' ? t('Дни недели') : t('Свои статусы')}
                 </button>
               ))}
             </div>
@@ -268,7 +269,7 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
                 <span key={label} className="flex items-center gap-1 text-xs px-2 py-1 rounded-md"
                   style={{ background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                  {label}
+                  {t(label)}
                 </span>
               ))}
             </div>
@@ -281,12 +282,12 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
                   <div
                     className="w-4 h-4 rounded-full shrink-0 cursor-pointer"
                     style={{ background: col.color }}
-                    title="Цвет"
+                    title={t('Цвет')}
                   />
                   <input
                     value={col.name}
                     onChange={e => updateCustomCol(i, 'name', e.target.value)}
-                    placeholder={`Колонка ${i + 1}`}
+                    placeholder={t('Колонка {n}', { n: i + 1 })}
                     className="flex-1 px-2.5 py-1.5 rounded-lg text-sm outline-none"
                     style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                     onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
@@ -315,7 +316,7 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                   </svg>
-                  Добавить колонку
+                  {t('Добавить колонку')}
                 </button>
               )}
             </div>
@@ -334,7 +335,7 @@ export default function CreateSprintView({ projectId, canManage }: Props) {
             {saving && (
               <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             )}
-            Создать спринт
+            {t('Создать спринт')}
           </button>
         </form>
       </div>

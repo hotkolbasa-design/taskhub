@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import { useKeepInView } from './use-keep-in-view'
+import { t } from '@/lib/i18n'
 
 export type FilterUser = { id: string; full_name: string | null; login: string; avatar_url?: string | null }
 
@@ -25,7 +26,7 @@ export default function UserFilter({
   users,
   selected,
   onChange,
-  placeholder = 'Все сотрудники',
+  placeholder = t('Все сотрудники'),
 }: {
   users: FilterUser[]
   selected: string[]
@@ -110,10 +111,10 @@ export default function UserFilter({
           }}
         >
           <div className="flex items-center justify-between px-3 py-1.5 mb-1" style={{ borderBottom: '1px solid var(--border)' }}>
-            <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>По исполнителю</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('По исполнителю')}</span>
             {active && (
               <button onClick={() => onChange([])} className="text-xs" style={{ color: 'var(--accent)', cursor: 'pointer' }}>
-                Сбросить
+                {t('Сбросить')}
               </button>
             )}
           </div>

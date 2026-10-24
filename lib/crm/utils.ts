@@ -1,3 +1,5 @@
+import { numericDate } from '@/lib/i18n'
+
 export const TEST_REGEX = /тест|test/i
 
 // Returns true for test leads: contain "тест"/"test" in title,
@@ -63,8 +65,8 @@ export function getWeekGroups(days: string[]): string[][] {
 
 // "2026-07-01" → "01.07"
 export function formatDay(dateKey: string): string {
-  const [, m, d] = dateKey.split('-')
-  return `${d}.${m}`
+  const [y, m, d] = dateKey.split('-')
+  return numericDate(`${d}.${m}`, new Date(Date.UTC(+y, +m - 1, +d)), false, true)
 }
 
 export function formatWeek(weekDays: string[]): string {

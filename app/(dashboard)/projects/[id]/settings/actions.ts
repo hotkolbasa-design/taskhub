@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateTag } from 'next/cache'
+import { t } from '@/lib/i18n'
 
 async function getSession() {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Не авторизован')
+  if (!session) throw new Error(t('Не авторизован'))
   return session
 }
 

@@ -7,14 +7,15 @@ import ExpenseFormModal from './expense-form-modal'
 import ExpenseDrawer from './expense-drawer'
 import { CATEGORY_LABEL, StatusBadge, Spinner, money, formatDate, personName } from './expense-ui'
 import type { ExpenseRequest } from '@/types'
+import { t, tc } from '@/lib/i18n'
 
 type Tab = 'pending' | 'to_pay' | 'history' | 'all'
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'pending', label: 'На рассмотрении' },
-  { value: 'to_pay',  label: 'Ждут оплаты' },
-  { value: 'history', label: 'История' },
-  { value: 'all',     label: 'Все' },
+  { value: 'pending', label: t('На рассмотрении') },
+  { value: 'to_pay',  label: t('Ждут оплаты') },
+  { value: 'history', label: t('История') },
+  { value: 'all',     label: t('Все') },
 ]
 
 function matchesTab(r: ExpenseRequest, tab: Tab): boolean {
@@ -92,9 +93,9 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
     <div className="p-6 flex flex-col gap-5 h-full">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Расходы</h1>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('Расходы')}</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text2)' }}>
-            {canApprove ? 'Заявки всех отделов' : canPay ? 'Заявки всех отделов — к оплате' : 'Ваши заявки на покупки'}
+            {canApprove ? tc('expenses', 'Заявки всех отделов') : canPay ? tc('expenses', 'Заявки всех отделов — к оплате') : tc('expenses', 'Ваши заявки на покупки')}
           </p>
         </div>
         <button onClick={() => { setEditing(null); setFormOpen(true) }}
@@ -103,7 +104,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
           </svg>
-          Новая заявка
+          {tc('expenses', 'Новая заявка')}
         </button>
       </div>
 
@@ -125,7 +126,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
       <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <span className="text-sm" style={{ color: 'var(--text2)' }}>
-          {visible.length === 0 ? 'Заявок нет' : `Заявок: ${visible.length}`}
+          {visible.length === 0 ? tc('expenses', 'Заявок нет') : tc('expenses', 'Заявок: {n}', { n: visible.length })}
         </span>
         <span className="text-base font-semibold" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
           {money(totalSum)}
@@ -135,19 +136,19 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
       {selectable && selected.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
           style={{ background: 'rgba(124,92,246,0.08)', border: '1px solid rgba(124,92,246,0.25)' }}>
-          <span className="text-sm" style={{ color: 'var(--text)' }}>Выбрано: {selected.size}</span>
+          <span className="text-sm" style={{ color: 'var(--text)' }}>{t('Выбрано: {n}', { n: selected.size })}</span>
           <button onClick={() => bulkDecide('approved')} disabled={!!bulkBusy}
             className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60"
             style={{ background: '#2DD4A0', color: '#fff', cursor: 'pointer' }}>
-            {bulkBusy === 'approved' && <Spinner />} Одобрить
+            {bulkBusy === 'approved' && <Spinner />} {t('Одобрить')}
           </button>
           <button onClick={() => bulkDecide('rejected')} disabled={!!bulkBusy}
             className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60"
             style={{ background: '#F75C6E', color: '#fff', cursor: 'pointer' }}>
-            {bulkBusy === 'rejected' && <Spinner />} Отклонить
+            {bulkBusy === 'rejected' && <Spinner />} {t('Отклонить')}
           </button>
           <button onClick={() => setSelected(new Set())} className="text-sm ml-auto"
-            style={{ color: 'var(--text2)', cursor: 'pointer' }}>Снять выделение</button>
+            style={{ color: 'var(--text2)', cursor: 'pointer' }}>{t('Снять выделение')}</button>
         </div>
       )}
 
@@ -155,7 +156,7 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         {visible.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--text2)' }}>
-            Здесь пока пусто
+            {t('Здесь пока пусто')}
           </div>
         ) : (
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
@@ -167,13 +168,13 @@ export default function ExpensesClient({ requests, currentUserId, canApprove, ca
                       onChange={() => setSelected(allSelected ? new Set() : new Set(visible.map(r => r.id)))} />
                   </th>
                 )}
-                <Th>Номер</Th>
-                <Th>Что покупаем</Th>
-                {canPay && <Th>Кто просит</Th>}
-                <Th>Категория</Th>
-                <Th right>Сумма</Th>
-                <Th>Нужно к</Th>
-                <Th>Статус</Th>
+                <Th>{t('Номер')}</Th>
+                <Th>{t('Что покупаем')}</Th>
+                {canPay && <Th>{t('Кто просит')}</Th>}
+                <Th>{t('Категория')}</Th>
+                <Th right>{t('Сумма')}</Th>
+                <Th>{t('Нужно к')}</Th>
+                <Th>{t('Статус')}</Th>
               </tr>
             </thead>
             <tbody>

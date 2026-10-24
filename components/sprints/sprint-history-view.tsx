@@ -6,6 +6,7 @@ import type { SprintStat, TaskStat } from '@/lib/queries/analytics'
 import { unfixSprint, deleteClosedSprint } from '@/app/(dashboard)/projects/[id]/sprint/actions'
 import { getTaskForDrawer, type DrawerData } from '@/app/(dashboard)/my-tasks/actions'
 import TaskDrawer from '@/components/backlog/task-drawer'
+import { t, INTL_LOCALE, numericDate } from '@/lib/i18n'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -18,11 +19,11 @@ function fmtDate(d: string) {
   const dd = String(dt.getDate()).padStart(2, '0')
   const mm = String(dt.getMonth() + 1).padStart(2, '0')
   const yy = String(dt.getFullYear()).slice(2)
-  return `${dd}.${mm}.${yy}`
+  return numericDate(`${dd}.${mm}.${yy}`, dt, false)
 }
 
 function fmtDateShort(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  return new Date(d + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' })
 }
 
 function TaskStatusBadge({ task }: { task: TaskStat }) {
@@ -36,7 +37,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
           <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        Выполнено
+        {t('Выполнено')}
       </span>
     )
   }
@@ -47,7 +48,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
           <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        Отменена
+        {t('Отменена')}
       </span>
     )
   }
@@ -55,7 +56,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
         style={{ background: 'rgba(136,146,164,0.1)', color: 'var(--text2)' }}>
-        Удалено
+        {t('Удалено')}
       </span>
     )
   }
@@ -67,12 +68,12 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
           <path d="M5 1L5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           <circle cx="5" cy="7.5" r="0.75" fill="currentColor" />
         </svg>
-        Просрочено
+        {t('Просрочено')}
       </span>
     )
   }
   const labels: Record<string, string> = {
-    new: 'Новая', in_progress: 'В работе', review: 'На проверке',
+    new: t('Новая'), in_progress: t('В работе'), review: t('На проверке'),
   }
   return (
     <span className="text-xs px-2 py-0.5 rounded-full"
@@ -152,7 +153,7 @@ function EpicGroup({ epic, subtasks, onOpen }: { epic: TaskStat; subtasks: TaskS
           </span>
           <span style={{ color: 'var(--text)', fontWeight: 500 }}>{epic.title}</span>
           {subtasks.length > 0 && (
-            <span className="text-xs shrink-0" style={{ color: 'var(--text2)', opacity: 0.6 }}>{subtasks.length} задач</span>
+            <span className="text-xs shrink-0" style={{ color: 'var(--text2)', opacity: 0.6 }}>{t('{n} задач', { n: subtasks.length })}</span>
           )}
         </span>
         <span className="py-2.5"><TaskStatusBadge task={epic} /></span>
@@ -242,7 +243,7 @@ function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdm
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              title={isClosed ? 'Удалить спринт' : 'Удалить снапшот'}
+              title={isClosed ? t('Удалить спринт') : t('Удалить снапшот')}
               className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md"
               style={{ color: 'var(--text2)', background: 'var(--surface2)', border: '1px solid var(--border)', cursor: 'pointer' }}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--red)'; e.currentTarget.style.borderColor = 'var(--red)' }}
@@ -254,7 +255,7 @@ function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdm
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                       <path d="M1.5 3h9M4 3V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V3M5 5.5v3M7 5.5v3M2.5 3l.6 6.5a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9L9.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    {isClosed ? 'Удалить спринт' : 'Удалить снапшот'}
+                    {isClosed ? t('Удалить спринт') : t('Удалить снапшот')}
                   </>
               }
             </button>
@@ -263,7 +264,7 @@ function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdm
         {sprint.sprint_status === 'active' ? (
           <span className="text-xs px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(45,212,160,0.1)', color: 'var(--green)', border: '1px solid rgba(45,212,160,0.2)' }}>
-            Активный спринт
+            {t('Активный спринт')}
           </span>
         ) : (
           <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
@@ -271,25 +272,25 @@ function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdm
             <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
               <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Завершён
+            {t('Завершён')}
           </span>
         )}
       </div>
 
       {/* Стат-карточки */}
       <div className="flex gap-3">
-        <StatCard value={sprint.total_tasks} label="Задач" />
-        <StatCard value={sprint.total_time > 0 ? fmtTime(sprint.total_time) : '—'} label="Объём" />
-        <StatCard value={sprint.done_count} label="Выполнено" color={sprint.done_count > 0 ? 'var(--green)' : undefined} />
-        <StatCard value={sprint.cancelled_count} label="Отменено" color={sprint.cancelled_count > 0 ? 'var(--yellow)' : undefined} />
-        <StatCard value={sprint.not_done_count} label="Не выполнено" color={sprint.not_done_count > 0 ? 'var(--red)' : undefined} />
+        <StatCard value={sprint.total_tasks} label={t('Задач')} />
+        <StatCard value={sprint.total_time > 0 ? fmtTime(sprint.total_time) : '—'} label={t('Объём')} />
+        <StatCard value={sprint.done_count} label={t('Выполнено')} color={sprint.done_count > 0 ? 'var(--green)' : undefined} />
+        <StatCard value={sprint.cancelled_count} label={t('Отменено')} color={sprint.cancelled_count > 0 ? 'var(--yellow)' : undefined} />
+        <StatCard value={sprint.not_done_count} label={t('Не выполнено')} color={sprint.not_done_count > 0 ? 'var(--red)' : undefined} />
       </div>
 
       {/* Эффективность */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
-            ⚡ Эффективность
+            {t('⚡ Эффективность')}
           </span>
           <span className="font-mono text-sm font-bold" style={{ color: effColor }}>
             {sprint.efficiency}%
@@ -314,17 +315,17 @@ function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdm
             style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
             <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          {open ? 'Скрыть задачи' : `Показать задачи (${sprint.tasks.length})`}
+          {open ? t('Скрыть задачи') : t('Показать задачи ({n})', { n: sprint.tasks.length })}
         </button>
 
         {open && (
           <div className="mt-3 rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
             <div className="grid text-xs px-4 py-2 font-medium"
               style={{ gridTemplateColumns: '1fr 140px 100px 80px', color: 'var(--text2)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              <span>Название задачи</span>
-              <span>Статус</span>
-              <span>Дедлайн</span>
-              <span>Время</span>
+              <span>{t('Название задачи')}</span>
+              <span>{t('Статус')}</span>
+              <span>{t('Дедлайн')}</span>
+              <span>{t('Время')}</span>
             </div>
             <TaskList tasks={visibleTasks} allTasks={sprint.tasks} onOpen={onOpenTask} />
             {sprint.tasks.length > 5 && !showAll && (
@@ -332,7 +333,7 @@ function SprintCard({ sprint, isAdmin, onOpenTask }: { sprint: SprintStat; isAdm
                 className="w-full py-2.5 text-xs font-medium"
                 style={{ color: 'var(--accent)', cursor: 'pointer' }}
                 onClick={() => setShowAll(true)}>
-                Показать все ({sprint.tasks.length})
+                {t('Показать все ({n})', { n: sprint.tasks.length })}
               </button>
             )}
           </div>
@@ -360,7 +361,7 @@ export default function SprintHistoryView({ sprints, isAdmin = false }: { sprint
   if (!sprints.length) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-sm" style={{ color: 'var(--text2)' }}>Спринтов пока нет</p>
+        <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('Спринтов пока нет')}</p>
       </div>
     )
   }

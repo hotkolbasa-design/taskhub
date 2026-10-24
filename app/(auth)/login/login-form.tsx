@@ -4,11 +4,12 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { t } from '@/lib/i18n'
 
 const reasonMessages: Record<string, string> = {
-  inactive: 'Ваш аккаунт деактивирован. Обратитесь к администратору.',
-  pending:  'Ваш аккаунт ожидает подтверждения администратора.',
-  demo:     'Не удалось войти в демо. Попробуйте ещё раз через минуту.',
+  inactive: t('Ваш аккаунт деактивирован. Обратитесь к администратору.'),
+  pending:  t('Ваш аккаунт ожидает подтверждения администратора.'),
+  demo:     t('Не удалось войти в демо. Попробуйте ещё раз через минуту.'),
 }
 
 export default function LoginFormBoundary({ demo }: { demo: boolean }) {
@@ -50,22 +51,22 @@ function LoginForm({ demo }: { demo: boolean }) {
 
   return (
     <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold text-white mb-8 text-center">Вход</h1>
+      <h1 className="text-2xl font-semibold text-white mb-8 text-center">{t('Вход')}</h1>
 
       {demo && (
         <div className="mb-6 flex flex-col gap-3">
           <a
-            href="/api/demo"
+            href="/api/demo/enter"
             onClick={() => setDemoLoading(true)}
             className="rounded-lg py-2.5 bg-[#7C5CF6] text-white text-sm font-medium hover:bg-[#6B4EE0] transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             {demoLoading && (
               <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
             )}
-            {demoLoading ? 'Входим…' : 'Войти в демо без пароля'}
+            {demoLoading ? t('Входим…') : t('Войти в демо без пароля')}
           </a>
           <p className="text-xs text-gray-500 text-center">
-            Демо-версия: вымышленная компания и тестовые данные. Данные обновляются раз в неделю.
+            {t('Демо-версия: вымышленная компания и тестовые данные. Данные обновляются раз в неделю.')}
           </p>
         </div>
       )}
@@ -91,10 +92,10 @@ function LoginForm({ demo }: { demo: boolean }) {
         </Field>
 
         <Field
-          label="Пароль"
+          label={t('Пароль')}
           action={
             <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-[#7C5CF6] transition-colors">
-              Забыли пароль?
+              {t('Забыли пароль?')}
             </Link>
           }
         >
@@ -119,14 +120,14 @@ function LoginForm({ demo }: { demo: boolean }) {
           {loading && (
             <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
           )}
-          {loading ? 'Вход…' : 'Войти'}
+          {loading ? t('Вход…') : t('Войти')}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
-        Нет аккаунта?{' '}
+        {t('Нет аккаунта?')}{' '}
         <Link href="/register" className="text-[#7C5CF6] hover:underline">
-          Зарегистрироваться
+          {t('Зарегистрироваться')}
         </Link>
       </p>
     </div>

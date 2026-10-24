@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BUCKET, UPLOAD_FOLDERS, type UploadFolder } from '@/lib/storage/const'
+import { t } from '@/lib/i18n'
 
 type UploadTicket = { path: string; token: string; publicUrl: string }
 
@@ -22,9 +23,9 @@ export async function createUploadTicket(
 ): Promise<UploadTicket> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Не авторизован')
+  if (!user) throw new Error(t('Не авторизован'))
 
-  if (!UPLOAD_FOLDERS.includes(folder)) throw new Error('Недопустимая папка')
+  if (!UPLOAD_FOLDERS.includes(folder)) throw new Error(t('Недопустимая папка'))
   // Путь целиком собираем на сервере: с клиента приходит только имя файла
   const safeSub = subPath && /^[0-9a-f-]{36}$/i.test(subPath) ? `${subPath}/` : ''
   const ext = (fileName.split('.').pop() ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8)

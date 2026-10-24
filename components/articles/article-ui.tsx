@@ -3,25 +3,26 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ArticleCategory, ArticleStatus } from '@/types'
+import { t } from '@/lib/i18n'
 
 export const CATEGORIES: { value: ArticleCategory; label: string }[] = [
-  { value: 'taskhub',   label: 'Работа в TaskHub' },
-  { value: 'processes', label: 'Процессы компании' },
-  { value: 'hr',        label: 'Кадры' },
-  { value: 'sales',     label: 'Продажи и маркетинг' },
-  { value: 'other',     label: 'Прочее' },
+  { value: 'taskhub',   label: t('Работа в TaskHub') },
+  { value: 'processes', label: t('Процессы компании') },
+  { value: 'hr',        label: t('Кадры') },
+  { value: 'sales',     label: t('Продажи и маркетинг') },
+  { value: 'other',     label: t('Прочее') },
 ]
 
 export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(CATEGORIES.map(c => [c.value, c.label]))
 
 export const STATUS_META: Record<ArticleStatus, { label: string; color: string; bg: string }> = {
-  draft:     { label: 'Черновик',    color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
-  review:    { label: 'На проверке', color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
-  published: { label: 'Опубликована',color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)' },
+  draft:     { label: t('Черновик'),    color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  review:    { label: t('На проверке'), color: '#F7C04F', bg: 'rgba(247,192,79,0.15)' },
+  published: { label: t('Опубликована'),color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)' },
 }
 
 /** Промпт для своего ИИ: задаёт единый вид инструкций, кто бы их ни писал. */
-export const AI_PROMPT = `Напиши инструкцию для сотрудников компании.
+export const AI_PROMPT = t(`Напиши инструкцию для сотрудников компании.
 
 Тема: [ОПИШИ, О ЧЁМ ИНСТРУКЦИЯ]
 
@@ -38,7 +39,7 @@ export const AI_PROMPT = `Напиши инструкцию для сотруд�
 1. 2. 3. для шагов, - для списков, **жирный** для важного,
 | таблицы | если нужно сравнение |
 
-Выдай только текст инструкции, без вступлений вроде «Конечно, вот инструкция».`
+Выдай только текст инструкции, без вступлений вроде «Конечно, вот инструкция».`)
 
 export function StatusBadge({ status }: { status: ArticleStatus }) {
   const meta = STATUS_META[status] ?? STATUS_META.draft
@@ -55,7 +56,7 @@ export function RequiredBadge() {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md whitespace-nowrap"
       style={{ color: '#F75C6E', background: 'rgba(247,92,110,0.15)' }}>
-      Обязательная
+      {t('Обязательная')}
     </span>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { getMyProfile, updateMyProfile } from '@/app/(dashboard)/profile/actions'
+import { t } from '@/lib/i18n'
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -107,7 +108,7 @@ export default function ProfileModal({ onClose, displayName }: Props) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className="text-base font-semibold" style={{ color: 'var(--text)' }}>Мой профиль</span>
+          <span className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('Мой профиль')}</span>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -151,9 +152,9 @@ export default function ProfileModal({ onClose, displayName }: Props) {
               </Field>
 
               {/* Имя */}
-              <Field label="Полное имя">
+              <Field label={t('Полное имя')}>
                 <input value={name} onChange={e => setName(e.target.value)}
-                  placeholder="Иванов Иван"
+                  placeholder={t('Иванов Иван')}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                   onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -162,9 +163,9 @@ export default function ProfileModal({ onClose, displayName }: Props) {
               </Field>
 
               {/* Должность */}
-              <Field label="Должность">
+              <Field label={t('Должность')}>
                 <input value={position} onChange={e => setPosition(e.target.value)}
-                  placeholder="Менеджер проектов"
+                  placeholder={t('Менеджер проектов')}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                   onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -173,9 +174,9 @@ export default function ProfileModal({ onClose, displayName }: Props) {
               </Field>
 
               {/* Отдел */}
-              <Field label="Отдел">
+              <Field label={t('Отдел')}>
                 <input value={department} onChange={e => setDepartment(e.target.value)}
-                  placeholder="Маркетинг"
+                  placeholder={t('Маркетинг')}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
                   onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -184,13 +185,13 @@ export default function ProfileModal({ onClose, displayName }: Props) {
               </Field>
 
               {/* Дата рождения */}
-              <Field label="Дата рождения">
+              <Field label={t('Дата рождения')}>
                 <div className="relative">
                   <button type="button" onClick={() => setCalOpen(o => !o)}
                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm"
                     style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: birthDate ? 'var(--text)' : 'var(--text2)', cursor: 'pointer' }}
                   >
-                    {birthDate ? formatBirth(birthDate) : 'Не указана'}
+                    {birthDate ? formatBirth(birthDate) : t('Не указана')}
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
                       <path d="M4.5 1.5v2M9.5 1.5v2M1.5 5.5h11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -217,14 +218,14 @@ export default function ProfileModal({ onClose, displayName }: Props) {
                           className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </button>
-                        <span className="text-xs" style={{ color: 'var(--text2)' }}>{MONTHS[calMonth]}</span>
+                        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t(MONTHS[calMonth])}</span>
                         <button type="button" onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
                           className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </button>
                       </div>
                       <div className="grid grid-cols-7 mb-1">
-                        {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-6 text-xs" style={{ color: 'var(--text2)' }}>{d}</div>)}
+                        {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-6 text-xs" style={{ color: 'var(--text2)' }}>{t(d)}</div>)}
                       </div>
                       <div className="grid grid-cols-7 gap-0.5">
                         {cells.map((cell, i) => {
@@ -245,7 +246,7 @@ export default function ProfileModal({ onClose, displayName }: Props) {
                           className="w-full mt-2 pt-2 text-xs text-left" style={{ borderTop: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}
                           onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                           onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-                        >Очистить</button>
+                        >{t('Очистить')}</button>
                       )}
                     </div>
                   )}
@@ -261,13 +262,13 @@ export default function ProfileModal({ onClose, displayName }: Props) {
             <button onClick={onClose}
               className="flex-1 py-2 rounded-lg text-sm"
               style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
-            >Отмена</button>
+            >{t('Отмена')}</button>
             <button onClick={handleSave} disabled={saving}
               className="flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
             >
               {saving && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-              {saving ? 'Сохранение…' : 'Сохранить'}
+              {saving ? t('Сохранение…') : t('Сохранить')}
             </button>
           </div>
         )}

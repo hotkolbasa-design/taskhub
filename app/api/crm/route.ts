@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { t } from '@/lib/i18n'
 import { revalidateTag } from 'next/cache'
 import { computeDashboardData, getCachedDashboard, getAvailableMonths, crmCacheTag } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot, deleteSnapshot } from '@/lib/crm/snapshots'
@@ -32,7 +33,7 @@ async function allowed(): Promise<boolean> {
   return !!profile && profile.status === 'active' && canAccessCrm(profile)
 }
 
-const denied = () => NextResponse.json({ error: 'Нет доступа к CRM' }, { status: 401 })
+const denied = () => NextResponse.json({ error: t('Нет доступа к CRM') }, { status: 401 })
 
 // Синхронизация движений учеников ходит в Битрикс и пишет в базу. Раньше она
 // запускалась на каждое открытие вкладки — кэш делает её общей на десять минут

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import BacklogView from '@/components/backlog/backlog-view'
 import { getBacklogTasks, getProjectMembers, getActiveSprintForProject } from '@/lib/queries/tasks'
 import { getSprintData } from '@/lib/queries/sprints'
+import { t } from '@/lib/i18n'
 
 export default async function BacklogPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -35,12 +36,12 @@ export default async function BacklogPage({ params }: { params: Promise<{ id: st
       {/* Хлебные крошки */}
       <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text2)' }}>
         <Link href="/projects" className="hover:underline" style={{ color: 'var(--text2)' }}>
-          Проекты
+          {t('Проекты')}
         </Link>
         <span>/</span>
         <span style={{ color: 'var(--text)' }}>{project.name}</span>
         <span>/</span>
-        <span style={{ color: 'var(--text)' }}>Бэклог</span>
+        <span style={{ color: 'var(--text)' }}>{t('Бэклог')}</span>
       </div>
 
       <BacklogView

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import GeneralForm from '@/components/projects/settings/general-form'
 import MembersSection from '@/components/projects/settings/members-section'
+import { t } from '@/lib/i18n'
 
 export default async function ProjectSettingsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -70,12 +71,12 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Проекты
+            {t('Проекты')}
           </Link>
           <span style={{ color: 'var(--border)' }}>/</span>
           <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{project.name}</span>
           <span style={{ color: 'var(--border)' }}>/</span>
-          <span className="text-sm" style={{ color: 'var(--text2)' }}>Настройки</span>
+          <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('Настройки')}</span>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -87,7 +88,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
               <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
               <path d="M3 4h6M3 6.5h4M3 9h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-            Бэклог
+            {t('Бэклог')}
           </Link>
           <Link
             href={`/projects/${id}/sprint`}
@@ -100,7 +101,7 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
               <rect x="1" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
               <rect x="6.5" y="6.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
             </svg>
-            Спринт
+            {t('Спринт')}
           </Link>
         </div>
       </div>

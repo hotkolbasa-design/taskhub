@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { HunterReport, HunterDay, HunterPlan } from '@/lib/crm/types'
+import { t, tc, INTL_LOCALE, LOCALE } from '@/lib/i18n'
 
 const COLORS = ['var(--accent)', 'var(--green)', 'var(--yellow)']
-const NF = new Intl.NumberFormat('ru-RU')
+const NF = new Intl.NumberFormat(INTL_LOCALE)
+const DEC = LOCALE === 'en' ? '.' : ','
 const n = (v: number) => NF.format(Math.round(v))
 const TONE = { ok: 'var(--green)', near: 'var(--yellow)', bad: 'var(--red)' } as const
 type Status = keyof typeof TONE | null
@@ -118,11 +120,11 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
   if (!report && !error) return (
     <div className="flex items-center justify-center py-20 gap-3">
       <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
-      <span className="text-sm" style={{ color: 'var(--text2)' }}>Собираем звонки и разборы…</span>
+      <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('Собираем звонки и разборы…')}</span>
     </div>
   )
-  if (error) return <p className="text-sm py-6" style={{ color: 'var(--red)' }}>Не удалось загрузить: {error}</p>
-  if (!report || !report.hunters.length) return <p className="text-sm py-6" style={{ color: 'var(--text2)' }}>Хантеры не заданы в настройках.</p>
+  if (error) return <p className="text-sm py-6" style={{ color: 'var(--red)' }}>{t('Не удалось загрузить: {error}', { error })}</p>
+  if (!report || !report.hunters.length) return <p className="text-sm py-6" style={{ color: 'var(--text2)' }}>{t('Хантеры не заданы в настройках.')}</p>
 
   const planOf = (name: string, key: keyof HunterPlan) => plans[name]?.[key] ?? 0
   const live = (d?: HunterDay) => Boolean(d && d.calls > 0)
@@ -148,7 +150,7 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
   }
   const fmt = (row: Row, v: number | null) => v == null ? ''
     : row.agg === 'ratio' ? Math.round(v) + (row.suffix ?? '')
-    : row.decimals ? String(Math.round(v * 10) / 10).replace('.', ',') : n(v)
+    : row.decimals ? String(Math.round(v * 10) / 10).replace('.', DEC) : n(v)
 
   function targetFor(row: Row, list: string[], name: string): number | null {
     if (row.plan && planOf(name, row.plan) > 0) return planOf(name, row.plan) * Math.max(1, workDaysIn(list))
@@ -185,18 +187,18 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
               <div className="font-semibold mb-1.5" style={{ color: 'var(--text)' }}>{h.short}</div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-semibold" style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>{n(calls)}</span>
-                <span className="text-xs" style={{ color: 'var(--text2)' }}>наборов{target ? ` из ${n(target)}` : ''}</span>
+                <span className="text-xs" style={{ color: 'var(--text2)' }}>{tc('crm', 'наборов')}{target ? t(' из {n}', { n: n(target) }) : ''}</span>
               </div>
               {share != null && (
                 <>
                   <div className="h-1.5 rounded mt-2 mb-1.5 overflow-hidden" style={{ background: 'var(--surface2)' }}>
                     <div className="h-full rounded" style={{ width: `${Math.min(100, share)}%`, background: st ? TONE[st] : COLORS[hi % 3] }} />
                   </div>
-                  <div className="text-xs" style={{ color: st ? TONE[st] : 'var(--text2)' }}>{share} % плана по звонкам</div>
+                  <div className="text-xs" style={{ color: st ? TONE[st] : 'var(--text2)' }}>{t('{share} % плана по звонкам', { share })}</div>
                 </>
               )}
               <div className="text-xs mt-1.5" style={{ color: 'var(--text2)' }}>
-                собеседований <b style={{ color: 'var(--text)' }}>{n(booked)}</b> → дошло <b style={{ color: 'var(--text)' }}>{n(held)}</b>
+                {tc('crm', 'собеседований')} <b style={{ color: 'var(--text)' }}>{n(booked)}</b> {tc('crm', '→ дошло')} <b style={{ color: 'var(--text)' }}>{n(held)}</b>
                 {booked ? ` · ${Math.round(held / booked * 100)} %` : ''}
               </div>
             </div>
@@ -207,19 +209,19 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
       {GROUPS.map(group => (
         <div key={group.title} className="mb-4">
           <div className="flex items-baseline gap-2.5 flex-wrap mb-2">
-            <b className="text-sm" style={{ color: 'var(--text)' }}>{group.title}</b>
-            <span className="text-xs" style={{ color: 'var(--text2)' }}>{group.hint}</span>
+            <b className="text-sm" style={{ color: 'var(--text)' }}>{tc('crm', group.title)}</b>
+            <span className="text-xs" style={{ color: 'var(--text2)' }}>{tc('crm', group.hint)}</span>
           </div>
           <div className="rounded-2xl overflow-x-auto" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1020 }}>
               <thead>
                 <tr>
-                  <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider sticky left-0" style={{ color: 'var(--text2)', background: 'var(--surface2)', zIndex: 3, minWidth: 148, borderBottom: '1px solid var(--border)' }}>Хантер</th>
-                  <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider sticky" style={{ left: 148, color: 'var(--text2)', background: 'var(--surface2)', zIndex: 3, minWidth: 96, borderBottom: '1px solid var(--border)' }}>Показатель</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider sticky left-0" style={{ color: 'var(--text2)', background: 'var(--surface2)', zIndex: 3, minWidth: 148, borderBottom: '1px solid var(--border)' }}>{tc('crm', 'Хантер')}</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider sticky" style={{ left: 148, color: 'var(--text2)', background: 'var(--surface2)', zIndex: 3, minWidth: 96, borderBottom: '1px solid var(--border)' }}>{tc('crm', 'Показатель')}</th>
                   {weeks.map((w, wi) => (
                     <WeekHead key={w.key} week={w} index={wi} />
                   ))}
-                  <th className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', background: 'color-mix(in srgb, var(--accent) 20%, var(--surface2))', minWidth: 64, borderBottom: '1px solid var(--border)' }}>месяц</th>
+                  <th className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', background: 'color-mix(in srgb, var(--accent) 20%, var(--surface2))', minWidth: 64, borderBottom: '1px solid var(--border)' }}>{tc('crm', 'месяц')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -235,7 +237,7 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
                           </span>
                         </td>
                       )}
-                      <td className="px-3 py-2.5 sticky text-left whitespace-nowrap" style={{ left: 148, background: 'var(--surface)', zIndex: 2, borderBottom: bb, fontSize: 11.5, color: 'var(--text2)', paddingLeft: row.conv ? 20 : 12, fontStyle: row.conv ? 'italic' : 'normal' }}>{row.label}</td>
+                      <td className="px-3 py-2.5 sticky text-left whitespace-nowrap" style={{ left: 148, background: 'var(--surface)', zIndex: 2, borderBottom: bb, fontSize: 11.5, color: 'var(--text2)', paddingLeft: row.conv ? 20 : 12, fontStyle: row.conv ? 'italic' : 'normal' }}>{tc('crm', row.label)}</td>
                       {weeks.map(w => (
                         <WeekCells key={w.key} week={w} bb={bb}
                           dayCell={(iso, di) => {
@@ -277,13 +279,13 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
 
       <div className="mt-5">
         <div className="flex items-baseline gap-2.5 flex-wrap mb-2">
-          <b className="text-sm" style={{ color: 'var(--text)' }}>Выполнение плана за месяц</b>
-          <span className="text-xs" style={{ color: 'var(--text2)' }}>доля от личного плана; у реакции меньше — лучше, поэтому считается наоборот</span>
+          <b className="text-sm" style={{ color: 'var(--text)' }}>{t('Выполнение плана за месяц')}</b>
+          <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('доля от личного плана; у реакции меньше — лучше, поэтому считается наоборот')}</span>
         </div>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(262px,1fr))' }}>
           {GROUPS.flatMap(g => g.rows.map(row => (
             <div key={g.title + row.key} className="rounded-2xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '13px 14px' }}>
-              <b className="text-xs block mb-2" style={{ color: 'var(--text)' }}>{g.title} · {row.label.replace('→ ', '')}</b>
+              <b className="text-xs block mb-2" style={{ color: 'var(--text)' }}>{tc('crm', g.title)} · {tc('crm', row.label).replace('→ ', '')}</b>
               {report.hunters.map((h, hi) => {
                 const v = rangeVal(h, row, days)
                 const t = targetFor(row, days, h.name)
@@ -317,9 +319,9 @@ export function HuntersView({ monthKey }: { monthKey: string }) {
       </div>
 
       <p className="text-xs mt-4" style={{ color: 'var(--text2)' }}>
-        Зелёная ячейка — план взят, жёлтая 70–99 %, красная ниже 70 %. Суббота и воскресенье приглушены: план с них не спрашивается.
-        {report.computedAt && <> Данные на {new Date(report.computedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.</>}
-        {' '}<button onClick={() => load(true)} disabled={busy} style={{ background: 'none', border: 0, padding: 0, color: 'var(--accent)', cursor: busy ? 'default' : 'pointer', font: 'inherit', opacity: busy ? 0.6 : 1 }}>{busy ? 'Считаем…' : 'Пересчитать'}</button>
+        {t('Зелёная ячейка — план взят, жёлтая 70–99 %, красная ниже 70 %. Суббота и воскресенье приглушены: план с них не спрашивается.')}
+        {report.computedAt && <> {t('Данные на {time}.', { time: new Date(report.computedAt).toLocaleTimeString(INTL_LOCALE, { hour: '2-digit', minute: '2-digit' }) })}</>}
+        {' '}<button onClick={() => load(true)} disabled={busy} style={{ background: 'none', border: 0, padding: 0, color: 'var(--accent)', cursor: busy ? 'default' : 'pointer', font: 'inherit', opacity: busy ? 0.6 : 1 }}>{busy ? t('Считаем…') : tc('crm', 'Пересчитать')}</button>
       </p>
     </div>
   )
@@ -331,7 +333,7 @@ function WeekHead({ week, index }: { week: { key: string; days: string[] }; inde
       {week.days.map((iso, di) => (
         <th key={iso} className="text-center text-[10px]" style={{ padding: '6px 3px', minWidth: 30, color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', borderLeft: di === 0 ? '2px solid var(--text2)' : undefined, opacity: isWeekend(iso) ? 0.5 : 1 }}>{iso.slice(8)}</th>
       ))}
-      <th className="text-center text-[10px] uppercase tracking-wider" style={{ minWidth: 56, color: 'var(--text2)', borderLeft: '2px solid var(--accent)', background: 'color-mix(in srgb, var(--accent) 22%, var(--surface2))', borderBottom: '1px solid var(--border)' }}>итог н{index + 1}</th>
+      <th className="text-center text-[10px] uppercase tracking-wider" style={{ minWidth: 56, color: 'var(--text2)', borderLeft: '2px solid var(--accent)', background: 'color-mix(in srgb, var(--accent) 22%, var(--surface2))', borderBottom: '1px solid var(--border)' }}>{t('итог н{n}', { n: index + 1 })}</th>
     </>
   )
 }
@@ -354,12 +356,12 @@ function PlanPanel({ hunters, plans, saving, days, onChange }: {
 }) {
   const rowStyle = (count: number) => ({ display: 'grid', gridTemplateColumns: `96px repeat(${count}, 1fr)`, gap: 8, alignItems: 'center', marginBottom: 7 })
   const field = (h: HunterReport['hunters'][0], f: { key: keyof HunterPlan; label: string }) => (
-    <input key={f.key} type="text" inputMode="decimal" aria-label={`${h.short}, ${f.label}`}
-      defaultValue={String(plans[h.name]?.[f.key] ?? '').replace('.', ',')}
+    <input key={f.key} type="text" inputMode="decimal" aria-label={`${h.short}, ${tc('crm', f.label)}`}
+      defaultValue={String(plans[h.name]?.[f.key] ?? '').replace('.', DEC)}
       onBlur={e => {
         const v = parseFloat(e.target.value.replace(',', '.'))
         if (Number.isFinite(v) && v > 0) onChange(h.name, f.key, v)
-        else e.target.value = String(plans[h.name]?.[f.key] ?? '').replace('.', ',')
+        else e.target.value = String(plans[h.name]?.[f.key] ?? '').replace('.', DEC)
       }}
       style={{ font: 'inherit', fontFamily: 'var(--font-mono)', fontSize: 13, padding: '6px 8px', borderRadius: 8,
         border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', width: '100%', outline: 'none' }} />
@@ -368,13 +370,13 @@ function PlanPanel({ hunters, plans, saving, days, onChange }: {
   return (
     <div className="rounded-2xl p-4 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
       <div className="flex items-center justify-between gap-2.5 flex-wrap mb-2.5">
-        <b className="text-sm" style={{ color: 'var(--text)' }}>План на один рабочий день</b>
+        <b className="text-sm" style={{ color: 'var(--text)' }}>{t('План на один рабочий день')}</b>
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
-          {saving ? 'Сохраняем…' : 'Меняется на ходу, сохраняется сразу для всех'}
+          {saving ? t('Сохраняем…') : t('Меняется на ходу, сохраняется сразу для всех')}
         </span>
       </div>
       <div style={{ ...rowStyle(PLAN_FIELDS.length), marginBottom: 6, alignItems: 'end' }}>
-        <span />{PLAN_FIELDS.map(f => <span key={f.key} className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)' }}>{f.label}</span>)}
+        <span />{PLAN_FIELDS.map(f => <span key={f.key} className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)' }}>{tc('crm', f.label)}</span>)}
       </div>
       {hunters.map((h, hi) => (
         <div key={h.name} style={rowStyle(PLAN_FIELDS.length)}>
@@ -386,11 +388,11 @@ function PlanPanel({ hunters, plans, saving, days, onChange }: {
       ))}
 
       <div style={{ margin: '14px 0 8px', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-        <b className="text-sm" style={{ color: 'var(--text)' }}>Нормативы качества</b>{' '}
-        <span className="text-xs" style={{ color: 'var(--text2)' }}>не зависят от доли ставки и не умножаются на дни</span>
+        <b className="text-sm" style={{ color: 'var(--text)' }}>{t('Нормативы качества')}</b>{' '}
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('не зависят от доли ставки и не умножаются на дни')}</span>
       </div>
       <div style={{ ...rowStyle(NORM_FIELDS.length), marginBottom: 6, alignItems: 'end' }}>
-        <span />{NORM_FIELDS.map(f => <span key={f.key} className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)' }}>{f.label}</span>)}
+        <span />{NORM_FIELDS.map(f => <span key={f.key} className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)' }}>{tc('crm', f.label)}</span>)}
       </div>
       {hunters.map((h, hi) => (
         <div key={h.name} style={rowStyle(NORM_FIELDS.length)}>
@@ -401,7 +403,7 @@ function PlanPanel({ hunters, plans, saving, days, onChange }: {
         </div>
       ))}
       <p className="text-xs" style={{ color: 'var(--text2)' }}>
-        Рабочих дней в месяце: {workDaysIn(days)}. За месяц это {hunters.map(h => `${h.short} — ${n((plans[h.name]?.calls ?? 0) * workDaysIn(days))}`).join(' · ')} наборов.
+        {t('Рабочих дней в месяце: {days}. За месяц это {list} наборов.', { days: workDaysIn(days), list: hunters.map(h => `${h.short} — ${n((plans[h.name]?.calls ?? 0) * workDaysIn(days))}`).join(' · ') })}
       </p>
     </div>
   )

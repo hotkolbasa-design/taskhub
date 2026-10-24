@@ -10,6 +10,7 @@ import { mondayOf, todayYmd, fmtWeekRange } from '@/lib/utils/week'
 import EfficiencySummary, { type SummaryRow } from './efficiency-summary'
 import AnalyticsCharts from './analytics-charts'
 import UserFilter from '@/components/common/user-filter'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 function fmtTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
@@ -18,11 +19,11 @@ function fmtTime(minutes: number): string {
 }
 
 function fmtDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' })
+  return new Date(d + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
 function fmtDateShort(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  return new Date(d + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' })
 }
 
 function UserAvatar({ user, size = 36 }: { user: AnalyticsUser; size?: number }) {
@@ -46,7 +47,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
           <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        Выполнено
+        {t('Выполнено')}
       </span>
     )
   }
@@ -54,7 +55,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
     return (
       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
         style={{ background: 'rgba(136,146,164,0.1)', color: 'var(--text2)' }}>
-        Удалено
+        {t('Удалено')}
       </span>
     )
   }
@@ -66,7 +67,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
           <path d="M5 1L5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           <circle cx="5" cy="7.5" r="0.75" fill="currentColor" />
         </svg>
-        Просрочено
+        {t('Просрочено')}
       </span>
     )
   }
@@ -76,7 +77,7 @@ function TaskStatusBadge({ task }: { task: TaskStat }) {
   return (
     <span className="text-xs px-2 py-0.5 rounded-full"
       style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>
-      {labels[task.workflow_status] ?? task.workflow_status}
+      {labels[task.workflow_status] ? t(labels[task.workflow_status]) : task.workflow_status}
     </span>
   )
 }
@@ -168,10 +169,10 @@ function SprintHistoryRow({ sprint, showProject }: { sprint: SprintStat; showPro
         <div style={{ borderTop: '1px solid var(--border)' }}>
           <div className="grid text-xs px-5 py-2 font-medium"
             style={{ gridTemplateColumns: '1fr 140px 100px 80px', color: 'var(--text2)', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
-            <span>Название задачи</span>
-            <span>Статус</span>
-            <span>Дедлайн</span>
-            <span>Время</span>
+            <span>{t('Название задачи')}</span>
+            <span>{t('Статус')}</span>
+            <span>{t('Дедлайн')}</span>
+            <span>{t('Время')}</span>
           </div>
           {visible.map(task => (
             <div key={task.id} className="grid items-center px-5 py-2.5 text-sm"
@@ -191,7 +192,7 @@ function SprintHistoryRow({ sprint, showProject }: { sprint: SprintStat; showPro
               className="w-full py-2.5 text-xs font-medium"
               style={{ color: 'var(--accent)' }}
               onClick={e => { e.stopPropagation(); setShowAll(true) }}>
-              Показать все ({sprint.tasks.length})
+              {t('Показать все ({n})', { n: sprint.tasks.length })}
             </button>
           )}
         </div>
@@ -211,25 +212,25 @@ function UserCard({ sprint, missingTimeCount }: { sprint: SprintStat; missingTim
         {sprint.sprint_status === 'active' && (
           <span className="text-xs px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(45,212,160,0.1)', color: 'var(--green)', border: '1px solid rgba(45,212,160,0.2)' }}>
-            Активный спринт
+            {t('Активный спринт')}
           </span>
         )}
       </div>
 
       {/* Статкарточки */}
       <div className="flex gap-3">
-        <StatCard value={sprint.total_tasks} label="Задач" />
-        <StatCard value={sprint.total_time > 0 ? fmtTime(sprint.total_time) : '—'} label="Объём" />
-        <StatCard value={sprint.done_count} label="Выполнено" color={sprint.done_count > 0 ? 'var(--green)' : undefined} />
-        <StatCard value={sprint.cancelled_count} label="Отменено" color={sprint.cancelled_count > 0 ? 'var(--yellow)' : undefined} />
-        <StatCard value={sprint.not_done_count} label="Не выполнено" color={sprint.not_done_count > 0 ? 'var(--red)' : undefined} />
+        <StatCard value={sprint.total_tasks} label={t('Задач')} />
+        <StatCard value={sprint.total_time > 0 ? fmtTime(sprint.total_time) : '—'} label={t('Объём')} />
+        <StatCard value={sprint.done_count} label={t('Выполнено')} color={sprint.done_count > 0 ? 'var(--green)' : undefined} />
+        <StatCard value={sprint.cancelled_count} label={t('Отменено')} color={sprint.cancelled_count > 0 ? 'var(--yellow)' : undefined} />
+        <StatCard value={sprint.not_done_count} label={t('Не выполнено')} color={sprint.not_done_count > 0 ? 'var(--red)' : undefined} />
       </div>
 
       {/* Эффективность */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
-            ⚡ Эффективность
+            {t('⚡ Эффективность')}
           </span>
           <span className="font-mono text-sm font-bold"
             style={{ color: sprint.efficiency >= 80 ? 'var(--green)' : sprint.efficiency >= 50 ? 'var(--accent)' : 'var(--red)' }}>
@@ -249,7 +250,7 @@ function UserCard({ sprint, missingTimeCount }: { sprint: SprintStat; missingTim
             <path d="M7 1.5L7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             <circle cx="7" cy="10" r="1" fill="currentColor" />
           </svg>
-          {missingTimeCount} {missingTimeCount === 1 ? 'задача' : missingTimeCount < 5 ? 'задачи' : 'задач'} без оценки времени — попросите сотрудника поставить время
+          {t('{n} {w} без оценки времени — попросите сотрудника поставить время', { n: missingTimeCount, w: missingTimeCount === 1 ? tc('analytics', 'задача') : missingTimeCount < 5 ? tc('analytics', 'задачи') : tc('analytics', 'задач') })}
         </div>
       )}
     </div>
@@ -275,8 +276,8 @@ function ProjectSelect({ projects, value, allowAll, onChange }: {
   }, [open])
 
   const options = [
-    ...(allowAll ? [{ id: 'all', name: 'Все проекты' }] : []),
-    ...projects.map(p => ({ id: p.project_id, name: p.project_name || 'Без названия' })),
+    ...(allowAll ? [{ id: 'all', name: t('Все проекты') }] : []),
+    ...projects.map(p => ({ id: p.project_id, name: p.project_name || t('Без названия') })),
   ]
   const current = options.find(o => o.id === value) ?? options[0]
 
@@ -389,7 +390,7 @@ export default function AnalyticsView({
           cells[m] = { eff, active: ws.some(w => w.sprint_status === 'active') }
         }
         const ongoing = p.weekly.find(w => w.sprint_status === 'active' && mondayOf(w.date_from) !== currentWeek)
-        const nm = p.project_name || 'Без названия'
+        const nm = p.project_name || t('Без названия')
         return {
           id: p.project_id, name: nm, color: getAvatarColor(p.project_id),
           avatarText: nm[0]?.toUpperCase() ?? '?', isProject: true, cells,
@@ -443,7 +444,7 @@ export default function AnalyticsView({
                 borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
                 cursor: 'pointer',
               }}>
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -451,7 +452,7 @@ export default function AnalyticsView({
         <ProjectSelect projects={projects} value={projectId} allowAll={allowAll} onChange={setProjectSel} />
 
         {mode === 'summary' && !showProjects && (
-          <UserFilter users={filterUsers} selected={employeeFilter} onChange={setEmployeeFilter} placeholder="Все сотрудники" />
+          <UserFilter users={filterUsers} selected={employeeFilter} onChange={setEmployeeFilter} placeholder={t('Все сотрудники')} />
         )}
 
         {mode === 'summary' && (
@@ -465,7 +466,7 @@ export default function AnalyticsView({
                   borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
                   cursor: 'pointer',
                 }}>
-                {n === 999 ? 'Всё' : `${n} нед.`}
+                {n === 999 ? t('Всё') : t('{n} нед.', { n })}
               </button>
             ))}
           </div>
@@ -480,7 +481,7 @@ export default function AnalyticsView({
             <rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.3" />
             <path d="M2 6h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
-          <span style={{ color: 'var(--text2)' }}>Текущая неделя:</span>
+          <span style={{ color: 'var(--text2)' }}>{t('Текущая неделя:')}</span>
           <span className="font-mono font-semibold" style={{ color: 'var(--text)' }}>{fmtWeekRange(currentWeek)}</span>
         </div>
       </div>
@@ -490,7 +491,7 @@ export default function AnalyticsView({
           <EfficiencySummary
             rows={summaryRows}
             weeksCount={weeksCount}
-            entityLabel={showProjects ? 'Проект' : 'Сотрудник'}
+            entityLabel={showProjects ? t('Проект') : t('Сотрудник')}
             onOpenRow={onOpenRow}
           />
           <AnalyticsCharts projects={selectedProjects} users={users} sprintsByUser={sprintsByUser} />
@@ -520,7 +521,7 @@ export default function AnalyticsView({
                   {name}
                 </span>
                 {user.role === 'admin' && (
-                  <span className="text-xs" style={{ color: 'var(--text2)' }}>Администратор</span>
+                  <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('Администратор')}</span>
                 )}
               </div>
             </button>
@@ -545,7 +546,7 @@ export default function AnalyticsView({
 
         {sprints.length === 0 ? (
           <div className="flex items-center justify-center py-16 rounded-xl" style={{ border: '1px dashed var(--border)' }}>
-            <p className="text-sm" style={{ color: 'var(--text2)' }}>Нет данных о спринтах</p>
+            <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('Нет данных о спринтах')}</p>
           </div>
         ) : (
           <>
@@ -558,15 +559,15 @@ export default function AnalyticsView({
                 {activeSprint.tasks.length > 0 && (
                   <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
                     <div className="px-5 py-3 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                      Список задач
+                      {t('Список задач')}
                     </div>
                     <div className="grid text-xs px-5 py-2 font-medium"
                       style={{ gridTemplateColumns: '1fr 140px 100px 80px 28px', color: 'var(--text2)', borderBottom: '1px solid var(--border)' }}>
-                      <span>Название задачи</span>
-                      <span>Статус</span>
-                      <span>Дедлайн</span>
-                      <span>Закрыта</span>
-                      <span>Время</span>
+                      <span>{t('Название задачи')}</span>
+                      <span>{t('Статус')}</span>
+                      <span>{t('Дедлайн')}</span>
+                      <span>{t('Закрыта')}</span>
+                      <span>{t('Время')}</span>
                     </div>
                     {activeSprint.tasks.map(task => (
                       <div key={task.id} className="grid items-center px-5 py-2.5 text-sm"
@@ -593,18 +594,18 @@ export default function AnalyticsView({
             {history.length > 0 && (
               <div className="flex flex-col gap-3">
                 <span className="text-xs font-medium uppercase tracking-wide px-1" style={{ color: 'var(--text2)' }}>
-                  ▼ История недель
+                  {t('▼ История недель')}
                 </span>
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface)' }}>
                   <div className="flex items-center gap-4 px-5 py-2.5 text-xs font-medium"
                     style={{ color: 'var(--text2)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                    <span style={{ width: 220, flexShrink: 0 }}>Период</span>
-                    {multiProject && <span style={{ width: 110, flexShrink: 0 }}>Проект</span>}
-                    <span style={{ width: 50, flexShrink: 0 }} className="text-right">Задач</span>
-                    <span style={{ width: 70, flexShrink: 0 }} className="text-right">Объём</span>
-                    <span style={{ width: 70, flexShrink: 0 }} className="text-right">Выполнено</span>
-                    <span style={{ width: 60, flexShrink: 0 }} className="text-right">Отменено</span>
-                    <span className="flex-1">Эффективность</span>
+                    <span style={{ width: 220, flexShrink: 0 }}>{t('Период')}</span>
+                    {multiProject && <span style={{ width: 110, flexShrink: 0 }}>{t('Проект')}</span>}
+                    <span style={{ width: 50, flexShrink: 0 }} className="text-right">{t('Задач')}</span>
+                    <span style={{ width: 70, flexShrink: 0 }} className="text-right">{t('Объём')}</span>
+                    <span style={{ width: 70, flexShrink: 0 }} className="text-right">{t('Выполнено')}</span>
+                    <span style={{ width: 60, flexShrink: 0 }} className="text-right">{t('Отменено')}</span>
+                    <span className="flex-1">{t('Эффективность')}</span>
                   </div>
                   {visibleHistory.map(sprint => (
                     <SprintHistoryRow key={sprint.sprint_id} sprint={sprint} showProject={multiProject} />
@@ -614,7 +615,7 @@ export default function AnalyticsView({
                       className="w-full py-3 text-sm font-medium"
                       style={{ color: 'var(--accent)', borderTop: '1px solid var(--border)' }}
                       onClick={() => setShowAllHistory(true)}>
-                      Показать все ({history.length})
+                      {t('Показать все ({n})', { n: history.length })}
                     </button>
                   )}
                 </div>

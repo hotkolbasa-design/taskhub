@@ -6,18 +6,19 @@ import { restoreTask, getTaskDrawerData, type DrawerData } from '@/app/(dashboar
 import TaskDrawer from '@/components/backlog/task-drawer'
 import type { BacklogTask } from '@/types'
 import { DEMO_READ_ONLY_BROWSER } from '@/lib/demo/read-only'
+import { t, INTL_LOCALE } from '@/lib/i18n'
 
 function timeAgo(dateStr: string | null): string {
-  if (!dateStr) return 'неизвестно'
+  if (!dateStr) return t('неизвестно')
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1) return 'только что'
-  if (m < 60) return `${m} мин назад`
+  if (m < 1) return t('только что')
+  if (m < 60) return t('{m} мин назад', { m })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h} ч назад`
+  if (h < 24) return t('{h} ч назад', { h })
   const d = Math.floor(h / 24)
-  if (d < 30) return `${d} дн назад`
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+  if (d < 30) return t('{d} дн назад', { d })
+  return new Date(dateStr).toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function ProjectDot({ color, name }: { color: string; name: string }) {
@@ -71,7 +72,7 @@ function RestoreButton({ taskId, onRestore }: { taskId: string; onRestore: (id: 
           <path d="M1.5 3v3h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       )}
-      {pending ? 'Восстанавливаю…' : 'Восстановить'}
+      {pending ? t('Восстанавливаю…') : t('Восстановить')}
     </button>
   )
 }
@@ -112,9 +113,9 @@ export default function TrashClient({ initialTasks }: { initialTasks: TrashTask[
             </svg>
           </div>
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>Корзина</h1>
+            <h1 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{t('Корзина')}</h1>
             <p className="text-sm" style={{ color: 'var(--text2)' }}>
-              {tasks.length > 0 ? `${tasks.length} удалённых задач` : 'Пусто'}
+              {tasks.length > 0 ? t('{n} удалённых задач', { n: tasks.length }) : t('Пусто')}
             </p>
           </div>
         </div>
@@ -132,7 +133,7 @@ export default function TrashClient({ initialTasks }: { initialTasks: TrashTask[
                 <path d="M4 6.5h16M8 6.5V4.5A2 2 0 0110 2.5h4a2 2 0 012 2v2M6 6.5l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text2)', opacity: 0.4 }}/>
               </svg>
             </div>
-            <p className="text-sm" style={{ color: 'var(--text2)', opacity: 0.6 }}>Корзина пуста</p>
+            <p className="text-sm" style={{ color: 'var(--text2)', opacity: 0.6 }}>{t('Корзина пуста')}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-1.5" style={{ maxWidth: 760 }}>

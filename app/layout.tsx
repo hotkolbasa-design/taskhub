@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geologica, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
+import { t, LOCALE } from '@/lib/i18n'
 
 const geologica = Geologica({
   variable: '--font-geologica',
@@ -16,12 +17,12 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'Task Hub',
-  description: 'Внутренняя платформа управления задачами',
+  description: t('Внутренняя платформа управления задачами'),
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={`${geologica.variable} ${jetbrainsMono.variable} h-full`}>
+    <html lang={LOCALE} className={`${geologica.variable} ${jetbrainsMono.variable} h-full`}>
       <body className="h-full">{children}</body>
     </html>
   )

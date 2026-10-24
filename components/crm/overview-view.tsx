@@ -3,6 +3,7 @@
 import { getWeekGroups } from '@/lib/crm/utils'
 import { planMetrics } from '@/lib/crm/plan'
 import type { DashData } from '@/lib/crm/types'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 const PALETTE = ['#7C5CF6', '#2DD4A0', '#F75C6E', '#F7C04F', '#60A5FA', '#FB923C', '#A78BFA', '#34D399', '#F472B6', '#94A3B8']
 const TODAY = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : ''
@@ -105,7 +106,7 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
   const future = (daysIso[0] ?? '') > TODAY
 
   const status = forecast >= plan * 1.05 ? 'ahead' : forecast >= plan * 0.9 ? 'on' : 'behind'
-  const statusLabel = future ? 'Месяц ещё не начался' : { ahead: 'Опережаем план', on: 'Идём по плану', behind: 'Отстаём от плана' }[status]
+  const statusLabel = future ? t('Месяц ещё не начался') : { ahead: t('Опережаем план'), on: t('Идём по плану'), behind: t('Отстаём от плана') }[status]
   const statusColor = future ? 'var(--text2)' : { ahead: 'var(--green)', on: 'var(--accent)', behind: 'var(--red)' }[status]
   const statusBg = future ? 'var(--surface2)' : { ahead: 'rgba(45,212,160,0.12)', on: 'rgba(124,92,246,0.12)', behind: 'rgba(247,92,110,0.12)' }[status]
 
@@ -127,34 +128,34 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
     const [w1, w2, w3] = [leads.weekValues[currentWeekIdx - 2], leads.weekValues[currentWeekIdx - 1], leads.weekValues[currentWeekIdx]]
     if (w1 > 0 && w2 > 0) {
       const g1 = Math.round((w2 - w1) / w1 * 100), g2 = Math.round((w3 - w2) / w2 * 100)
-      trendText = `${g1 >= 0 ? '+' : ''}${g1}%, затем ${g2 >= 0 ? '+' : ''}${g2}%`
+      trendText = t('{a}%, затем {b}%', { a: `${g1 >= 0 ? '+' : ''}${g1}`, b: `${g2 >= 0 ? '+' : ''}${g2}` })
       trendGood = g2 >= 0
     }
   } else if (currentWeekIdx >= 1 && leads.weekValues[currentWeekIdx - 1] > 0) {
     const g = Math.round((leads.weekValues[currentWeekIdx] - leads.weekValues[currentWeekIdx - 1]) / leads.weekValues[currentWeekIdx - 1] * 100)
-    trendText = `${g >= 0 ? '+' : ''}${g}% к прошлой неделе`
+    trendText = t('{g}% к прошлой неделе', { g: `${g >= 0 ? '+' : ''}${g}` })
     trendGood = g >= 0
   }
 
   const [, month] = data.monthKey.split('-')
   const monthNames = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь']
-  const monthLabel = monthNames[parseInt(month) - 1]
+  const monthLabel = t(monthNames[parseInt(month) - 1])
 
   return (
     <div>
-      <SectionLabel n="01" label="Идем ли по плану" />
+      <SectionLabel n="01" label={t('Идем ли по плану')} />
 
       <div className="rounded-2xl p-6 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="flex items-baseline gap-2">
               <span className="font-bold" style={{ fontSize: 48, lineHeight: 1, color: 'var(--text)' }}>{totalLeads}</span>
-              <span className="text-xl" style={{ color: 'var(--text2)' }}>из {plan} заявок</span>
+              <span className="text-xl" style={{ color: 'var(--text2)' }}>{tc('crm', 'из {plan} заявок', { plan })}</span>
             </div>
             <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>
               {future
-                ? `Месяц впереди — ${totalDays} дней, факт появится с первого числа`
-                : `Прошло ${daysElapsed} из ${totalDays} дня месяца · ${Math.round(daysElapsed / totalDays * 100)}%`}
+                ? t('Месяц впереди — {n} дней, факт появится с первого числа', { n: totalDays })
+                : t('Прошло {d} из {total} дня месяца · {pct}%', { d: daysElapsed, total: totalDays, pct: Math.round(daysElapsed / totalDays * 100) })}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
@@ -163,7 +164,7 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
             </span>
             {!future && (
               <span className="text-xs" style={{ color: 'var(--text2)' }}>
-                Прогноз на {totalDays}.{month}: <strong style={{ color: 'var(--text)' }}>{forecast} заявки</strong>
+                {t('Прогноз на {d}.{m}:', { d: totalDays, m: month })} <strong style={{ color: 'var(--text)' }}>{tc('crm', '{n} заявки', { n: forecast })}</strong>
               </span>
             )}
           </div>
@@ -174,7 +175,7 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
         <div className="relative mt-2">
           {!future && (
             <div style={{ position: 'absolute', left: `${todayMarkerPct}%`, top: -18, transform: 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--text2)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-              СЕГОДНЯ
+              {t('СЕГОДНЯ')}
             </div>
           )}
           <div className="relative rounded-full overflow-visible" style={{ height: 36, background: 'var(--surface2)' }}>
@@ -183,32 +184,32 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
             {!future && (
               <div className="h-full rounded-full flex items-center px-3 transition-all duration-500"
                 style={{ width: `${Math.max(progressPct, 4)}%`, background: statusColor }}>
-                <span className="text-sm font-bold text-white whitespace-nowrap">{Math.round(progressPct)}% плана</span>
+                <span className="text-sm font-bold text-white whitespace-nowrap">{t('{pct}% плана', { pct: Math.round(progressPct) })}</span>
               </div>
             )}
             {future && (
               <span className="absolute inset-0 flex items-center px-3 text-sm" style={{ color: 'var(--text2)' }}>
-                Факт пойдёт с 1-го числа
+                {t('Факт пойдёт с 1-го числа')}
               </span>
             )}
             {!future && <div style={{ position: 'absolute', left: `${todayMarkerPct}%`, top: 0, bottom: 0, width: 2, background: 'var(--text)', opacity: 0.6, transform: 'translateX(-50%)', borderRadius: 1 }} />}
           </div>
           <div className="flex justify-between mt-1">
             <span className="text-xs" style={{ color: 'var(--text2)' }}>0</span>
-            <span className="text-xs" style={{ color: 'var(--text2)' }}>цель {plan}</span>
+            <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('цель {plan}', { plan })}</span>
           </div>
         </div>
 
         {/* Ссылка на план месяца */}
         <div className="flex items-center gap-3 mt-5 pt-4 flex-wrap" style={{ borderTop: '1px solid var(--border)' }}>
           <span className="text-sm" style={{ color: 'var(--text2)' }}>
-            План на {monthLabel}: <strong style={{ color: 'var(--text)' }}>{plan} заявок</strong> под цель {data.plan.target} сделок
+            {t('План на {month}:', { month: monthLabel })} <strong style={{ color: 'var(--text)' }}>{tc('crm', '{n} заявок', { n: plan })}</strong> {t('под цель {n} сделок', { n: data.plan.target })}
           </span>
           <button onClick={onGoPlan}
             className="text-sm font-medium rounded-lg px-3 py-1.5"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}
           >
-            Изменить во вкладке «План»
+            {t('Изменить во вкладке «План»')}
           </button>
         </div>
       </div>
@@ -217,8 +218,8 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
       <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="font-semibold" style={{ color: 'var(--text)' }}>Динамика по неделям</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>Пунктир — неделя ещё не закончена, сравнивать с ней нельзя</p>
+            <h3 className="font-semibold" style={{ color: 'var(--text)' }}>{t('Динамика по неделям')}</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{t('Пунктир — неделя ещё не закончена, сравнивать с ней нельзя')}</p>
           </div>
           {trendText && (
             <span className="text-sm font-semibold" style={{ color: trendGood ? 'var(--green)' : 'var(--red)' }}>{trendText}</span>
@@ -235,7 +236,7 @@ function PlanSection({ data, onGoPlan }: { data: DashData; onGoPlan: () => void 
               <svg width="12" height="12" viewBox="0 0 12 12">
                 <circle cx="6" cy="6" r="5" fill={hollow ? 'var(--surface)' : color} stroke={color} strokeWidth={hollow ? '2' : '0'} />
               </svg>
-              <span className="text-xs" style={{ color: 'var(--text2)' }}>{label}</span>
+              <span className="text-xs" style={{ color: 'var(--text2)' }}>{tc('crm', label)}</span>
             </div>
           ))}
         </div>
@@ -255,7 +256,7 @@ function SpendSection({ data, onGoMarketing }: { data: DashData; onGoMarketing: 
 
   return (
     <div>
-      <SectionLabel n="02" label="Куда уходят деньги" />
+      <SectionLabel n="02" label={t('Куда уходят деньги')} />
       <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         {!hasSpend ? (
           <div className="flex flex-col items-center py-8 gap-4">
@@ -266,10 +267,10 @@ function SpendSection({ data, onGoMarketing }: { data: DashData; onGoMarketing: 
               <path d="M30 6L14 38" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
             <div className="text-center">
-              <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>Расходы не внесены</p>
+              <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>{t('Расходы не внесены')}</p>
               <p className="text-sm" style={{ color: 'var(--text2)' }}>
-                {totalLeads} заявок пришли — но неизвестно, за сколько.<br />
-                Пока здесь пусто, CAC и ROMI посчитать нельзя.
+                {tc('crm', '{n} заявок пришли — но неизвестно, за сколько.', { n: totalLeads })}<br />
+                {t('Пока здесь пусто, CAC и ROMI посчитать нельзя.')}
               </p>
             </div>
             <button onClick={onGoMarketing}
@@ -277,19 +278,19 @@ function SpendSection({ data, onGoMarketing }: { data: DashData; onGoMarketing: 
               style={{ border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', cursor: 'pointer' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}>
-              Внести расходы за {monthNames[parseInt(month) - 1]}
+              {t('Внести расходы за {month}', { month: t(monthNames[parseInt(month) - 1]) })}
             </button>
           </div>
         ) : (
           <div>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="font-semibold" style={{ color: 'var(--text)' }}>Расходы по неделям</h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>Бюджет в тенге · красная линия — цена лида</p>
+                <h3 className="font-semibold" style={{ color: 'var(--text)' }}>{t('Расходы по неделям')}</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{t('Бюджет в тенге · красная линия — цена лида')}</p>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>{Math.round(spend?.budgetKzt?.total ?? 0).toLocaleString('ru-RU')} ₸</div>
-                <div className="text-xs" style={{ color: 'var(--text2)' }}>итого за месяц</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>{Math.round(spend?.budgetKzt?.total ?? 0).toLocaleString(INTL_LOCALE)} ₸</div>
+                <div className="text-xs" style={{ color: 'var(--text2)' }}>{t('итого за месяц')}</div>
               </div>
             </div>
             <SpendBarChart weekLabels={data.weeks} spendValues={spend?.budgetKzt?.weekValues ?? []} leadValues={data.marketing.overall.milestones[0].weekValues} />
@@ -325,7 +326,7 @@ function SpendBarChart({ weekLabels, spendValues, leadValues }: { weekLabels: st
       ))}
       {spendTicks.map(v => (
         <text key={v} x={pad.l - 6} y={yS(v)} textAnchor="end" dominantBaseline="middle" fontSize="9" fill="var(--text2)">
-          {v >= 1000 ? `${Math.round(v / 1000)}к` : v}
+          {v >= 1000 ? `${Math.round(v / 1000)}${tc('crm', 'к')}` : v}
         </text>
       ))}
       {spendValues.map((v, i) => {
@@ -340,7 +341,7 @@ function SpendBarChart({ weekLabels, spendValues, leadValues }: { weekLabels: st
           {cplValues.map((v, i) => v > 0 && (
             <circle key={i} cx={xi(i) + barW / 2} cy={yC(v)} r="3.5" fill="var(--red)" />
           ))}
-          <text x={W - pad.r + 6} y={pad.t} fontSize="9" fill="var(--red)" dominantBaseline="hanging">₸/лид</text>
+          <text x={W - pad.r + 6} y={pad.t} fontSize="9" fill="var(--red)" dominantBaseline="hanging">{t('₸/лид')}</text>
         </>
       )}
       {weekLabels.map((w, i) => (
@@ -372,9 +373,9 @@ function FunnelMatrix({ data }: { data: DashData }) {
   if (allSources.length === 0) {
     return (
       <div>
-        <SectionLabel n="03" label="Какая воронка работает" />
+        <SectionLabel n="03" label={t('Какая воронка работает')} />
         <div className="rounded-2xl p-6 mb-8 flex items-center justify-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)', minHeight: 120 }}>
-          <p className="text-sm" style={{ color: 'var(--text2)' }}>Нет данных по источникам</p>
+          <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('Нет данных по источникам')}</p>
         </div>
       </div>
     )
@@ -396,7 +397,7 @@ function FunnelMatrix({ data }: { data: DashData }) {
   if (small.length > 0) {
     const tl = small.reduce((s, x) => s + x.leads, 0)
     const ti = small.reduce((s, x) => s + x.interviews, 0)
-    bubbles.push({ name: `Остальные ${small.length}`, leads: tl, pct: tl > 0 ? ti / tl * 100 : 0, spend: small.reduce((s, x) => s + x.spend, 0), color: '#94A3B8' })
+    bubbles.push({ name: t('Остальные {n}', { n: small.length }), leads: tl, pct: tl > 0 ? ti / tl * 100 : 0, spend: small.reduce((s, x) => s + x.spend, 0), color: '#94A3B8' })
   }
 
   const W = 640, H = 300
@@ -421,7 +422,7 @@ function FunnelMatrix({ data }: { data: DashData }) {
   const yStep = maxPct <= 30 ? 10 : maxPct <= 60 ? 20 : 25
   const yTicks = Array.from({ length: Math.floor(maxPct / yStep) + 1 }, (_, i) => i * yStep)
 
-  const named = bubbles.filter(s => !s.name.startsWith('Остальные'))
+  const named = bubbles.filter(s => !s.name.startsWith(t('Остальные')))
   const topRight = named.filter(s => s.leads >= medLeads && s.pct >= medPct)
   const botRight = named.filter(s => s.leads >= medLeads && s.pct < medPct)
   const botLeft = named.filter(s => s.leads < medLeads && s.pct < medPct)
@@ -429,23 +430,23 @@ function FunnelMatrix({ data }: { data: DashData }) {
   const recs: { title: string; desc: string; color: string; bg: string }[] = []
   if (topRight.length > 0) {
     const b = topRight.sort((a, c) => c.pct - a.pct)[0]
-    recs.push({ title: '↗ Масштабировать', desc: `${b.name}: ${b.leads} заявки, ${Math.round(b.pct)}% до собеса — лучшее качество. Лить сюда бюджет.`, color: 'var(--green)', bg: 'rgba(45,212,160,0.08)' })
+    recs.push({ title: t('↗ Масштабировать'), desc: tc('crm', '{name}: {n} заявки, {pct}% до собеса — лучшее качество. Лить сюда бюджет.', { name: b.name, n: b.leads, pct: Math.round(b.pct) }), color: 'var(--green)', bg: 'rgba(45,212,160,0.08)' })
   }
   if (botRight.length > 0) {
     const b = botRight.sort((a, c) => c.leads - a.leads)[0]
-    recs.push({ title: '△ Чинить квалификацию', desc: `${b.name}: ${b.leads} заявок, до собеса ${Math.round(b.pct)}%. Объём есть, качество нет — фильтровать на входе.`, color: 'var(--yellow)', bg: 'rgba(247,192,79,0.08)' })
+    recs.push({ title: t('△ Чинить квалификацию'), desc: tc('crm', '{name}: {n} заявок, до собеса {pct}%. Объём есть, качество нет — фильтровать на входе.', { name: b.name, n: b.leads, pct: Math.round(b.pct) }), color: 'var(--yellow)', bg: 'rgba(247,192,79,0.08)' })
   }
   if (botLeft.length > 0) {
     const b = botLeft.sort((a, c) => a.pct - c.pct)[0]
-    recs.push({ title: '✕ Под вопросом', desc: `${b.name}: ${b.leads} заявки, ${Math.round(b.pct)}% до собеса. Либо переделать, либо выключить.`, color: 'var(--red)', bg: 'rgba(247,92,110,0.08)' })
+    recs.push({ title: t('✕ Под вопросом'), desc: tc('crm', '{name}: {n} заявки, {pct}% до собеса. Либо переделать, либо выключить.', { name: b.name, n: b.leads, pct: Math.round(b.pct) }), color: 'var(--red)', bg: 'rgba(247,92,110,0.08)' })
   }
 
   return (
     <div>
-      <SectionLabel n="03" label="Какая воронка работает" />
+      <SectionLabel n="03" label={t('Какая воронка работает')} />
       <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <h3 className="font-semibold mb-0.5" style={{ color: 'var(--text)' }}>Матрица воронок</h3>
-        <p className="text-xs mb-4" style={{ color: 'var(--text2)' }}>Вправо — больше заявок. Вверх — лучше доходят до собеседования. Размер круга — расход.</p>
+        <h3 className="font-semibold mb-0.5" style={{ color: 'var(--text)' }}>{t('Матрица воронок')}</h3>
+        <p className="text-xs mb-4" style={{ color: 'var(--text2)' }}>{tc('crm', 'Вправо — больше заявок. Вверх — лучше доходят до собеседования. Размер круга — расход.')}</p>
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
           <rect x={xi(medLeads)} y={pad.t} width={pad.l + pw - xi(medLeads)} height={yi(medPct) - pad.t} fill="var(--green)" opacity="0.05" />
           <rect x={xi(medLeads)} y={yi(medPct)} width={pad.l + pw - xi(medLeads)} height={pad.t + ph - yi(medPct)} fill="var(--yellow)" opacity="0.05" />
@@ -454,8 +455,8 @@ function FunnelMatrix({ data }: { data: DashData }) {
           {xTicks.map(v => <line key={v} x1={xi(v)} y1={pad.t} x2={xi(v)} y2={pad.t + ph} stroke="var(--border)" strokeWidth="1" />)}
           {yTicks.map(v => <text key={v} x={pad.l - 6} y={yi(v)} textAnchor="end" dominantBaseline="middle" fontSize="9" fill="var(--text2)">{v}%</text>)}
           {xTicks.map(v => <text key={v} x={xi(v)} y={H - pad.b + 16} textAnchor="middle" fontSize="9" fill="var(--text2)">{v}</text>)}
-          <text x={pad.l - 52} y={pad.t + ph / 2} textAnchor="middle" fontSize="9" fill="var(--text2)" transform={`rotate(-90 ${pad.l - 52} ${pad.t + ph / 2})`}>% до собеседования</text>
-          <text x={pad.l + pw / 2} y={H - 4} textAnchor="middle" fontSize="9" fill="var(--text2)">Заявок за месяц</text>
+          <text x={pad.l - 52} y={pad.t + ph / 2} textAnchor="middle" fontSize="9" fill="var(--text2)" transform={`rotate(-90 ${pad.l - 52} ${pad.t + ph / 2})`}>{t('% до собеседования')}</text>
+          <text x={pad.l + pw / 2} y={H - 4} textAnchor="middle" fontSize="9" fill="var(--text2)">{tc('crm', 'Заявок за месяц')}</text>
           {[...bubbles].sort((a, b) => b.spend - a.spend).map(s => (
             <g key={s.name}>
               <circle cx={xi(s.leads)} cy={yi(s.pct)} r={ri(s.spend)} fill={s.color} opacity="0.65" />

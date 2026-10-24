@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getMyTasks, getTasksForUsers } from '@/lib/queries/my-tasks'
 import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive } from '@/lib/queries/task-archive'
 import type { BacklogTask } from '@/types'
+import { t } from '@/lib/i18n'
 
 async function getCurrentUser() {
   const supabase = await createClient()
@@ -36,7 +37,7 @@ export async function fetchTasksForUsers(userIds: string[]) {
 
 export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: string) {
   const user = await getCurrentUser()
-  if (!user) throw new Error('Не авторизован')
+  if (!user) throw new Error(t('Не авторизован'))
   const admin = createAdminClient()
 
   const { data: current } = await admin
@@ -67,7 +68,7 @@ export async function updateTaskWorkflowStatus(taskId: string, workflowStatus: s
 
 export async function updateTaskPriority(taskId: string, priority: 'medium' | 'high' | null) {
   const user = await getCurrentUser()
-  if (!user) throw new Error('Не авторизован')
+  if (!user) throw new Error(t('Не авторизован'))
   const admin = createAdminClient()
   const { error } = await admin
     .from('tasks')

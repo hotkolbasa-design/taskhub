@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { DEMO_BLOCKED_COOKIE, DEMO_BLOCKED_EVENT, DEMO_READ_ONLY_MESSAGE } from '@/lib/demo/read-only'
+import { t } from '@/lib/i18n'
 
 // Плашка демо-сайта и подсказка на каждую попытку что-то изменить. Устройство запрета —
 // lib/demo/read-only.ts. Рисуется только при isDemoReadOnly() (app/(dashboard)/layout.tsx).
@@ -72,8 +73,8 @@ export default function DemoReadOnlyBar() {
           <circle cx="8" cy="8" r="2" stroke="var(--accent)" strokeWidth="1.4" />
         </svg>
         <span>
-          <span className="font-semibold">Демо-режим: только просмотр</span>
-          <span style={{ color: 'var(--text2)' }}> — изменения не сохраняются</span>
+          <span className="font-semibold">{t('Демо-режим: только просмотр')}</span>
+          <span style={{ color: 'var(--text2)' }}>{t(' — изменения не сохраняются')}</span>
         </span>
       </div>
       {notice && (

@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 export default function ErrorBoundary({
   error,
   reset,
@@ -20,9 +22,9 @@ export default function ErrorBoundary({
         </svg>
       </div>
       <div className="text-center">
-        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Не удалось загрузить страницу</p>
+        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t('Не удалось загрузить страницу')}</p>
         <p className="text-xs mt-1" style={{ color: 'var(--text2)' }}>
-          {error.message || 'Произошла непредвиденная ошибка'}
+          {error.message || t('Произошла непредвиденная ошибка')}
         </p>
       </div>
       <button
@@ -32,7 +34,7 @@ export default function ErrorBoundary({
         onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
         onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
       >
-        Попробовать снова
+        {t('Попробовать снова')}
       </button>
     </div>
   )

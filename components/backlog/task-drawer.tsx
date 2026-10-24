@@ -7,19 +7,20 @@ import { minutesToDisplay } from '@/lib/utils/time'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import CommentsSection from './comments-section'
 import type { BacklogTask, WorkflowStatus } from '@/types'
+import { t, INTL_LOCALE } from '@/lib/i18n'
 
 const WORKFLOW_OPTIONS: { value: WorkflowStatus; label: string; color: string; bg: string }[] = [
-  { value: 'new',         label: 'Новая',       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  { value: 'in_progress', label: 'В работе',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
-  { value: 'review',      label: 'На проверке', color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
-  { value: 'done',        label: 'Выполнена',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
-  { value: 'cancelled',   label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  { value: 'new',         label: t('Новая'),       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  { value: 'in_progress', label: t('В работе'),    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
+  { value: 'review',      label: t('На проверке'), color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
+  { value: 'done',        label: t('Выполнена'),   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
+  { value: 'cancelled',   label: t('Отменена'),    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 ]
 
 const PRIORITY_OPTIONS = [
-  { value: null,     label: 'Без приоритета', color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  { value: 'medium', label: 'Средний',        color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
-  { value: 'high',   label: 'Высокий',        color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
+  { value: null,     label: t('Без приоритета'), color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  { value: 'medium', label: t('Средний'),        color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
+  { value: 'high',   label: t('Высокий'),        color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
 ] as const
 
 function PriorityDropdown({ value, onChange, readOnly = false }: { value: 'medium' | 'high' | null; onChange: (v: 'medium' | 'high' | null) => void; readOnly?: boolean }) {
@@ -157,7 +158,7 @@ function UserDropdown({ value, onChange, members, readOnly = false }: { value: s
             </span>
             <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
           </>
-        ) : <span className="flex-1 text-sm" style={{ color: 'var(--text2)' }}>Не назначено</span>}
+        ) : <span className="flex-1 text-sm" style={{ color: 'var(--text2)' }}>{t('Не назначено')}</span>}
         {!readOnly && (
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
             <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -172,7 +173,7 @@ function UserDropdown({ value, onChange, members, readOnly = false }: { value: s
             style={{ color: !value ? 'var(--accent)' : 'var(--text2)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          >Не назначено</button>
+          >{t('Не назначено')}</button>
           {members.map(m => (
             <button key={m.id} type="button" onClick={() => { onChange(m.id); setOpen(false) }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left"
@@ -219,7 +220,7 @@ function DatePicker({ value, onChange, readOnly = false }: { value: string; onCh
   }, [open])
 
   const displayValue = value
-    ? new Date(value + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(value + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })
     : ''
 
   const year = viewDate.getFullYear()
@@ -263,7 +264,7 @@ function DatePicker({ value, onChange, readOnly = false }: { value: string; onCh
           <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
           <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
         </svg>
-        <span className="flex-1">{displayValue || (readOnly ? '—' : 'Выберите дату')}</span>
+        <span className="flex-1">{displayValue || (readOnly ? '—' : t('Выберите дату'))}</span>
         {value && !readOnly && (
           <span onClick={e => { e.stopPropagation(); onChange('') }} style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
@@ -286,7 +287,7 @@ function DatePicker({ value, onChange, readOnly = false }: { value: string; onCh
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{MONTHS[month]} {year}</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t(MONTHS[month])} {year}</span>
             <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))}
               className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: 'var(--text2)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
@@ -296,7 +297,7 @@ function DatePicker({ value, onChange, readOnly = false }: { value: string; onCh
             </button>
           </div>
           <div className="grid grid-cols-7 mb-1">
-            {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-7 text-xs font-medium" style={{ color: 'var(--text2)' }}>{d}</div>)}
+            {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-7 text-xs font-medium" style={{ color: 'var(--text2)' }}>{t(d)}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-0.5">
             {cells.map((cell, i) => {
@@ -317,11 +318,11 @@ function DatePicker({ value, onChange, readOnly = false }: { value: string; onCh
             <button type="button" onClick={() => { onChange(''); setOpen(false) }} className="text-xs px-2 py-1 rounded-md" style={{ color: 'var(--text2)' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-            >Очистить</button>
+            >{t('Очистить')}</button>
             <button type="button" onClick={setToday} className="text-xs px-2 py-1 rounded-md" style={{ color: 'var(--accent)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >Сегодня</button>
+            >{t('Сегодня')}</button>
           </div>
         </div>
       )}
@@ -507,14 +508,14 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
           <div className="flex items-center gap-3">
             {readOnly ? (
               <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
-                {taskType === 'epic' ? 'Эпик' : 'Задача'}
+                {taskType === 'epic' ? t('Эпик') : t('Задача')}
               </span>
             ) : (
               <button
                 type="button"
                 onClick={handleConvertType}
                 disabled={converting}
-                title={taskType === 'epic' ? 'Сделать задачей' : 'Сделать эпиком'}
+                title={taskType === 'epic' ? t('Сделать задачей') : t('Сделать эпиком')}
                 className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors"
                 style={{ color: 'var(--text2)', background: 'var(--surface2)', border: '1px solid var(--border)', cursor: 'pointer' }}
                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
@@ -526,7 +527,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
                       <path d="M3 4.5h8M3 4.5l1.8-1.8M3 4.5l1.8 1.8M11 9.5H3M11 9.5L9.2 7.7M11 9.5l-1.8 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                 }
-                {taskType === 'epic' ? 'Эпик' : 'Задача'}
+                {taskType === 'epic' ? t('Эпик') : t('Задача')}
               </button>
             )}
             <WorkflowDropdown value={workflowStatus} onChange={handleWorkflowChange} readOnly={readOnly} />
@@ -534,12 +535,12 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             {readOnly && (
               <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md font-medium"
                 style={{ background: 'var(--surface2)', color: 'var(--text2)', border: '1px solid var(--border)' }}
-                title="Задача из истории спринтов — только просмотр">
+                title={t('Задача из истории спринтов — только просмотр')}>
                 <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                   <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                   <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
                 </svg>
-                Только просмотр
+                {t('Только просмотр')}
               </span>
             )}
           </div>
@@ -563,7 +564,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             rows={2}
             className="w-full bg-transparent outline-none resize-none text-lg font-semibold"
             style={{ color: 'var(--text)', lineHeight: 1.6 }}
-            placeholder="Название задачи"
+            placeholder={t('Название задачи')}
           />
         </div>
 
@@ -572,14 +573,14 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
 
           {/* Описание */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Описание</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Описание')}</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               onBlur={handleDescriptionBlur}
               readOnly={readOnly}
               rows={4}
-              placeholder={readOnly ? '—' : 'Добавьте описание...'}
+              placeholder={readOnly ? '—' : t('Добавьте описание...')}
               className="px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => { if (!readOnly) e.currentTarget.style.borderColor = 'var(--accent)' }}
@@ -588,25 +589,25 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
 
           {/* Постановщик */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Постановщик</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Постановщик')}</label>
             <UserDropdown value={creatorId} onChange={handleCreatorChange} members={members} readOnly={readOnly} />
           </div>
 
           {/* Исполнитель */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Исполнитель</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Исполнитель')}</label>
             <UserDropdown value={assigneeId} onChange={handleAssigneeChange} members={members} readOnly={readOnly} />
           </div>
 
           {/* Дедлайн */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Дедлайн</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Дедлайн')}</label>
             <DatePicker value={deadline} onChange={handleDeadlineChange} readOnly={readOnly} />
           </div>
 
           {/* Дата создания */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Дата создания</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Дата создания')}</label>
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)' }}>
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--text2)', flexShrink: 0 }}>
@@ -614,14 +615,14 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
                 <path d="M4 1v2M10 1v2M1 5.5h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
               </svg>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
-                {new Date(task.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {new Date(task.created_at).toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             </div>
           </div>
 
           {/* Оценка времени */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Оценка времени</label>
+            <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Оценка времени')}</label>
             <div className="flex gap-2">
               <div className="flex items-center gap-1.5 flex-1 px-3 py-2 rounded-lg"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -631,7 +632,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
                   className="w-full bg-transparent outline-none text-sm"
                   style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
                 />
-                <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>ч</span>
+                <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>{t('ч')}</span>
               </div>
               <div className="flex items-center gap-1.5 flex-1 px-3 py-2 rounded-lg"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -641,7 +642,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
                   className="w-full bg-transparent outline-none text-sm"
                   style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}
                 />
-                <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>мин</span>
+                <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>{t('мин')}</span>
               </div>
             </div>
           </div>
@@ -649,11 +650,11 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
           {/* Родительский эпик (только для задач) */}
           {taskType === 'task' && availableEpics.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Эпик</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Эпик')}</label>
               <select value={parentId} onChange={e => handleParentChange(e.target.value)} disabled={readOnly}
                 className="px-3 py-2 rounded-lg text-sm outline-none"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: parentId ? 'var(--text)' : 'var(--text2)', colorScheme: 'dark', cursor: readOnly ? 'default' : 'pointer' }}>
-                <option value="">Без эпика</option>
+                <option value="">{t('Без эпика')}</option>
                 {availableEpics.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
               </select>
             </div>
@@ -669,10 +670,10 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text2)' }}>
               <span className="w-3 h-3 rounded-full border-2 animate-spin shrink-0"
                 style={{ borderColor: 'rgba(136,146,164,0.3)', borderTopColor: 'var(--text2)' }} />
-              Сохранение...
+              {t('Сохранение...')}
             </span>
           ) : saveStatus === 'saved' ? (
-            <span className="text-xs" style={{ color: 'var(--green)' }}>Сохранено ✓</span>
+            <span className="text-xs" style={{ color: 'var(--green)' }}>{t('Сохранено ✓')}</span>
           ) : (
             <span />
           )}
@@ -681,7 +682,7 @@ export default function TaskDrawer({ task, projectId, members, epics, initialCom
             style={{ background: 'var(--surface2)', color: 'var(--text)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}
-          >Закрыть</button>
+          >{t('Закрыть')}</button>
         </div>
       </div>
     </>

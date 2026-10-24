@@ -10,6 +10,7 @@ import { minutesToDisplay } from '@/lib/utils/time'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import type { BacklogTask } from '@/types'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -27,9 +28,9 @@ function Avatar({ name, login, size = 24 }: { name: string | null; login: string
 }
 
 const PRIORITY_OPTIONS = [
-  { value: null,     label: 'Нет',     color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  { value: 'medium', label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
-  { value: 'high',   label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
+  { value: null,     label: tc('priority', 'Нет'),     color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  { value: 'medium', label: t('Средний'), color: '#F7A84F', bg: 'rgba(247,168,79,0.14)'  },
+  { value: 'high',   label: t('Высокий'), color: '#F75C6E', bg: 'rgba(247,92,110,0.14)'  },
 ] as const
 
 function PriorityBadgeDropdown({ priority, taskId, onChange }: {
@@ -83,7 +84,7 @@ function PriorityBadgeDropdown({ priority, taskId, onChange }: {
         onClick={handleOpen}
         className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
         style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
-        title="Приоритет"
+        title={t('Приоритет')}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
           <path d="M2 2h6v4l-3 2-3-2V2z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
@@ -141,11 +142,11 @@ function PriorityBadgeDropdown({ priority, taskId, onChange }: {
 }
 
 const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  new:         { label: 'Новая',        color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  in_progress: { label: 'В работе',     color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
-  review:      { label: 'На проверке',  color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
-  done:        { label: 'Выполнена',    color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
-  cancelled:   { label: 'Отменена',     color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  new:         { label: t('Новая'),        color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  in_progress: { label: t('В работе'),     color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
+  review:      { label: t('На проверке'),  color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
+  done:        { label: t('Выполнена'),    color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
+  cancelled:   { label: t('Отменена'),     color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 }
 
 function WorkflowBadge({ status }: { status: string }) {
@@ -265,7 +266,7 @@ function DeadlineLabel({ deadline, isDone }: { deadline: string; isDone?: boolea
   now.setHours(0, 0, 0, 0)
   const isPast = !isDone && date < now
   const isToday = !isDone && date.getTime() === now.getTime()
-  const formatted = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  const formatted = date.toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' })
   return (
     <span
       className="text-xs flex items-center gap-1"
@@ -313,7 +314,7 @@ function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
   const now = new Date(); now.setHours(0, 0, 0, 0)
   const isPast = !isDone && (date ? date < now : false)
   const isToday = !isDone && (date ? date.getTime() === now.getTime() : false)
-  const formatted = date ? date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : null
+  const formatted = date ? date.toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' }) : null
 
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
@@ -411,7 +412,7 @@ function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
               </svg>
             </button>
             <span className="text-xs font-semibold" style={{ color: 'var(--text)' }}>
-              {MONTHS[month]} {year}
+              {t(MONTHS[month])} {year}
             </span>
             <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))}
               className="w-6 h-6 flex items-center justify-center rounded-lg"
@@ -428,7 +429,7 @@ function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
           {/* Дни недели */}
           <div className="grid grid-cols-7 mb-0.5">
             {WEEKDAYS.map(d => (
-              <div key={d} className="flex items-center justify-center h-6" style={{ color: 'var(--text2)', fontSize: 10 }}>{d}</div>
+              <div key={d} className="flex items-center justify-center h-6" style={{ color: 'var(--text2)', fontSize: 10 }}>{t(d)}</div>
             ))}
           </div>
 
@@ -470,7 +471,7 @@ function DeadlinePickerInline({ deadline, taskId, onChange, isDone }: {
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--red)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--text2)'}
               >
-                Очистить
+                {t('Очистить')}
               </button>
             </div>
           )}
@@ -579,7 +580,7 @@ function TimePickerInline({ minutes, taskId, onChange }: {
           }}
           onClick={e => e.stopPropagation()}
         >
-          <p className="text-xs mb-2 font-medium" style={{ color: 'var(--text2)' }}>Оценка времени</p>
+          <p className="text-xs mb-2 font-medium" style={{ color: 'var(--text2)' }}>{t('Оценка времени')}</p>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg flex-1"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -592,7 +593,7 @@ function TimePickerInline({ minutes, taskId, onChange }: {
                 onKeyDown={e => e.key === 'Enter' && handleSave()}
                 autoFocus
               />
-              <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>ч</span>
+              <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>{t('ч')}</span>
             </div>
             <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg flex-1"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -604,7 +605,7 @@ function TimePickerInline({ minutes, taskId, onChange }: {
                 onChange={e => setMins(e.target.value.replace(/\D/g, ''))}
                 onKeyDown={e => e.key === 'Enter' && handleSave()}
               />
-              <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>мин</span>
+              <span className="text-xs shrink-0 select-none" style={{ color: 'var(--text2)' }}>{t('мин')}</span>
             </div>
           </div>
           <div className="flex gap-2 mt-2">
@@ -614,7 +615,7 @@ function TimePickerInline({ minutes, taskId, onChange }: {
               className="flex-1 py-1.5 rounded-lg text-xs font-medium"
               style={{ background: 'var(--accent)', color: '#fff' }}
             >
-              Сохранить
+              {t('Сохранить')}
             </button>
             {minutes != null && (
               <button
@@ -800,7 +801,7 @@ export default function TaskCard({
               background: task.type === 'epic' ? 'rgba(247,192,79,0.15)' : 'rgba(124,92,246,0.15)',
               color: task.type === 'epic' ? 'var(--yellow)' : 'var(--accent)',
             }}
-            title={task.type === 'epic' ? 'Эпик' : 'Задача'}
+            title={task.type === 'epic' ? t('Эпик') : t('Задача')}
           >
             {task.type === 'epic' ? (
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -869,7 +870,7 @@ export default function TaskCard({
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
                 onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
-                title="Действия"
+                title={t('Действия')}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
                   <circle cx="7" cy="3" r="1.2"/>
@@ -901,7 +902,7 @@ export default function TaskCard({
         }}
         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--text)' }}
         onMouseLeave={e => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text2)' } }}
-        title="Действия"
+        title={t('Действия')}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
           <circle cx="7" cy="3" r="1.2"/>
@@ -944,7 +945,7 @@ export default function TaskCard({
                     <path d="M2 5h6M6 3l2 2-2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
               }
-              В спринт
+              {t('В спринт')}
             </button>
           )}
 
@@ -961,7 +962,7 @@ export default function TaskCard({
               <svg width="13" height="13" viewBox="0 0 10 10" fill="none" className="shrink-0">
                 <path d="M8 5H2M4 3L2 5l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              В бэклог
+              {t('В бэклог')}
             </button>
           )}
 
@@ -978,7 +979,7 @@ export default function TaskCard({
                 <rect x="1.5" y="4.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
                 <path d="M8.5 7h4M10.5 5l2 2-2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Убрать из эпика
+              {t('Убрать из эпика')}
             </button>
           )}
 
@@ -994,7 +995,7 @@ export default function TaskCard({
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="shrink-0">
                 <path d="M3 4.5h8M3 4.5l1.8-1.8M3 4.5l1.8 1.8M11 9.5H3M11 9.5L9.2 7.7M11 9.5l-1.8 1.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              {task.type === 'epic' ? 'Сделать задачей' : 'Сделать эпиком'}
+              {task.type === 'epic' ? t('Сделать задачей') : t('Сделать эпиком')}
             </button>
           )}
 
@@ -1011,7 +1012,7 @@ export default function TaskCard({
                 <rect x="1" y="4" width="8" height="9" rx="1.2" stroke="currentColor" strokeWidth="1.3"/>
                 <path d="M4 4V2.5A1.5 1.5 0 015.5 1H11a1.5 1.5 0 011.5 1.5V9A1.5 1.5 0 0111 10.5H10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
-              Дублировать
+              {t('Дублировать')}
             </button>
           )}
 
@@ -1038,7 +1039,7 @@ export default function TaskCard({
                       <rect x="2.333" y="3.5" width="9.333" height="8.75" rx="1" stroke="currentColor" strokeWidth="1.3"/>
                     </svg>
                 }
-                Точно удалить?
+                {t('Точно удалить?')}
               </button>
               <button
                 type="button"
@@ -1048,7 +1049,7 @@ export default function TaskCard({
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                Отмена
+                {t('Отмена')}
               </button>
             </>
           ) : (
@@ -1066,7 +1067,7 @@ export default function TaskCard({
                 <rect x="2.333" y="3.5" width="9.333" height="8.75" rx="1" stroke="currentColor" strokeWidth="1.3"/>
                 <path d="M5.25 6.417v3.5M8.75 6.417v3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
-              Удалить
+              {t('Удалить')}
             </button>
           )}
         </div>,

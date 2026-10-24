@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { deleteProject } from '@/app/(dashboard)/projects/actions'
 import type { ProjectWithMeta } from '@/types'
+import { t, plural } from '@/lib/i18n'
 
 const ROLE_LABEL: Record<string, string> = {
-  owner: 'Владелец',
-  manager: 'Руководитель',
-  member: 'Участник',
-  viewer: 'Наблюдатель',
+  owner: t('Владелец'),
+  manager: t('Руководитель'),
+  member: t('Участник'),
+  viewer: t('Наблюдатель'),
 }
 
 export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
@@ -88,14 +89,14 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
               >
                 {deleting
                   ? <span className="w-3 h-3 rounded-full border border-t-transparent animate-spin" style={{ borderColor: 'var(--red)', borderTopColor: 'transparent' }} />
-                  : 'Удалить'}
+                  : t('Удалить')}
               </button>
               <button
                 onClick={() => setConfirming(false)}
                 className="px-2 py-0.5 rounded-md text-xs"
                 style={{ color: 'var(--text2)' }}
               >
-                Отмена
+                {t('Отмена')}
               </button>
             </div>
           ) : (
@@ -106,7 +107,7 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
                 style={{ color: 'var(--text2)' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-                title="Настройки проекта"
+                title={t('Настройки проекта')}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2"/>
@@ -119,7 +120,7 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
                 style={{ color: 'var(--text2)' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-                title="Удалить проект"
+                title={t('Удалить проект')}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M1.75 3.5h10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -149,7 +150,7 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}
         >
-          Бэклог
+          {t('Бэклог')}
         </Link>
         <Link
           href={`/projects/${project.id}/sprint`}
@@ -158,7 +159,7 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
           onMouseEnter={e => (e.currentTarget.style.background = project.color + '44')}
           onMouseLeave={e => (e.currentTarget.style.background = project.color + '22')}
         >
-          Спринт
+          {t('Спринт')}
         </Link>
         <Link
           href={`/projects/${project.id}/sprints`}
@@ -167,18 +168,9 @@ export default function ProjectCard({ project }: { project: ProjectWithMeta }) {
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(136,146,164,0.18)'; e.currentTarget.style.color = 'var(--text)' }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(136,146,164,0.1)'; e.currentTarget.style.color = 'var(--text2)' }}
         >
-          История
+          {t('История')}
         </Link>
       </div>
     </div>
   )
-}
-
-function plural(n: number, one: string, few: string, many: string) {
-  const mod10 = n % 10
-  const mod100 = n % 100
-  if (mod100 >= 11 && mod100 <= 14) return many
-  if (mod10 === 1) return one
-  if (mod10 >= 2 && mod10 <= 4) return few
-  return many
 }

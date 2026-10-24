@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { t } from '@/lib/i18n'
 
 const MIN_LENGTH = 8
 
@@ -46,11 +47,11 @@ export default function ResetPasswordPage() {
     setError(null)
 
     if (password.length < MIN_LENGTH) {
-      setError(`Пароль должен быть не короче ${MIN_LENGTH} символов`)
+      setError(t('Пароль должен быть не короче {n} символов', { n: MIN_LENGTH }))
       return
     }
     if (password !== confirm) {
-      setError('Пароли не совпадают')
+      setError(t('Пароли не совпадают'))
       return
     }
 
@@ -79,15 +80,15 @@ export default function ResetPasswordPage() {
   if (!allowed) {
     return (
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-white mb-4 text-center">Ссылка не действует</h1>
+        <h1 className="text-2xl font-semibold text-white mb-4 text-center">{t('Ссылка не действует')}</h1>
         <p className="text-sm text-gray-400 text-center leading-relaxed">
-          Ссылка для смены пароля устарела или уже была использована. Запросите новую — она придёт на почту.
+          {t('Ссылка для смены пароля устарела или уже была использована. Запросите новую — она придёт на почту.')}
         </p>
         <Link
           href="/forgot-password"
           className="mt-6 w-full rounded-lg py-2.5 bg-[#7C5CF6] text-white text-sm font-medium hover:bg-[#6B4EE0] transition-colors cursor-pointer flex items-center justify-center"
         >
-          Запросить новую ссылку
+          {t('Запросить новую ссылку')}
         </Link>
       </div>
     )
@@ -96,16 +97,16 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-white mb-4 text-center">Пароль изменён</h1>
+        <h1 className="text-2xl font-semibold text-white mb-4 text-center">{t('Пароль изменён')}</h1>
         <p className="text-sm text-gray-400 text-center leading-relaxed">
-          Новый пароль сохранён. Им же входите в следующий раз.
+          {t('Новый пароль сохранён. Им же входите в следующий раз.')}
         </p>
         <button
           type="button"
           onClick={() => { window.location.href = '/dashboard' }}
           className="mt-6 w-full rounded-lg py-2.5 bg-[#7C5CF6] text-white text-sm font-medium hover:bg-[#6B4EE0] transition-colors cursor-pointer"
         >
-          Перейти в TaskHub
+          {t('Перейти в TaskHub')}
         </button>
       </div>
     )
@@ -113,11 +114,11 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold text-white mb-2 text-center">Новый пароль</h1>
-      <p className="text-sm text-gray-500 mb-8 text-center">Придумайте пароль от {MIN_LENGTH} символов</p>
+      <h1 className="text-2xl font-semibold text-white mb-2 text-center">{t('Новый пароль')}</h1>
+      <p className="text-sm text-gray-500 mb-8 text-center">{t('Придумайте пароль от {n} символов', { n: MIN_LENGTH })}</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Новый пароль">
+        <Field label={t('Новый пароль')}>
           <input
             id="password"
             type="password"
@@ -129,7 +130,7 @@ export default function ResetPasswordPage() {
           />
         </Field>
 
-        <Field label="Повторите пароль">
+        <Field label={t('Повторите пароль')}>
           <input
             id="confirm"
             type="password"
@@ -151,7 +152,7 @@ export default function ResetPasswordPage() {
           {loading && (
             <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
           )}
-          {loading ? 'Сохранение…' : 'Сохранить пароль'}
+          {loading ? t('Сохранение…') : t('Сохранить пароль')}
         </button>
       </form>
     </div>

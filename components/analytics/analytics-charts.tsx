@@ -5,6 +5,7 @@ import type { SprintStat, AnalyticsUser, ProjectAnalytics } from '@/lib/queries/
 import { efficiencyColor } from '@/lib/utils/efficiency'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import { mondayOf, fmtDay } from '@/lib/utils/week'
+import { t } from '@/lib/i18n'
 
 type Pt = { mon: string; eff: number; active: boolean }
 
@@ -12,7 +13,7 @@ type Pt = { mon: string; eff: number; active: boolean }
 function LineChart({ points }: { points: Pt[] }) {
   const W = 260, H = 72, padX = 6, padTop = 8, padBottom = 16
   if (!points.length) {
-    return <div className="flex items-center justify-center text-xs" style={{ height: H, color: 'var(--text2)' }}>Нет данных</div>
+    return <div className="flex items-center justify-center text-xs" style={{ height: H, color: 'var(--text2)' }}>{t('Нет данных')}</div>
   }
   const innerW = W - padX * 2
   const innerH = H - padTop - padBottom
@@ -41,7 +42,7 @@ function LineChart({ points }: { points: Pt[] }) {
         <g key={p.mon}>
           <circle cx={x(i)} cy={y(p.eff)} r={p.active ? 3.5 : 2.5}
             fill={efficiencyColor(p.eff)} stroke="var(--surface)" strokeWidth="1.5" />
-          <title>{`${fmtDay(p.mon)}: ${p.eff}%${p.active ? ' (текущая)' : ''}`}</title>
+          <title>{`${fmtDay(p.mon)}: ${p.eff}%${p.active ? t(' (текущая)') : ''}`}</title>
         </g>
       ))}
     </svg>
@@ -69,8 +70,8 @@ function ChartCard({
       </div>
       <LineChart points={points} />
       <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text2)' }}>
-        <span>{points.length ? `${points.length} нед.` : '—'}</span>
-        {avg != null && <span>среднее <span className="font-mono font-semibold" style={{ color: efficiencyColor(avg) }}>{avg}%</span></span>}
+        <span>{points.length ? t('{n} нед.', { n: points.length }) : '—'}</span>
+        {avg != null && <span>{t('среднее')} <span className="font-mono font-semibold" style={{ color: efficiencyColor(avg) }}>{avg}%</span></span>}
       </div>
     </div>
   )
@@ -124,13 +125,13 @@ export default function AnalyticsCharts({
 
   return (
     <div className="flex flex-col gap-6">
-      <Section label="График по проектам">
+      <Section label={t('График по проектам')}>
         {projectCharts.map(p => (
-          <ChartCard key={p.id} title={p.name || 'Без названия'} color={getAvatarColor(p.id)} points={p.points} />
+          <ChartCard key={p.id} title={p.name || t('Без названия')} color={getAvatarColor(p.id)} points={p.points} />
         ))}
       </Section>
 
-      <Section label="График по сотрудникам">
+      <Section label={t('График по сотрудникам')}>
         {userCharts.map(({ user, points }) => (
           <ChartCard key={user.id}
             title={user.full_name || user.login}

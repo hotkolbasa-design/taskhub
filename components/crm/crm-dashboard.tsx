@@ -12,6 +12,7 @@ import StudentsView from './students-view'
 
 import type { MonthPlan, HunterStat } from '@/lib/crm/types'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 type MonthOption = { key: string; label: string; future?: boolean }
 type ValuesSet = { dayValues: number[]; weekValues: number[]; total: number }
@@ -82,10 +83,10 @@ function cvChip(c: number | null) {
 }
 function fmtMoney(v: number, unit: string) {
   if (v === 0) return '0' + unit
-  if (unit.includes('₸')) return Math.round(v).toLocaleString('ru-RU') + unit
+  if (unit.includes('₸')) return Math.round(v).toLocaleString(INTL_LOCALE) + unit
   if (Math.abs(v) < 0.01) return '<0.01' + unit
-  if (Math.abs(v) < 1) return (Math.round(v * 100) / 100).toLocaleString('ru-RU') + unit
-  return (Math.round(v * 10) / 10).toLocaleString('ru-RU') + unit
+  if (Math.abs(v) < 1) return (Math.round(v * 100) / 100).toLocaleString(INTL_LOCALE) + unit
+  return (Math.round(v * 10) / 10).toLocaleString(INTL_LOCALE) + unit
 }
 function fmtPct(v: number) {
   return (Math.round(v * 10) / 10) + '%'
@@ -175,7 +176,7 @@ function SourceModal({ sources, excluded, onChange, onClose }: {
     >
       <div className="w-full max-w-lg rounded-2xl flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)', maxHeight: '80vh', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h3 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Источники</h3>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{tc('crm', 'Источники')}</h3>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -186,8 +187,8 @@ function SourceModal({ sources, excluded, onChange, onClose }: {
           </button>
         </div>
         <div className="flex gap-4 px-5 pt-3 pb-1">
-          <button onClick={() => setAll(true)} className="text-xs" style={{ color: 'var(--accent)', cursor: 'pointer' }}>Выбрать все</button>
-          <button onClick={() => setAll(false)} className="text-xs" style={{ color: 'var(--text2)', cursor: 'pointer' }}>Снять все</button>
+          <button onClick={() => setAll(true)} className="text-xs" style={{ color: 'var(--accent)', cursor: 'pointer' }}>{t('Выбрать все')}</button>
+          <button onClick={() => setAll(false)} className="text-xs" style={{ color: 'var(--text2)', cursor: 'pointer' }}>{t('Снять все')}</button>
         </div>
         <div className="overflow-y-auto px-5 pb-5 flex flex-col">
           {sources.map(src => (
@@ -214,10 +215,10 @@ function HeadRow({ data }: { data: DashData }) {
       {data.weeks.map(w => (
         <th key={w} className="crm-cell crm-head crm-col-week">
           <span>{w}</span>
-          <span className="crm-week-sub">неделя</span>
+          <span className="crm-week-sub">{tc('crm', 'неделя')}</span>
         </th>
       ))}
-      <th className="crm-cell crm-head crm-col-total">Итог</th>
+      <th className="crm-cell crm-head crm-col-total">{tc('crm', 'Итог')}</th>
     </tr>
   )
 }
@@ -245,9 +246,9 @@ const LEAD_ROW_HINTS: Record<string, string> = {
 
 function MilestoneLabel({ name }: { name: string }) {
   const hint = LEAD_ROW_HINTS[name]
-  if (!hint) return <>{name}</>
+  if (!hint) return <>{t(name)}</>
   return (
-    <span title={hint} style={{ borderBottom: '1px dotted var(--text2)', cursor: 'help' }}>{name}</span>
+    <span title={t(hint)} style={{ borderBottom: '1px dotted var(--text2)', cursor: 'help' }}>{t(name)}</span>
   )
 }
 
@@ -267,7 +268,7 @@ function CvRow({ a, b }: { a: Milestone; b: Milestone }) {
 }
 
 function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
-  const fmt = (x: number) => x ? `${Math.round(x).toLocaleString('ru-RU')} ₸` : '0'
+  const fmt = (x: number) => x ? `${Math.round(x).toLocaleString(INTL_LOCALE)} ₸` : '0'
   return (
     <tr>
       <td className="crm-cell crm-col-label crm-lbl">{label}</td>
@@ -277,7 +278,7 @@ function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
       {v.weekValues.map((x, i) => (
         <td key={i} className={`crm-cell crm-col-week ${x === 0 ? 'crm-zero' : 'crm-value'}`}>{fmt(x)}</td>
       ))}
-      <td className="crm-cell crm-col-total">{Math.round(v.total).toLocaleString('ru-RU')} ₸</td>
+      <td className="crm-cell crm-col-total">{Math.round(v.total).toLocaleString(INTL_LOCALE)} ₸</td>
     </tr>
   )
 }
@@ -333,9 +334,9 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
     const fmt = (n: number) => {
       if (n === 0) return '0'
       if (currency === '$') {
-        return (Math.round(n * 100) / 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' $'
+        return (Math.round(n * 100) / 100).toLocaleString(INTL_LOCALE, { maximumFractionDigits: 2 }) + ' $'
       }
-      return Math.round(n).toLocaleString('ru-RU')
+      return Math.round(n).toLocaleString(INTL_LOCALE)
     }
     const cellCls = (n: number, col: string) => `crm-cell ${col} ${n === 0 ? 'crm-zero' : 'crm-value'}`
 
@@ -368,20 +369,20 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
   return (
     <>
       <tr>
-        <td className="crm-cell crm-col-label crm-spend-head crm-lbl">Маркетинговые расходы</td>
+        <td className="crm-cell crm-col-label crm-spend-head crm-lbl">{t('Маркетинговые расходы')}</td>
         <td className="crm-spend-filler" colSpan={fillerColSpan} />
       </tr>
-      {editRow('Потрачено, $', 'spent', spend.spent, '$')}
-      {editRow('Показы', 'impressions', spend.impressions)}
-      {editRow('Клики', 'clicks', spend.clicks)}
+      {editRow(t('Потрачено, $'), 'spent', spend.spent, '$')}
+      {editRow(tc('crm', 'Показы'), 'impressions', spend.impressions)}
+      {editRow(tc('crm', 'Клики'), 'clicks', spend.clicks)}
       <ComputedRow label="CTR, %" v={spend.ctr} fmt={fmtPct} />
-      <ComputedRow label="Стоимость клика, $" v={spend.costPerClick} fmt={v => fmtMoney(v, '$')} />
-      {editRow('Лиды (Facebook)', 'fbLeads', spend.fbLeads)}
-      <ComputedRow label="Стоимость лида (аналитика), $" v={spend.costPerLeadAnalytics} fmt={v => fmtMoney(v, '$')} />
-      <ComputedRow label="Бюджет на продвижение, тнг" v={spend.budgetKzt} fmt={v => fmtMoney(v, ' ₸')} />
-      <ComputedRow label="Цена лида, $" v={spend.costPerLeadCrm} fmt={v => fmtMoney(v, '$')} />
-      <ComputedRow label="Цена клиента, $" v={spend.costPerClient} fmt={v => fmtMoney(v, '$')} />
-      <ComputedRow label="Цена клиента, тнг" v={spend.costPerClientKzt} fmt={v => fmtMoney(v, ' ₸')} />
+      <ComputedRow label={t('Стоимость клика, $')} v={spend.costPerClick} fmt={v => fmtMoney(v, '$')} />
+      {editRow(t('Лиды (Facebook)'), 'fbLeads', spend.fbLeads)}
+      <ComputedRow label={t('Стоимость лида (аналитика), $')} v={spend.costPerLeadAnalytics} fmt={v => fmtMoney(v, '$')} />
+      <ComputedRow label={t('Бюджет на продвижение, тнг')} v={spend.budgetKzt} fmt={v => fmtMoney(v, ' ₸')} />
+      <ComputedRow label={t('Цена лида, $')} v={spend.costPerLeadCrm} fmt={v => fmtMoney(v, '$')} />
+      <ComputedRow label={t('Цена клиента, $')} v={spend.costPerClient} fmt={v => fmtMoney(v, '$')} />
+      <ComputedRow label={t('Цена клиента, тнг')} v={spend.costPerClientKzt} fmt={v => fmtMoney(v, ' ₸')} />
       <ComputedRow label="ROMI, %" v={spend.romi} fmt={fmtPct} />
     </>
   )
@@ -408,11 +409,11 @@ function RateSection({ data, onSaveRate }: {
           <path d="M10 8l1.5 1.5L13 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M11.5 9.5V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
         </svg>
-        Курс USD / KZT
+        {t('Курс USD / KZT')}
       </span>
     }>
       <tr>
-        <td className="crm-cell crm-col-label crm-lbl" style={{ color: 'var(--text2)', fontWeight: 500 }}>₸ за 1$</td>
+        <td className="crm-cell crm-col-label crm-lbl" style={{ color: 'var(--text2)', fontWeight: 500 }}>{t('₸ за 1$')}</td>
         {data.daysIso.map((d, i) => (
           <td key={i} className="crm-cell crm-col-day" style={{ padding: '4px 6px' }}>
             <SpendInput initialValue={data.rateMap?.[d] ?? 0} onSave={v => onSaveRate(d, v)} suffix="₸" />
@@ -502,11 +503,11 @@ function PipelineCard({ p, data, idx }: { p: Pipeline; data: DashData; idx: numb
     <Card data={data} header={
       <span className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-        <span style={{ color: 'var(--text)' }}>{p.name}</span>
+        <span style={{ color: 'var(--text)' }}>{t(p.name)}</span>
       </span>
     }>
       {p.stages.map(s => (
-        <DataRow key={s.name} name={s.name} dayValues={s.dayValues} weekValues={s.weekValues} total={s.total} />
+        <DataRow key={s.name} name={t(s.name)} dayValues={s.dayValues} weekValues={s.weekValues} total={s.total} />
       ))}
     </Card>
   )
@@ -534,7 +535,7 @@ function SourceCard({ src, data, editable, onSave, overall, hideSpend }: {
         </>
       ))}
       {src.revenue && (
-        <MoneyRow label="Сумма продаж" v={src.revenue} />
+        <MoneyRow label={t('Сумма продаж')} v={src.revenue} />
       )}
       {src.spend && !hideSpend && (
         <SpendSection src={src.source} spend={src.spend} daysIso={data.daysIso} data={data} editable={editable} onSave={onSave} />
@@ -573,7 +574,7 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div>
             <p className="text-base font-semibold" style={{ color: 'var(--text)' }}>{group.source}</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>Состав группы</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{t('Состав группы')}</p>
           </div>
           <button type="button" onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 4 }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
@@ -588,9 +589,9 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
         <div className="overflow-y-auto flex-1 px-5 py-4 flex flex-col gap-5">
           {/* Current sources */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>В группе ({current.length})</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>{t('В группе ({n})', { n: current.length })}</p>
             {current.length === 0 ? (
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>Пусто</p>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{tc('crm', 'Пусто')}</p>
             ) : (
               <div className="flex flex-col gap-1">
                 {current.map(src => (
@@ -613,13 +614,13 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
           {/* Available sources */}
           {available.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>Доступные источники ({available.length})</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text2)' }}>{t('Доступные источники ({n})', { n: available.length })}</p>
               <div className="flex flex-col gap-1">
                 {available.map(src => (
                   <div key={src} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                     <span className="text-sm flex-1 min-w-0 truncate" style={{ color: 'var(--text)' }} title={src}>{src}</span>
                     <button type="button" onClick={() => add(src)} style={{ color: 'var(--accent)', cursor: 'pointer', background: 'rgba(124,92,246,0.1)', border: 'none', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                      + Добавить
+                      {t('+ Добавить')}
                     </button>
                   </div>
                 ))}
@@ -628,7 +629,7 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
           )}
 
           {available.length === 0 && current.length > 0 && (
-            <p className="text-xs" style={{ color: 'var(--text2)' }}>Все доступные источники уже в группе</p>
+            <p className="text-xs" style={{ color: 'var(--text2)' }}>{t('Все доступные источники уже в группе')}</p>
           )}
         </div>
 
@@ -640,13 +641,13 @@ function EditGroupModal({ group, ungroupedSources, onSave, onClose }: {
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            Сохранить
+            {t('Сохранить')}
           </button>
           <button type="button" onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm"
             style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer', border: '1px solid var(--border)' }}
           >
-            Отмена
+            {t('Отмена')}
           </button>
         </div>
       </div>
@@ -692,15 +693,15 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
               <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            {expanded ? 'Свернуть' : `Показать ${localSources.length} источника`}
+            {expanded ? tc('crm', 'Свернуть') : t('Показать {n} источника', { n: localSources.length })}
           </button>
           <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)', border: '1px solid rgba(124,92,246,0.2)' }}>
-            Объединено
+            {tc('crm', 'Объединено')}
           </span>
           <button
             type="button"
             onClick={() => setEditOpen(true)}
-            title="Редактировать состав группы"
+            title={t('Редактировать состав группы')}
             style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 3, borderRadius: 5, display: 'flex', alignItems: 'center' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -712,7 +713,7 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
           <button
             type="button"
             onClick={onDelete}
-            title="Удалить группу"
+            title={t('Удалить группу')}
             style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none', padding: 2, display: 'flex', alignItems: 'center' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -733,7 +734,7 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
             )}
           </>
         ))}
-        {group.revenue && <MoneyRow label="Сумма продаж" v={group.revenue} />}
+        {group.revenue && <MoneyRow label={t('Сумма продаж')} v={group.revenue} />}
         {group.spend && (
           <SpendSection src={group.source} spend={group.spend} daysIso={data.daysIso} data={data} editable onSave={onSave} />
         )}
@@ -803,7 +804,7 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
       <div className="w-full max-w-lg rounded-2xl flex flex-col" style={{ background: 'var(--surface)', border: '1px solid var(--border)', maxHeight: '80vh', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h3 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Группы воронок</h3>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('Группы воронок')}</h3>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer', background: 'none', border: 'none' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -818,7 +819,7 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
           {/* Existing groups */}
           {existingGroups.length > 0 && (
             <div className="px-5 pt-4 pb-3 flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text2)' }}>Существующие группы</p>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{t('Существующие группы')}</p>
               {existingGroups.map((g, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-2.5 rounded-lg" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
                   <div>
@@ -843,17 +844,17 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
 
           {/* Create new group */}
           <div className="px-5 pt-3 pb-5" style={{ borderTop: existingGroups.length > 0 ? '1px solid var(--border)' : undefined }}>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text2)' }}>Создать группу</p>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text2)' }}>{t('Создать группу')}</p>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Название группы"
+              placeholder={t('Название группы')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none mb-3"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
               onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
-            <p className="text-xs mb-2" style={{ color: 'var(--text2)' }}>Выберите источники для объединения (минимум 2):</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--text2)' }}>{t('Выберите источники для объединения (минимум 2):')}</p>
             <div className="flex flex-col gap-0.5">
               {sources.map(src => {
                 const inOther = usedSources.has(src)
@@ -863,7 +864,7 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
                     <input type="checkbox" checked={checked} disabled={inOther} onChange={() => toggleSource(src)}
                       style={{ accentColor: 'var(--accent)', width: 15, height: 15, cursor: inOther ? 'default' : 'pointer', flexShrink: 0 }} />
                     {src}
-                    {inOther && <span className="text-xs ml-auto" style={{ color: 'var(--text2)' }}>уже в группе</span>}
+                    {inOther && <span className="text-xs ml-auto" style={{ color: 'var(--text2)' }}>{t('уже в группе')}</span>}
                   </label>
                 )
               })}
@@ -875,7 +876,7 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
         <div className="flex items-center justify-end gap-3 px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm"
             style={{ background: 'var(--surface2)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}
-          >Отмена</button>
+          >{t('Отмена')}</button>
           <button
             onClick={handleCreate}
             disabled={!canCreate || saving}
@@ -883,7 +884,7 @@ function GroupModal({ sources, existingGroups, onSave, onClose }: {
             style={{ background: canCreate ? 'var(--accent)' : 'var(--surface2)', color: canCreate ? '#fff' : 'var(--text2)', border: 'none', cursor: canCreate ? 'pointer' : 'default' }}
           >
             {saving && <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-            Создать группу
+            {t('Создать группу')}
           </button>
         </div>
       </div>
@@ -968,10 +969,10 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
     <div>
       {/* Summary metrics — no scroll */}
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <MetricCard label="Всего лидов" value={summary.totalLeads} />
-        <MetricCard label="Продаж" value={summary.totalSales} />
-        <MetricCard label="Выручка" value={summary.totalRevenue.toLocaleString('ru-RU') + ' ₸'} />
-        <MetricCard label="Конверсия в продажу" value={(summary.totalLeads ? Math.round(summary.totalSales / summary.totalLeads * 1000) / 10 : 0) + '%'} />
+        <MetricCard label={t('Всего лидов')} value={summary.totalLeads} />
+        <MetricCard label={tc('crm', 'Продаж')} value={summary.totalSales} />
+        <MetricCard label={tc('crm', 'Выручка')} value={summary.totalRevenue.toLocaleString(INTL_LOCALE) + ' ₸'} />
+        <MetricCard label={t('Конверсия в продажу')} value={(summary.totalLeads ? Math.round(summary.totalSales / summary.totalLeads * 1000) / 10 : 0) + '%'} />
       </div>
 
       {/* Toolbar: source filter + group management — no scroll */}
@@ -986,7 +987,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
             <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/>
             <path d="M7 4v3l2 1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
-          Источники ({allSources.filter(s => !excluded.has(s)).length} из {allSources.length})
+          {t('Источники ({n} из {total})', { n: allSources.filter(s => !excluded.has(s)).length, total: allSources.length })}
         </button>
 
         <button onClick={() => setGroupModalOpen(true)}
@@ -1001,7 +1002,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
             <circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.3"/>
             <path d="M6 7h1.5M8.1 4.7L6 6.4M8.1 9.3L6 7.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
-          Объединить
+          {tc('crm', 'Объединить')}
           {groups.length > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(124,92,246,0.15)', color: 'var(--accent)' }}>{groups.length}</span>
           )}
@@ -1033,7 +1034,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
 
           {/* Visible individual source cards */}
           {visible.length === 0 && groups.length === 0 && (
-            <p className="text-sm py-4 px-1" style={{ color: 'var(--text2)' }}>Ни один источник не выбран.</p>
+            <p className="text-sm py-4 px-1" style={{ color: 'var(--text2)' }}>{t('Ни один источник не выбран.')}</p>
           )}
           {visible.map(src => (
             <SourceCard key={src.source} src={src} data={data} editable onSave={onSave} />
@@ -1043,7 +1044,7 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
           {archived.length > 0 && (
             <>
               <div className="flex items-center gap-3 my-6" style={{ opacity: 0.5 }}>
-                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text2)' }}>Архив ({archived.length})</span>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text2)' }}>{t('Архив ({n})', { n: archived.length })}</span>
                 <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
               </div>
               {archived.map(src => (
@@ -1106,7 +1107,7 @@ function ConfirmModal({ config, onClose }: { config: ConfirmConfig; onClose: () 
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface3, var(--border))')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}
           >
-            Отмена
+            {t('Отмена')}
           </button>
           <button
             onClick={() => { config.onConfirm(); onClose() }}
@@ -1192,7 +1193,7 @@ export default function CrmDashboard() {
       const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'freeze', monthKey: selectedMonth }) })
       const result = await res.json()
-      if (result?.error) { alert('Ошибка при заморозке: ' + result.error); return }
+      if (result?.error) { alert(t('Ошибка при заморозке: {error}', { error: result.error })); return }
       setData(prev => prev ? { ...prev, frozen: true } : prev)
       const d = await safeReload(selectedMonth)
       if (d) setData(d)
@@ -1208,7 +1209,7 @@ export default function CrmDashboard() {
       const res = await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'unfreeze', monthKey: selectedMonth }) })
       const result = await res.json()
-      if (result?.error) { alert('Ошибка при разморозке: ' + result.error); return }
+      if (result?.error) { alert(t('Ошибка при разморозке: {error}', { error: result.error })); return }
       setData(prev => prev ? { ...prev, frozen: false } : prev)
       const d = await safeReload(selectedMonth)
       if (d) setData(d)
@@ -1221,9 +1222,9 @@ export default function CrmDashboard() {
   const handleFreeze = useCallback(() => {
     if (!data || data.frozen) return
     setConfirmConfig({
-      title: 'Зафиксировать месяц?',
-      message: 'Текущие цифры будут сохранены. После этого они не будут меняться при поступлении новых данных из таблицы.',
-      confirmLabel: 'Зафиксировать',
+      title: t('Зафиксировать месяц?'),
+      message: t('Текущие цифры будут сохранены. После этого они не будут меняться при поступлении новых данных из таблицы.'),
+      confirmLabel: tc('crm', 'Зафиксировать'),
       confirmStyle: { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' },
       onConfirm: doFreeze,
     })
@@ -1232,9 +1233,9 @@ export default function CrmDashboard() {
   const handleUnfreeze = useCallback(() => {
     if (!data || !data.frozen) return
     setConfirmConfig({
-      title: 'Разморозить месяц?',
-      message: 'Данные снова начнут пересчитываться живьём при каждом открытии.',
-      confirmLabel: 'Разморозить',
+      title: t('Разморозить месяц?'),
+      message: t('Данные снова начнут пересчитываться живьём при каждом открытии.'),
+      confirmLabel: tc('crm', 'Разморозить'),
       confirmStyle: { background: 'var(--surface2)', color: 'var(--text)', border: '1px solid var(--border)' },
       onConfirm: doUnfreeze,
     })
@@ -1243,9 +1244,9 @@ export default function CrmDashboard() {
   const handleRefreeze = useCallback(() => {
     if (!data || !data.frozen) return
     setConfirmConfig({
-      title: 'Пересчитать снимок?',
-      message: 'Данные будут заново загружены из таблицы и снапшот обновится. Это может занять несколько секунд.',
-      confirmLabel: 'Пересчитать',
+      title: t('Пересчитать снимок?'),
+      message: t('Данные будут заново загружены из таблицы и снапшот обновится. Это может занять несколько секунд.'),
+      confirmLabel: tc('crm', 'Пересчитать'),
       confirmStyle: { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' },
       onConfirm: doFreeze,
     })
@@ -1312,7 +1313,7 @@ export default function CrmDashboard() {
         </svg>
         <p className="text-sm" style={{ color: 'var(--text2)' }}>{error}</p>
         <p className="text-xs max-w-sm text-center" style={{ color: 'var(--text2)', opacity: 0.7 }}>
-          Убедитесь, что переменные GOOGLE_SERVICE_ACCOUNT_KEY и GOOGLE_SPREADSHEET_ID добавлены в настройки Vercel.
+          {t('Убедитесь, что переменные GOOGLE_SERVICE_ACCOUNT_KEY и GOOGLE_SPREADSHEET_ID добавлены в настройки Vercel.')}
         </p>
       </div>
     )
@@ -1327,7 +1328,7 @@ export default function CrmDashboard() {
           <path d="M2 13l4-5 3 3.5 4-6.5 3 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           <rect x="1.5" y="1.5" width="15" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.5"/>
         </svg>
-        <h1 className="text-lg font-semibold flex-1" style={{ color: 'var(--text)' }}>CRM Дашборд</h1>
+        <h1 className="text-lg font-semibold flex-1" style={{ color: 'var(--text)' }}>{t('CRM Дашборд')}</h1>
 
         {/* Toolbar */}
         <div className="flex items-center gap-3">
@@ -1335,11 +1336,11 @@ export default function CrmDashboard() {
           {data?.computedAt && !data.frozen && (
             <button
               onClick={handleReload}
-              title="Пересчитать сейчас"
+              title={t('Пересчитать сейчас')}
               className="text-xs px-2 py-1 rounded-lg"
               style={{ color: 'var(--text2)', background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer' }}
             >
-              данные на {new Date(data.computedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · обновить
+              {t('данные на {time} · обновить', { time: new Date(data.computedAt).toLocaleTimeString(INTL_LOCALE, { hour: '2-digit', minute: '2-digit' }) })}
             </button>
           )}
           {months.length > 0 && (
@@ -1356,7 +1357,7 @@ export default function CrmDashboard() {
                       <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                       <rect x="2" y="5" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
                     </svg>
-                    Зафиксировано
+                    {tc('crm', 'Зафиксировано')}
                   </span>
                   {/* Refreeze button */}
                   <button
@@ -1369,7 +1370,7 @@ export default function CrmDashboard() {
                       ? <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />
                       : <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 1 1 9.5 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M9.5 1v2.5H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     }
-                    Пересчитать
+                    {tc('crm', 'Пересчитать')}
                   </button>
                   {/* Unfreeze button */}
                   <button
@@ -1378,7 +1379,7 @@ export default function CrmDashboard() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
                     style={{ background: 'transparent', color: 'var(--text2)', border: '1px solid var(--border)', cursor: 'pointer' }}
                   >
-                    Разморозить
+                    {tc('crm', 'Разморозить')}
                   </button>
                 </>
               ) : (
@@ -1389,7 +1390,7 @@ export default function CrmDashboard() {
                   style={{ background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)', cursor: 'pointer' }}
                 >
                   {freezing && <span className="w-3 h-3 rounded-full border-2 border-current/30 border-t-current animate-spin" />}
-                  Зафиксировать
+                  {tc('crm', 'Зафиксировать')}
                 </button>
               )}
             </>
@@ -1399,17 +1400,17 @@ export default function CrmDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-2 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        {(['obzor', 'plan', 'hantery', 'kanaly', 'voronki', 'marketing', 'ucheniki'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
+        {(['obzor', 'plan', 'hantery', 'kanaly', 'voronki', 'marketing', 'ucheniki'] as const).map(id => (
+          <button key={id} onClick={() => setTab(id)}
             className="px-3 py-1.5 rounded-lg text-sm font-medium"
             style={{
-              background: tab === t ? 'var(--accent)' : 'transparent',
-              color: tab === t ? '#fff' : 'var(--text2)',
-              border: tab === t ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: tab === id ? 'var(--accent)' : 'transparent',
+              color: tab === id ? '#fff' : 'var(--text2)',
+              border: tab === id ? '1px solid var(--accent)' : '1px solid var(--border)',
               cursor: 'pointer',
             }}
           >
-            {t === 'obzor' ? 'Обзор' : t === 'plan' ? 'План' : t === 'hantery' ? 'Хантеры' : t === 'kanaly' ? 'Каналы' : t === 'voronki' ? 'Воронки' : t === 'marketing' ? 'Маркетинг' : 'Ученики'}
+            {tc('crm', id === 'obzor' ? 'Обзор' : id === 'plan' ? 'План' : id === 'hantery' ? 'Хантеры' : id === 'kanaly' ? 'Каналы' : id === 'voronki' ? 'Воронки' : id === 'marketing' ? 'Маркетинг' : 'Ученики')}
           </button>
         ))}
       </div>
@@ -1419,7 +1420,7 @@ export default function CrmDashboard() {
         {loading ? (
           <div className="flex items-center justify-center py-20 gap-3">
             <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
-            <span className="text-sm" style={{ color: 'var(--text2)' }}>Загрузка данных…</span>
+            <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('Загрузка данных…')}</span>
           </div>
         ) : data ? (
           <>

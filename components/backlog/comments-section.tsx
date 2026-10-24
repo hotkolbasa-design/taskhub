@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createComment, getComments, getActivities } from '@/app/(dashboard)/projects/[id]/backlog/actions'
 import { uploadFile, FileTooLargeError } from '@/lib/storage/upload'
+import { t, INTL_LOCALE } from '@/lib/i18n'
 
 type Attachment = { url: string; name: string; size: number }
 
@@ -58,19 +59,19 @@ function Avatar({ name, login, size = 28 }: { name: string | null; login: string
 function formatTime(iso: string): string {
   const date = new Date(iso)
   const diffMin = Math.floor((Date.now() - date.getTime()) / 60000)
-  if (diffMin < 1) return 'только что'
-  if (diffMin < 60) return `${diffMin} мин назад`
+  if (diffMin < 1) return t('только что')
+  if (diffMin < 60) return t('{n} мин назад', { n: diffMin })
   const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH} ч назад`
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  if (diffH < 24) return t('{n} ч назад', { n: diffH })
+  return date.toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  new:         'Новая',
-  in_progress: 'В работе',
-  review:      'На проверке',
-  done:        'Выполнена',
-  cancelled:   'Отменена',
+  new:         t('Новая'),
+  in_progress: t('В работе'),
+  review:      t('На проверке'),
+  done:        t('Выполнена'),
+  cancelled:   t('Отменена'),
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -82,23 +83,23 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function minutesToText(raw: string | null): string {
-  if (!raw) return 'не задано'
+  if (!raw) return t('не задано')
   const m = parseInt(raw)
-  if (isNaN(m) || m === 0) return 'не задано'
+  if (isNaN(m) || m === 0) return t('не задано')
   const h = Math.floor(m / 60)
   const min = m % 60
-  if (h > 0 && min > 0) return `${h} ч ${min} мин`
-  if (h > 0) return `${h} ч`
-  return `${min} мин`
+  if (h > 0 && min > 0) return t('{h} ч {m} мин', { h, m: min })
+  if (h > 0) return t('{h} ч', { h })
+  return t('{m} мин', { m: min })
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return 'не задано'
-  return new Date(iso + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  if (!iso) return t('не задано')
+  return new Date(iso + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'long' })
 }
 
 function ActivityRow({ activity }: { activity: Activity }) {
-  const actor = activity.actor?.full_name || activity.actor?.login || 'Кто-то'
+  const actor = activity.actor?.full_name || activity.actor?.login || t('Кто-то')
 
   let icon: React.ReactNode
   let text: React.ReactNode
@@ -113,7 +114,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
     text = (
       <span>
         <b style={{ color: 'var(--text)' }}>{actor}</b>
-        {' изменил название: '}
+        {t(' изменил название: ')}
         <span style={{ color: 'var(--text2)' }}>«{activity.old_value ?? '—'}»</span>
         {' → '}
         <span style={{ color: '#7C5CF6', fontWeight: 500 }}>«{activity.new_value ?? '—'}»</span>
@@ -132,7 +133,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
     text = (
       <span>
         <b style={{ color: 'var(--text)' }}>{actor}</b>
-        {' изменил статус: '}
+        {t(' изменил статус: ')}
         <span style={{ color: 'var(--text2)' }}>{oldLabel}</span>
         {' → '}
         <span style={{ color: newColor, fontWeight: 500 }}>{newLabel}</span>
@@ -150,7 +151,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
     text = (
       <span>
         <b style={{ color: 'var(--text)' }}>{actor}</b>
-        {' изменил дедлайн: '}
+        {t(' изменил дедлайн: ')}
         <span style={{ color: 'var(--text2)' }}>{oldDate}</span>
         {' → '}
         <span style={{ color: '#F7C04F', fontWeight: 500 }}>{newDate}</span>
@@ -168,7 +169,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
     text = (
       <span>
         <b style={{ color: 'var(--text)' }}>{actor}</b>
-        {' изменил оценку времени: '}
+        {t(' изменил оценку времени: ')}
         <span style={{ color: 'var(--text2)' }}>{oldTime}</span>
         {' → '}
         <span style={{ color: '#A78BFA', fontWeight: 500 }}>{newTime}</span>
@@ -399,8 +400,8 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
         setText(messageText)
         setPendingFiles(filesToUpload)
         setUploadError(tooLarge
-          ? 'Файл больше 25 МБ — такой не загрузится.'
-          : 'Не удалось загрузить файл. Попробуйте ещё раз.')
+          ? t('Файл больше 25 МБ — такой не загрузится.')
+          : t('Не удалось загрузить файл. Попробуйте ещё раз.'))
         return
       }
 
@@ -412,7 +413,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
       setComments(prev => prev.filter(c => c.id !== tempId))
       setText(messageText)
       setPendingFiles(filesToUpload)
-      setUploadError('Ошибка отправки. Попробуйте ещё раз.')
+      setUploadError(t('Ошибка отправки. Попробуйте ещё раз.'))
     } finally {
       setSending(false)
       setUploading(false)
@@ -445,7 +446,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
             style={{ color: 'var(--text2)', transition: 'transform 0.15s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
             <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Активность</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t('Активность')}</span>
           {totalCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
               style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)' }}>
@@ -464,7 +465,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
                   style={{ borderColor: 'rgba(136,146,164,0.3)', borderTopColor: 'var(--text2)' }} />
               </div>
             ) : feed.length === 0 ? (
-              <p className="text-xs pb-2" style={{ color: 'var(--text2)' }}>Нет активности</p>
+              <p className="text-xs pb-2" style={{ color: 'var(--text2)' }}>{t('Нет активности')}</p>
             ) : (
               feed.map(item => {
                 if (item.kind === 'activity') {
@@ -479,7 +480,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-                          {comment.author?.full_name || comment.author?.login || 'Пользователь'}
+                          {comment.author?.full_name || comment.author?.login || t('Пользователь')}
                         </span>
                         <span className="text-xs" style={{ color: 'var(--text2)' }}>
                           {formatTime(comment.created_at)}
@@ -588,7 +589,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
                   onChange={e => setText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder="Написать комментарий..."
+                  placeholder={t('Написать комментарий...')}
                   rows={1}
                   className="w-full bg-transparent outline-none resize-none text-sm"
                   style={{ color: 'var(--text)', lineHeight: 1.5, maxHeight: 100 }}
@@ -603,7 +604,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
                     <button onClick={() => fileInputRef.current?.click()}
                       className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                       style={{ color: 'var(--text2)', cursor: 'pointer' }}
-                      title="Прикрепить изображение"
+                      title={t('Прикрепить изображение')}
                       onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
                       onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
                     >
@@ -612,7 +613,7 @@ export default function CommentsSection({ taskId, projectId, initialComments, re
                       </svg>
                     </button>
                     <span className="text-xs" style={{ color: 'var(--text2)' }}>
-                      Enter — отправить · Shift+Enter — новая строка
+                      {t('Enter — отправить · Shift+Enter — новая строка')}
                     </span>
                   </div>
                   <button onClick={handleSend} disabled={isSendDisabled}

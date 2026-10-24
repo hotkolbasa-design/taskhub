@@ -5,15 +5,16 @@ import { createPortal } from 'react-dom'
 import { setRole, setStatus, updateUserProfile, resetUserPassword, setCanApproveExpenses, setCanPayExpenses } from '@/app/(dashboard)/admin/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t } from '@/lib/i18n'
 
 const ROLES = [
   { value: 'employee', label: 'Employee', color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
   { value: 'admin',    label: 'Admin',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)'  },
 ]
 const STATUSES = [
-  { value: 'active',   label: 'Активен',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
-  { value: 'inactive', label: 'Неактивен', color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
-  { value: 'pending',  label: 'Ожидает',   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
+  { value: 'active',   label: t('Активен'),   color: '#2DD4A0', bg: 'rgba(45,212,160,0.15)'  },
+  { value: 'inactive', label: t('Неактивен'), color: '#F75C6E', bg: 'rgba(247,92,110,0.15)'  },
+  { value: 'pending',  label: t('Ожидает'),   color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
 ]
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -113,7 +114,7 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
         className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm disabled:opacity-50"
         style={{ background: 'var(--surface2)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`, color: value ? 'var(--text)' : 'var(--text2)', cursor: disabled ? 'default' : 'pointer' }}
       >
-        <span className="truncate">{value || 'Не указан'}</span>
+        <span className="truncate">{value || t('Не указан')}</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -136,7 +137,7 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); select(q) } }}
-              placeholder="Поиск или новый отдел…"
+              placeholder={t('Поиск или новый отдел…')}
               className="w-full px-2.5 py-1.5 rounded-md text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
             />
@@ -147,7 +148,7 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
             style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-            Не указан
+            {t('Не указан')}
             {!value && <svg className="ml-auto" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5.5L4 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
           </button>
 
@@ -169,12 +170,12 @@ function DepartmentCombobox({ value, options, disabled, onChange }: {
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,92,246,0.08)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
-              Добавить «{q}»
+              {t('Добавить «{q}»', { q })}
             </button>
           )}
 
           {filtered.length === 0 && !canAdd && (
-            <div className="px-3 py-2 text-sm" style={{ color: 'var(--text2)' }}>Ничего не найдено</div>
+            <div className="px-3 py-2 text-sm" style={{ color: 'var(--text2)' }}>{t('Ничего не найдено')}</div>
           )}
         </div>,
         document.body,
@@ -264,7 +265,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
       onUpdated(user.id, { can_approve_expenses: next })
     } catch (e) {
       setCanApprove(!next)
-      setApproveError(e instanceof Error ? e.message : 'Не удалось изменить право')
+      setApproveError(e instanceof Error ? e.message : t('Не удалось изменить право'))
     }
     setApproveSaving(false)
   }
@@ -278,7 +279,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
       onUpdated(user.id, { can_pay_expenses: next })
     } catch (e) {
       setCanPay(!next)
-      setApproveError(e instanceof Error ? e.message : 'Не удалось изменить право')
+      setApproveError(e instanceof Error ? e.message : t('Не удалось изменить право'))
     }
     setApproveSaving(false)
   }
@@ -291,7 +292,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
       setNewPassword(password)
       setPwStage('done')
     } catch (e) {
-      setPwError(e instanceof Error ? e.message : 'Не удалось сбросить пароль')
+      setPwError(e instanceof Error ? e.message : t('Не удалось сбросить пароль'))
       setPwStage('idle')
     }
   }
@@ -302,7 +303,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      setPwError('Скопируйте пароль вручную')
+      setPwError(t('Скопируйте пароль вручную'))
     }
   }
 
@@ -335,7 +336,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Профиль пользователя</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('Профиль пользователя')}</span>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
@@ -358,8 +359,8 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                 <BadgeDropdown options={ROLES} value={currentRole} disabled={!canEditRoleStatus} onChange={handleRoleChange} />
                 <BadgeDropdown options={selectableStatuses} value={currentStatus} disabled={!canEditRoleStatus} onChange={handleStatusChange} />
               </div>
-              {isSelf && <span className="text-xs" style={{ color: 'var(--text2)' }}>Это вы</span>}
-              {isProtected && !isSelf && <span className="text-xs" style={{ color: 'var(--text2)' }}>Суперадмин</span>}
+              {isSelf && <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('Это вы')}</span>}
+              {isProtected && !isSelf && <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('Суперадмин')}</span>}
             </div>
           </div>
 
@@ -371,7 +372,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
           </Field>
 
           {/* Имя */}
-          <Field label="Полное имя">
+          <Field label={t('Полное имя')}>
             <input value={name} onChange={e => setName(e.target.value)} disabled={!canEditProfile}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
@@ -381,9 +382,9 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
           </Field>
 
           {/* Должность */}
-          <Field label="Должность">
+          <Field label={t('Должность')}>
             <input value={position} onChange={e => setPosition(e.target.value)} disabled={!canEditProfile}
-              placeholder="Менеджер проектов"
+              placeholder={t('Менеджер проектов')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none disabled:opacity-50"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => { if (canEditProfile) e.currentTarget.style.borderColor = 'var(--accent)' }}
@@ -392,7 +393,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
           </Field>
 
           {/* Отдел */}
-          <Field label="Отдел">
+          <Field label={t('Отдел')}>
             <DepartmentCombobox
               value={department}
               options={departments}
@@ -402,13 +403,13 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
           </Field>
 
           {/* Дата рождения */}
-          <Field label="Дата рождения">
+          <Field label={t('Дата рождения')}>
             <div className="relative">
               <button type="button" onClick={() => canEditProfile && setCalOpen(o => !o)}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: birthDate ? 'var(--text)' : 'var(--text2)', cursor: canEditProfile ? 'pointer' : 'default', opacity: canEditProfile ? 1 : 0.5 }}
               >
-                {birthDate ? formatBirth(birthDate) : 'Не указана'}
+                {birthDate ? formatBirth(birthDate) : t('Не указана')}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
                   <path d="M4.5 1.5v2M9.5 1.5v2M1.5 5.5h11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -437,14 +438,14 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                       className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
-                    <span className="text-xs" style={{ color: 'var(--text2)' }}>{MONTHS[calMonth]}</span>
+                    <span className="text-xs" style={{ color: 'var(--text2)' }}>{t(MONTHS[calMonth])}</span>
                     <button type="button" onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
                       className="w-6 h-6 flex items-center justify-center rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                   </div>
                   <div className="grid grid-cols-7 mb-1">
-                    {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-6 text-xs" style={{ color: 'var(--text2)' }}>{d}</div>)}
+                    {WEEKDAYS.map(d => <div key={d} className="flex items-center justify-center h-6 text-xs" style={{ color: 'var(--text2)' }}>{t(d)}</div>)}
                   </div>
                   <div className="grid grid-cols-7 gap-0.5">
                     {cells.map((cell, i) => {
@@ -465,7 +466,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                       className="w-full mt-2 pt-2 text-xs text-left" style={{ borderTop: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                       onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-                    >Очистить</button>
+                    >{t('Очистить')}</button>
                   )}
                 </div>
               )}
@@ -473,11 +474,11 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
           </Field>
 
           {/* Право решать по расходам — отдельно от роли: учредителю нужен только этот раздел */}
-          <Field label="Заявки на расходы">
+          <Field label={t('Заявки на расходы')}>
             <button type="button" onClick={() => handleApproveToggle(!canApprove)} disabled={approveSaving}
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm disabled:opacity-60"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}>
-              <span>Может одобрять расходы</span>
+              <span>{t('Может одобрять расходы')}</span>
               <span className="flex items-center rounded-full transition-colors"
                 style={{ width: 34, height: 20, padding: 2, background: canApprove ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}>
                 <span className="rounded-full bg-white transition-transform"
@@ -487,7 +488,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
             <button type="button" onClick={() => handlePayToggle(!canPay)} disabled={approveSaving}
               className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm disabled:opacity-60 mt-2"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}>
-              <span>Бухгалтерия: видит все и отмечает оплату</span>
+              <span>{t('Бухгалтерия: видит все и отмечает оплату')}</span>
               <span className="flex items-center rounded-full transition-colors"
                 style={{ width: 34, height: 20, padding: 2, background: canPay ? 'var(--accent)' : 'rgba(255,255,255,0.15)' }}>
                 <span className="rounded-full bg-white transition-transform"
@@ -499,7 +500,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
 
           {/* Пароль — запасной путь, когда человек не получает письма */}
           {canEditRoleStatus && (
-            <Field label="Пароль">
+            <Field label={t('Пароль')}>
               {pwStage === 'done' ? (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -510,28 +511,28 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                     <button type="button" onClick={copyPassword}
                       className="px-3 py-2 rounded-lg text-xs shrink-0"
                       style={{ background: copied ? 'rgba(45,212,160,0.15)' : 'var(--surface2)', border: '1px solid var(--border)', color: copied ? 'var(--green)' : 'var(--text2)', cursor: 'pointer' }}>
-                      {copied ? 'Скопировано' : 'Копировать'}
+                      {copied ? t('Скопировано') : t('Копировать')}
                     </button>
                   </div>
                   <span className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
-                    Передайте пароль лично — второй раз он не покажется. Войдя, человек сменит его на свой через «Забыли пароль?».
+                    {t('Передайте пароль лично — второй раз он не покажется. Войдя, человек сменит его на свой через «Забыли пароль?».')}
                   </span>
                 </div>
               ) : pwStage === 'confirm' ? (
                 <div className="flex flex-col gap-2">
                   <span className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
-                    Старый пароль перестанет работать. Сбросить?
+                    {t('Старый пароль перестанет работать. Сбросить?')}
                   </span>
                   <div className="flex gap-2">
                     <button type="button" onClick={handleResetPassword}
                       className="flex-1 py-2 rounded-lg text-sm"
                       style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
-                      Да, сбросить
+                      {t('Да, сбросить')}
                     </button>
                     <button type="button" onClick={() => setPwStage('idle')}
                       className="flex-1 py-2 rounded-lg text-sm"
                       style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>
-                      Отмена
+                      {t('Отмена')}
                     </button>
                   </div>
                 </div>
@@ -540,7 +541,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
                   className="w-full py-2 rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-60"
                   style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}>
                   {pwStage === 'loading' && <span className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'var(--accent)' }} />}
-                  {pwStage === 'loading' ? 'Сброс…' : 'Сбросить пароль'}
+                  {pwStage === 'loading' ? t('Сброс…') : t('Сбросить пароль')}
                 </button>
               )}
               {pwError && <span className="text-xs" style={{ color: 'var(--red)' }}>{pwError}</span>}
@@ -556,7 +557,7 @@ export default function AdminUserDrawer({ user, isSelf, isProtected, departments
               style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
             >
               {saving && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-              {saving ? 'Сохранение…' : 'Сохранить изменения'}
+              {saving ? t('Сохранение…') : t('Сохранить изменения')}
             </button>
           </div>
         )}

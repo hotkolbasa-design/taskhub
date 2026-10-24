@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateProject } from '@/app/(dashboard)/projects/[id]/settings/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { t } from '@/lib/i18n'
 
 const COLORS = [
   '#7C5CF6', '#2DD4A0', '#F75C6E', '#F7C04F',
@@ -13,9 +14,9 @@ const COLORS = [
 type Member = { id: string; full_name: string | null; login: string }
 
 const ASSIGNEE_MODES = [
-  { value: 'manual', label: 'Вручную', desc: 'При создании задачи исполнитель не назначается' },
-  { value: 'creator', label: 'Создатель задачи', desc: 'Исполнитель = тот кто создаёт задачу' },
-  { value: 'specific', label: 'Конкретный человек', desc: 'Всегда назначать одного и того же' },
+  { value: 'manual', label: t('Вручную'), desc: t('При создании задачи исполнитель не назначается') },
+  { value: 'creator', label: t('Создатель задачи'), desc: t('Исполнитель = тот кто создаёт задачу') },
+  { value: 'specific', label: t('Конкретный человек'), desc: t('Всегда назначать одного и того же') },
 ]
 
 function UserDropdown({ value, onChange, members }: { value: string; onChange: (v: string) => void; members: Member[] }) {
@@ -43,7 +44,7 @@ function UserDropdown({ value, onChange, members }: { value: string; onChange: (
             </span>
             <span className="flex-1 truncate">{selected.full_name || selected.login}</span>
           </>
-        ) : <span className="flex-1">Выбрать пользователя...</span>}
+        ) : <span className="flex-1">{t('Выбрать пользователя...')}</span>}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.5, flexShrink: 0 }}>
           <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -112,7 +113,7 @@ export default function GeneralForm({
 
   async function handleSave() {
     if (!name.trim()) return
-    if (assigneeMode === 'specific' && !assigneeId) { setError('Выберите исполнителя по умолчанию'); return }
+    if (assigneeMode === 'specific' && !assigneeId) { setError(t('Выберите исполнителя по умолчанию')); return }
     setLoading(true); setError('')
     try {
       await updateProject(projectId, {
@@ -132,11 +133,11 @@ export default function GeneralForm({
 
   return (
     <div className="rounded-xl p-6 flex flex-col gap-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Основное</h2>
+      <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('Основное')}</h2>
 
       {/* Название */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Название</label>
+        <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Название')}</label>
         <input value={name} onChange={e => setName(e.target.value)}
           className="px-3 py-2.5 rounded-lg text-sm outline-none"
           style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
@@ -147,7 +148,7 @@ export default function GeneralForm({
 
       {/* Описание */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Описание</label>
+        <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Описание')}</label>
         <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
           className="px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
           style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
@@ -158,7 +159,7 @@ export default function GeneralForm({
 
       {/* Цвет */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Цвет проекта</label>
+        <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Цвет проекта')}</label>
         <div className="flex gap-2.5">
           {COLORS.map(c => (
             <button key={c} type="button" onClick={() => setColor(c)}
@@ -172,8 +173,8 @@ export default function GeneralForm({
       {/* Исполнитель по умолчанию */}
       <div className="flex flex-col gap-3 pt-1" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="pt-3">
-          <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Исполнитель по умолчанию</label>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text2)', opacity: 0.6 }}>Кто будет назначен исполнителем при создании задачи</p>
+          <label className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Исполнитель по умолчанию')}</label>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text2)', opacity: 0.6 }}>{t('Кто будет назначен исполнителем при создании задачи')}</p>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -214,9 +215,9 @@ export default function GeneralForm({
           style={{ background: 'var(--accent)', color: '#fff' }}
         >
           {loading && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-          Сохранить
+          {t('Сохранить')}
         </button>
-        {saved && <span className="text-xs" style={{ color: 'var(--green)' }}>Сохранено ✓</span>}
+        {saved && <span className="text-xs" style={{ color: 'var(--green)' }}>{t('Сохранено ✓')}</span>}
       </div>
     </div>
   )

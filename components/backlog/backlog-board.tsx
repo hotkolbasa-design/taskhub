@@ -36,6 +36,7 @@ import SprintPanel, {
   toBacklogTask as sprintToBacklog,
 } from './sprint-panel'
 import type { BacklogTask } from '@/types'
+import { t, plural } from '@/lib/i18n'
 
 type Member = { id: string; full_name: string | null; login: string; avatar_url: string | null }
 type MemberWithCreator = Member & { creator_name?: string | null }
@@ -264,7 +265,7 @@ function RootDropZone() {
         transition: 'background 0.15s, border-color 0.15s',
       }}
     >
-      {isOver ? 'Отдельная задача' : ''}
+      {isOver ? t('Отдельная задача') : ''}
     </div>
   )
 }
@@ -768,7 +769,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
     const copy: BacklogTask = {
       ...task,
       id: crypto.randomUUID(),
-      title: `Копия — ${task.title}`,
+      title: t('Копия — {title}', { title: task.title }),
       workflow_status: 'new',
       status: 'backlog',
       sprint_id: null,
@@ -876,7 +877,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                     {tc > 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{tc} {plural(tc, 'задача', 'задачи', 'задач')}</span>}
                     {ec > 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{ec} {plural(ec, 'эпик', 'эпика', 'эпиков')}</span>}
                     {mins > 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{minutesToDisplay(mins)}</span>}
-                    {tc === 0 && ec === 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{filterActive ? 'Нет задач по фильтру' : 'Бэклог пуст'}</span>}
+                    {tc === 0 && ec === 0 && <span className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{filterActive ? t('Нет задач по фильтру') : t('Бэклог пуст')}</span>}
                   </>
                 })()}
               </div>
@@ -888,7 +889,7 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                 </svg>
-                Добавить задачу
+                {t('Добавить задачу')}
               </button>
             </div>
 
@@ -903,14 +904,14 @@ export default function BacklogBoard({ projectId, initialTasks, members, members
                   <rect x="6" y="4" width="28" height="32" rx="3" stroke="var(--text2)" strokeWidth="2"/>
                   <path d="M13 14h14M13 20h14M13 26h8" stroke="var(--text2)" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
-                <p className="text-sm" style={{ color: 'var(--text2)' }}>{filterActive ? 'Нет задач по выбранным исполнителям' : 'Бэклог пуст'}</p>
+                <p className="text-sm" style={{ color: 'var(--text2)' }}>{filterActive ? t('Нет задач по выбранным исполнителям') : t('Бэклог пуст')}</p>
                 {!filterActive && (
                   <button
                     onClick={() => setShowModal(true)}
                     className="text-sm px-4 py-2 rounded-lg font-medium"
                     style={{ background: 'rgba(124,92,246,0.12)', color: 'var(--accent)' }}
                   >
-                    Создать первую задачу
+                    {t('Создать первую задачу')}
                   </button>
                 )}
               </div>
@@ -1114,14 +1115,14 @@ function MiniCalBB({ value, onChange }: { value: string; onChange: (v: string) =
           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 3L4.5 6L7.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-        <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>{MONTHS_RU_BB[month]} {year}</span>
+        <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>{t(MONTHS_RU_BB[month])} {year}</span>
         <button type="button" onClick={() => setView(new Date(year, month + 1, 1))} style={{ color: 'var(--text2)', cursor: 'pointer', padding: 4 }}
           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 3L7.5 6L4.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
       </div>
       <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {WEEKDAYS_BB.map(wd => <div key={wd} className="text-center" style={{ color: 'var(--text2)', fontSize: 10 }}>{wd}</div>)}
+        {WEEKDAYS_BB.map(wd => <div key={wd} className="text-center" style={{ color: 'var(--text2)', fontSize: 10 }}>{t(wd)}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-0.5">
         {cells.map((c, i) => {
@@ -1174,7 +1175,7 @@ function CreateSprintModal({ projectId, onClose }: { projectId: string; onClose:
       onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{ background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 28, width: 300, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', animation: 'dropdownIn 0.12s ease-out' }}>
-        <p className="text-base font-semibold mb-4" style={{ color: 'var(--text)' }}>Новый спринт</p>
+        <p className="text-base font-semibold mb-4" style={{ color: 'var(--text)' }}>{t('Новый спринт')}</p>
 
         {/* Табы начало / конец */}
         <div className="flex gap-2 mb-4">
@@ -1186,7 +1187,7 @@ function CreateSprintModal({ projectId, onClose }: { projectId: string; onClose:
                 color: step === s ? '#fff' : 'var(--text2)',
                 cursor: 'pointer',
               }}>
-              {s === 'from' ? `Начало: ${fmtDate(dateFrom)}` : `Конец: ${fmtDate(dateTo)}`}
+              {s === 'from' ? t('Начало: {date}', { date: fmtDate(dateFrom) }) : t('Конец: {date}', { date: fmtDate(dateTo) })}
             </button>
           ))}
         </div>
@@ -1204,12 +1205,12 @@ function CreateSprintModal({ projectId, onClose }: { projectId: string; onClose:
           <button onClick={onClose}
             className="flex-1 py-2 rounded-lg text-sm font-medium"
             style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}>
-            Отмена
+            {t('Отмена')}
           </button>
           <button onClick={handleSave} disabled={saving || !dateFrom || !dateTo}
             className="flex-1 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
             style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
-            {saving ? 'Создание…' : 'Создать'}
+            {saving ? t('Создание…') : t('Создать')}
           </button>
         </div>
       </div>
@@ -1232,14 +1233,14 @@ function EmptySprintPanel({ projectId }: { projectId: string }) {
           style={{ borderBottom: '1px solid var(--border)' }}
         >
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--text2)', opacity: 0.4 }} />
-          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Спринт</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('Спринт')}</span>
         </div>
         <div className="flex flex-col items-center justify-center gap-4 flex-1 py-16 px-6">
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ opacity: 0.2 }}>
             <rect x="4" y="4" width="32" height="32" rx="4" stroke="var(--text2)" strokeWidth="1.5"/>
             <path d="M13 20h14M20 13v14" stroke="var(--text2)" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          <p className="text-sm text-center" style={{ color: 'var(--text2)' }}>Нет активного спринта</p>
+          <p className="text-sm text-center" style={{ color: 'var(--text2)' }}>{t('Нет активного спринта')}</p>
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
@@ -1248,20 +1249,11 @@ function EmptySprintPanel({ projectId }: { projectId: string }) {
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
-            Создать спринт
+            {t('Создать спринт')}
           </button>
         </div>
       </div>
       {showModal && <CreateSprintModal projectId={projectId} onClose={() => setShowModal(false)} />}
     </>
   )
-}
-
-function plural(n: number, one: string, few: string, many: string) {
-  const mod10 = n % 10
-  const mod100 = n % 100
-  if (mod100 >= 11 && mod100 <= 14) return many
-  if (mod10 === 1) return one
-  if (mod10 >= 2 && mod10 <= 4) return few
-  return many
 }

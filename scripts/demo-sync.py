@@ -208,7 +208,7 @@ def peresobrat(env: dict):
     # эпики раньше подзадач: внешний ключ parent_task_id проверяется по каждой пачке
     dannye['tasks'].sort(key=lambda t: t['type'] != 'epic')
     for n, z in enumerate(dannye['expense_requests'], 1):
-        z['number'] = f'ЗР-{n:04d}'
+        z['number'] = f'ER-{n:04d}'  # в бою номер «ЗР-…» ставит база; демо по-английски
     for t in TABLITSY:
         zalit(t, dannye[t], upsert=(t == 'profiles'))
     api.query(api.DEV_REF, f"select setval('public.expense_request_number_seq', {len(dannye['expense_requests'])})",

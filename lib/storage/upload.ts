@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/client'
 import { createUploadTicket } from '@/app/actions/storage'
 import { BUCKET, MAX_UPLOAD_BYTES, type UploadFolder } from '@/lib/storage/const'
+import { t } from '@/lib/i18n'
 
 export type UploadedFile = { url: string; name: string; size: number }
 
 export class FileTooLargeError extends Error {
-  constructor() { super('Файл больше 25 МБ') }
+  constructor() { super(t('Файл больше 25 МБ')) }
 }
 
 /**
@@ -28,5 +29,5 @@ export async function uploadFile(
     .uploadToSignedUrl(path, token, file, { contentType: file.type || 'application/octet-stream' })
   if (error) throw new Error(error.message)
 
-  return { url: publicUrl, name: file.name || 'файл', size: file.size }
+  return { url: publicUrl, name: file.name || t('файл'), size: file.size }
 }

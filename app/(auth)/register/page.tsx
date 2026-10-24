@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { t } from '@/lib/i18n'
 
 type Form = { fullName: string; email: string; password: string }
 
@@ -49,14 +50,14 @@ export default function RegisterPage() {
               <path d="M5 13l4 4L19 7" stroke="#7C5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-white mb-2">Регистрация завершена</h2>
+          <h2 className="text-lg font-semibold text-white mb-2">{t('Регистрация завершена')}</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
-            Ваш аккаунт ожидает подтверждения администратора
+            {t('Ваш аккаунт ожидает подтверждения администратора')}
           </p>
         </div>
         <p className="mt-6 text-sm text-gray-500">
           <Link href="/login" className="text-[#7C5CF6] hover:underline">
-            Вернуться ко входу
+            {t('Вернуться ко входу')}
           </Link>
         </p>
       </div>
@@ -65,10 +66,10 @@ export default function RegisterPage() {
 
   return (
     <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold text-white mb-8 text-center">Регистрация</h1>
+      <h1 className="text-2xl font-semibold text-white mb-8 text-center">{t('Регистрация')}</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Имя">
+        <Field label={t('Имя')}>
           <input
             id="fullName"
             name="fullName"
@@ -94,7 +95,7 @@ export default function RegisterPage() {
           />
         </Field>
 
-        <Field label="Пароль">
+        <Field label={t('Пароль')}>
           <input
             id="password"
             name="password"
@@ -114,14 +115,14 @@ export default function RegisterPage() {
           disabled={loading}
           className="mt-2 rounded-lg py-2.5 bg-[#7C5CF6] text-white text-sm font-medium hover:bg-[#6B4EE0] disabled:opacity-50 transition-colors cursor-pointer"
         >
-          {loading ? 'Регистрация…' : 'Зарегистрироваться'}
+          {loading ? t('Регистрация…') : t('Зарегистрироваться')}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
-        Уже есть аккаунт?{' '}
+        {t('Уже есть аккаунт?')}{' '}
         <Link href="/login" className="text-[#7C5CF6] hover:underline">
-          Войти
+          {t('Войти')}
         </Link>
       </p>
     </div>

@@ -35,6 +35,7 @@ import CreateTaskModal from '@/components/backlog/create-task-modal'
 import { usePersistedFilter } from '@/lib/hooks/use-persisted-filter'
 import SprintTaskCard from './sprint-task-card'
 import UserFilter from '@/components/common/user-filter'
+import { t, INTL_LOCALE } from '@/lib/i18n'
 
 type TaskMap = Record<string, SprintTask[]>
 
@@ -351,7 +352,7 @@ export default function SprintBoard({ projectId, currentUserId, sprint, columns:
   }
 
   async function handleCloseSprint() {
-    if (!confirm('Завершить спринт? Все задачи останутся в колонках.')) return
+    if (!confirm(t('Завершить спринт? Все задачи останутся в колонках.'))) return
     setClosing(true)
     await closeSprintAction(sprint.id, projectId)
     router.refresh()
@@ -426,7 +427,7 @@ export default function SprintBoard({ projectId, currentUserId, sprint, columns:
   }
 
   const formatDate = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    new Date(d + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'long' })
 
   const totalTasks = Object.values(taskMap).reduce((s, t) => s + t.length, 0)
 
@@ -443,7 +444,7 @@ export default function SprintBoard({ projectId, currentUserId, sprint, columns:
             {formatDate(sprint.date_from)} — {formatDate(sprint.date_to)}
           </span>
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>
-            {totalTasks} {totalTasks === 1 ? 'задача' : totalTasks < 5 ? 'задачи' : 'задач'}
+            {totalTasks} {totalTasks === 1 ? t('задача') : totalTasks < 5 ? t('задачи') : t('задач')}
           </span>
           {isFixed && (
             <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
@@ -453,8 +454,8 @@ export default function SprintBoard({ projectId, currentUserId, sprint, columns:
                 <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
               </svg>
               {sprint.fixed_at
-                ? `Зафиксировано ${new Date(sprint.fixed_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`
-                : 'Зафиксировано'}
+                ? t('Зафиксировано {date}', { date: new Date(sprint.fixed_at).toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' }) })
+                : t('Зафиксировано')}
             </span>
           )}
         </div>
@@ -474,7 +475,7 @@ export default function SprintBoard({ projectId, currentUserId, sprint, columns:
                 <span className="w-3 h-3 rounded-full border-2 animate-spin"
                   style={{ borderColor: 'var(--red)', borderTopColor: 'transparent' }} />
               )}
-              Завершить спринт
+              {t('Завершить спринт')}
             </button>
           )}
         </div>
@@ -649,7 +650,7 @@ function KanbanColumn({
   const hours = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
   const timeLabel = totalMinutes > 0
-    ? (hours > 0 ? `${hours} ч` : '') + (mins > 0 ? (hours > 0 ? ` ${mins} м` : `${mins} м`) : '')
+    ? (hours > 0 ? t('{h} ч', { h: hours }) : '') + (mins > 0 ? (hours > 0 ? ' ' + t('{m} м', { m: mins }) : t('{m} м', { m: mins })) : '')
     : null
 
   const isColumnTarget = dragPreview?.columnId === column.id
@@ -699,7 +700,7 @@ function KanbanColumn({
           </span>
 
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: column.color }} />
-          <span className="flex-1 text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{column.name}</span>
+          <span className="flex-1 text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{t(column.name)}</span>
 
           {/* Статы: кол-во задач и время */}
           {!headerHovered && (
@@ -716,7 +717,7 @@ function KanbanColumn({
 
           {/* Замочек для защищённых колонок */}
           {!headerHovered && column.role && (
-            <span title="Обязательная колонка" style={{ color: 'var(--text2)', opacity: 0.35, display: 'flex', alignItems: 'center' }}>
+            <span title={t('Обязательная колонка')} style={{ color: 'var(--text2)', opacity: 0.35, display: 'flex', alignItems: 'center' }}>
               <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                 <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                 <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
@@ -731,7 +732,7 @@ function KanbanColumn({
               <button
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => { e.stopPropagation(); onAddAfter() }}
-                title="Добавить колонку после"
+                title={t('Добавить колонку после')}
                 style={{
                   width: 26, height: 26,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -752,7 +753,7 @@ function KanbanColumn({
 
               {/* Замочек вместо удаления для защищённых */}
               {column.role && (
-                <span title="Обязательная колонка — удаление недоступно"
+                <span title={t('Обязательная колонка — удаление недоступно')}
                   style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text2)', opacity: 0.4 }}>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M9 5V4a3 3 0 1 0-6 0v1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -779,13 +780,13 @@ function KanbanColumn({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    Удалить?
+                    {t('Удалить?')}
                   </button>
                 ) : (
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
-                    title="Удалить колонку"
+                    title={t('Удалить колонку')}
                     style={{
                       width: 26, height: 26,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -824,7 +825,7 @@ function KanbanColumn({
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuick() }
                   if (e.key === 'Escape') { setAdding(false); setNewTitle('') }
                 }}
-                placeholder="Название задачи…"
+                placeholder={t('Название задачи…')}
                 rows={2}
                 className="w-full px-2.5 py-2 rounded-lg text-sm outline-none resize-none"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--accent)', color: 'var(--text)' }}
@@ -838,7 +839,7 @@ function KanbanColumn({
                   style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
                 >
                   {saving && <span className="w-3 h-3 rounded-full border border-white/40 border-t-white animate-spin" />}
-                  Добавить
+                  {t('Добавить')}
                 </button>
                 <button
                   type="button"
@@ -846,12 +847,12 @@ function KanbanColumn({
                   className="px-2.5 py-1 rounded-md text-xs"
                   style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
                 >
-                  Подробнее
+                  {t('Подробнее')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setAdding(false); setNewTitle('') }}
-                  title="Отмена"
+                  title={t('Отмена')}
                   className="ml-auto p-1 rounded-md"
                   style={{ color: 'var(--text2)', cursor: 'pointer' }}
                 >
@@ -873,7 +874,7 @@ function KanbanColumn({
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
-              Задача
+              {t('Задача')}
             </button>
           )}
         </div>
@@ -1027,12 +1028,12 @@ function ColumnOverlay({ column, taskCount }: { column: SprintColumn; taskCount:
     >
       <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
         <span className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-        <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text)' }}>{column.name}</span>
+        <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text)' }}>{t(column.name)}</span>
         <span className="text-xs font-mono" style={{ color: 'var(--text2)' }}>{taskCount}</span>
       </div>
       <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
-          {taskCount} {taskCount === 1 ? 'задача' : taskCount < 5 ? 'задачи' : 'задач'}
+          {taskCount} {taskCount === 1 ? t('задача') : taskCount < 5 ? t('задачи') : t('задач')}
         </span>
       </div>
     </div>
@@ -1116,7 +1117,7 @@ function AddColumnForm({
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
-        placeholder="Название колонки"
+        placeholder={t('Название колонки')}
         onKeyDown={e => {
           if (e.key === 'Enter') handleSave()
           if (e.key === 'Escape') onCancel()
@@ -1180,7 +1181,7 @@ function AddColumnForm({
             <span className="w-3 h-3 rounded-full border-2 animate-spin"
               style={{ borderColor: 'white', borderTopColor: 'transparent' }} />
           )}
-          Добавить
+          {t('Добавить')}
         </button>
         <button
           onClick={onCancel}
@@ -1194,7 +1195,7 @@ function AddColumnForm({
             cursor: 'pointer',
           }}
         >
-          Отмена
+          {t('Отмена')}
         </button>
       </div>
     </div>

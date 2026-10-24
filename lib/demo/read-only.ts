@@ -9,9 +9,10 @@
 //
 // Файл общий для сервера и браузера: next/* здесь не импортировать.
 import { isDemo } from './mode'
+import { t } from '@/lib/i18n'
 
 export const DEMO_READ_ONLY_CODE = 'DEMO_READ_ONLY'
-export const DEMO_READ_ONLY_MESSAGE = 'Демо-режим: только просмотр, изменения не сохраняются'
+export const DEMO_READ_ONLY_MESSAGE = t('Демо-режим: только просмотр, изменения не сохраняются')
 /** Кука-сигнал из server action: запись отбита — плашка демо показывает подсказку. */
 export const DEMO_BLOCKED_COOKIE = 'taskhub_demo_blocked'
 /** То же в браузере: отбитый запрос браузерного клиента Supabase. */

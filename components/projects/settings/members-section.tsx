@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { addMember, updateMemberRole, removeMember } from '@/app/(dashboard)/projects/[id]/settings/actions'
 import { getAvatarColor } from '@/lib/utils/avatar'
+import { t } from '@/lib/i18n'
 
 type Member = {
   user_id: string
@@ -18,9 +19,9 @@ type Profile = {
 }
 
 const ROLE_OPTIONS = [
-  { value: 'manager', label: 'Руководитель', color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' },
-  { value: 'member',  label: 'Участник',     color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
-  { value: 'viewer',  label: 'Наблюдатель',  color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
+  { value: 'manager', label: t('Руководитель'), color: '#7C5CF6', bg: 'rgba(124,92,246,0.15)' },
+  { value: 'member',  label: t('Участник'),     color: '#8892A4', bg: 'rgba(136,146,164,0.15)' },
+  { value: 'viewer',  label: t('Наблюдатель'),  color: '#F7C04F', bg: 'rgba(247,192,79,0.15)'  },
 ]
 
 // ─── Мультиселект пользователей ───────────────────────────────────────────────
@@ -95,7 +96,7 @@ function MultiUserDropdown({
         ))}
         {selectedProfiles.length === 0 && (
           <span className="text-sm flex-1" style={{ color: 'var(--text2)' }}>
-            Выбрать пользователей...
+            {t('Выбрать пользователей...')}
           </span>
         )}
         <svg
@@ -124,7 +125,7 @@ function MultiUserDropdown({
               ref={inputRef}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск..."
+              placeholder={t('Поиск...')}
               className="w-full bg-transparent outline-none text-sm"
               style={{ color: 'var(--text)' }}
               onClick={e => e.stopPropagation()}
@@ -134,7 +135,7 @@ function MultiUserDropdown({
           {/* Список */}
           <div className="max-h-52 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm" style={{ color: 'var(--text2)' }}>Не найдено</p>
+              <p className="px-3 py-2 text-sm" style={{ color: 'var(--text2)' }}>{t('Не найдено')}</p>
             ) : filtered.map(opt => {
               const isSelected = selected.includes(opt.id)
               return (
@@ -189,7 +190,7 @@ function MultiUserDropdown({
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                Выбрать всех
+                {t('Выбрать всех')}
               </button>
               {selected.length > 0 && (
                 <button
@@ -200,7 +201,7 @@ function MultiUserDropdown({
                   onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
                 >
-                  Снять всё
+                  {t('Снять всё')}
                 </button>
               )}
             </div>
@@ -375,13 +376,13 @@ export default function MembersSection({
       style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
     >
       <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>
-        Участники — {optimisticMembers.length}
+        {t('Участники — {n}', { n: optimisticMembers.length })}
       </h2>
 
       {/* Список участников */}
       <div className="flex flex-col gap-1.5">
         {optimisticMembers.map(m => {
-          const name = m.profile?.full_name || m.profile?.login || 'Неизвестный'
+          const name = m.profile?.full_name || m.profile?.login || t('Неизвестный')
           const isOwner = m.role === 'owner'
           const isSelf = m.user_id === currentUserId
           const loading = loadingIds.has(m.user_id)
@@ -402,7 +403,7 @@ export default function MembersSection({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>
                   {name}{' '}
-                  {isSelf && <span style={{ color: 'var(--text2)', fontWeight: 400 }}>(вы)</span>}
+                  {isSelf && <span style={{ color: 'var(--text2)', fontWeight: 400 }}>{t('(вы)')}</span>}
                 </p>
                 <p className="text-xs truncate" style={{ color: 'var(--text2)' }}>
                   {m.profile?.login}
@@ -411,7 +412,7 @@ export default function MembersSection({
 
               {isOwner ? (
                 <span className="text-xs px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(124,92,246,0.15)', color: 'var(--accent)' }}>
-                  Владелец
+                  {t('Владелец')}
                 </span>
               ) : (
                 <RoleDropdown
@@ -429,7 +430,7 @@ export default function MembersSection({
                   style={{ color: 'var(--text2)', cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
-                  title="Удалить участника"
+                  title={t('Удалить участника')}
                 >
                   {loading
                     ? <span className="w-3.5 h-3.5 rounded-full border border-t-transparent animate-spin block" style={{ borderColor: 'var(--text2)', borderTopColor: 'transparent' }} />
@@ -449,11 +450,11 @@ export default function MembersSection({
 
       {/* Добавить участников */}
       <div className="flex flex-col gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-        <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>Добавить участников</p>
+        <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('Добавить участников')}</p>
 
         {notMembers.length === 0 ? (
           <p className="text-xs" style={{ color: 'var(--text2)', opacity: 0.5 }}>
-            Все пользователи системы уже добавлены в проект
+            {t('Все пользователи системы уже добавлены в проект')}
           </p>
         ) : (
           <div className="flex gap-2 items-start">
@@ -473,7 +474,7 @@ export default function MembersSection({
                 ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 : <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
               }
-              {addingIds.length > 1 ? `Добавить (${addingIds.length})` : 'Добавить'}
+              {addingIds.length > 1 ? t('Добавить ({n})', { n: addingIds.length }) : t('Добавить')}
             </button>
           </div>
         )}

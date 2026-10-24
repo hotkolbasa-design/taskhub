@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { t } from '@/lib/i18n'
 
 const SUPERADMIN_EMAIL = 'director@goschool.kz'
 
@@ -95,7 +96,7 @@ export async function setRole(userId: string, role: 'admin' | 'employee') {
 export async function setCanApproveExpenses(userId: string, value: boolean) {
   const caller = await requireAdmin()
   if (!(await isSuperAdmin(caller.id))) {
-    throw new Error('Только суперадмин может выдавать право утверждать расходы')
+    throw new Error(t('Только суперадмин может выдавать право утверждать расходы'))
   }
   const admin = createAdminClient()
   const { error } = await admin.from('profiles').update({ can_approve_expenses: value }).eq('id', userId)
@@ -111,7 +112,7 @@ export async function setCanApproveExpenses(userId: string, value: boolean) {
 export async function setCanPayExpenses(userId: string, value: boolean) {
   const caller = await requireAdmin()
   if (!(await isSuperAdmin(caller.id))) {
-    throw new Error('Только суперадмин может выдавать доступ к расходам')
+    throw new Error(t('Только суперадмин может выдавать доступ к расходам'))
   }
   const admin = createAdminClient()
   const { error } = await admin.from('profiles').update({ can_pay_expenses: value }).eq('id', userId)
@@ -148,7 +149,7 @@ function generatePassword(length = 12) {
 export async function resetUserPassword(userId: string): Promise<string> {
   const caller = await requireAdmin()
   await guardTarget(userId, caller.id)
-  if (userId === caller.id) throw new Error('Свой пароль меняйте через восстановление по почте')
+  if (userId === caller.id) throw new Error(t('Свой пароль меняйте через восстановление по почте'))
 
   const password = generatePassword()
   const admin = createAdminClient()
@@ -167,7 +168,7 @@ export async function inviteUser(data: {
 }) {
   const caller = await requireAdmin()
   if (data.role === 'admin' && !(await isSuperAdmin(caller.id))) {
-    throw new Error('Только суперадмин может приглашать администраторов')
+    throw new Error(t('Только суперадмин может приглашать администраторов'))
   }
 
   const admin = createAdminClient()

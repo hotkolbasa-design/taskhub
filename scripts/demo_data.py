@@ -20,231 +20,246 @@ NS = uuid.UUID('6f1c2a52-3c1e-4c55-9d5e-1a7e0b2d6d10')
 
 DOMEN = 'taskhub.local'
 
-# key — логин и часть почты; первый в списке — учётка для показа (её логин и пароль раздаём)
+# key — логин и часть почты; первый в списке — учётка для показа (её логин и пароль раздаём).
+# Демо показывают иностранным работодателям, поэтому данные по-английски; компания — казахстанская,
+# имена латиницей. Отделы «Sales» и «Marketing» дают доступ к CRM (lib/utils/crm-access.ts).
 LYUDI = [
-    dict(key='demo',   name='Дана Алиева',        role='admin',    pos='Операционный директор',      dept='Управление', approve=True),
-    dict(key='erlan',  name='Ерлан Касымов',      role='employee', pos='Руководитель отдела продаж',  dept='Отдел продаж'),
-    dict(key='madina', name='Мадина Нурланова',   role='employee', pos='Менеджер по продажам',        dept='Отдел продаж'),
-    dict(key='timur',  name='Тимур Беков',        role='employee', pos='Менеджер по продажам',        dept='Отдел продаж'),
-    dict(key='kamila', name='Камила Рахимова',    role='employee', pos='Менеджер по продажам',        dept='Отдел продаж'),
-    dict(key='asel',   name='Асель Жумабаева',    role='employee', pos='Маркетолог',                  dept='Маркетинг'),
-    dict(key='igor',   name='Игорь Ким',          role='employee', pos='Таргетолог',                  dept='Маркетинг'),
-    dict(key='anna',   name='Анна Литвинова',     role='employee', pos='Дизайнер',                    dept='Маркетинг'),
-    dict(key='saule',  name='Сауле Оспанова',     role='employee', pos='HR-менеджер',                 dept='HR'),
-    dict(key='dauren', name='Даурен Сейткали',    role='admin',    pos='Ведущий разработчик',         dept='Разработка'),
-    dict(key='maksim', name='Максим Орлов',       role='employee', pos='Разработчик',                 dept='Разработка'),
-    dict(key='nurlan', name='Нурлан Абенов',      role='employee', pos='Бухгалтер',                   dept='Финансы', pay=True),
-    dict(key='zhanna', name='Жанна Тулеуова',     role='employee', pos='Менеджер по качеству',        dept='Операции'),
-    dict(key='ruslan', name='Руслан Мухамедов',   role='employee', pos='Куратор',                     dept='Операции'),
-    dict(key='aidos',  name='Айдос Жаксылыков',   role='employee', pos='Куратор',                     dept='Операции', status='inactive'),
+    dict(key='demo',   name='Dana Aliyeva',        role='admin',    pos='Chief Operating Officer',  dept='Management', approve=True),
+    dict(key='erlan',  name='Yerlan Kassymov',     role='employee', pos='Head of Sales',            dept='Sales'),
+    dict(key='madina', name='Madina Nurlanova',    role='employee', pos='Sales Development Rep',    dept='Sales'),
+    dict(key='timur',  name='Timur Bekov',         role='employee', pos='Sales Development Rep',    dept='Sales'),
+    dict(key='kamila', name='Kamila Rakhimova',    role='employee', pos='Sales Development Rep',    dept='Sales'),
+    dict(key='asel',   name='Assel Zhumabayeva',   role='employee', pos='Marketer',                 dept='Marketing'),
+    dict(key='igor',   name='Igor Kim',            role='employee', pos='Performance Marketer',     dept='Marketing'),
+    dict(key='anna',   name='Anna Litvinova',      role='employee', pos='Designer',                 dept='Marketing'),
+    dict(key='saule',  name='Saule Ospanova',      role='employee', pos='HR Manager',               dept='HR'),
+    dict(key='dauren', name='Dauren Seitkali',     role='admin',    pos='Lead Developer',           dept='Engineering'),
+    dict(key='maksim', name='Maxim Orlov',         role='employee', pos='Developer',                dept='Engineering'),
+    dict(key='nurlan', name='Nurlan Abenov',       role='employee', pos='Accountant',               dept='Finance', pay=True),
+    dict(key='zhanna', name='Zhanna Tuleuova',     role='employee', pos='Quality Manager',          dept='Operations'),
+    dict(key='ruslan', name='Ruslan Mukhamedov',   role='employee', pos='Student Success Manager',  dept='Operations'),
+    dict(key='aidos',  name='Aidos Zhaksylykov',   role='employee', pos='Student Success Manager',  dept='Operations', status='inactive'),
     # заявка на регистрацию, которую ещё не подтвердили — видно бейдж в админке
-    dict(key='olga',   name='Ольга Смирнова',     role='employee', pos=None,                          dept=None, status='pending'),
+    dict(key='olga',   name='Olga Smirnova',       role='employee', pos=None,                       dept=None, status='pending'),
 ]
 
-STD_COLS = [('К выполнению', '#7C5CF6', 'todo'), ('В работе', '#F7C04F', None), ('Готово', '#2DD4A0', 'done')]
-DAY_COLS = [('К выполнению', '#2DD4A0', 'todo'), ('Новые', '#8892A4', None), ('Понедельник', '#7C5CF6', None),
-            ('Вторник', '#A78BFA', None), ('Среда', '#2DD4A0', None), ('Четверг', '#F7C04F', None),
-            ('Пятница', '#F75C6E', None), ('Суббота', '#60C0E8', None), ('Готово', '#2DD4A0', 'done')]
-HR_COLS = [('К выполнению', '#4F8EF7', 'todo'), ('Вакансия', '#F75C6E', None), ('Ищу кандидата', '#F7C04F', None),
-           ('Собеседование', '#A78BFA', None), ('Готово', '#2DD4A0', 'done')]
+STD_COLS = [('To do', '#7C5CF6', 'todo'), ('In progress', '#F7C04F', None), ('Done', '#2DD4A0', 'done')]
+DAY_COLS = [('To do', '#2DD4A0', 'todo'), ('New', '#8892A4', None), ('Monday', '#7C5CF6', None),
+            ('Tuesday', '#A78BFA', None), ('Wednesday', '#2DD4A0', None), ('Thursday', '#F7C04F', None),
+            ('Friday', '#F75C6E', None), ('Saturday', '#60C0E8', None), ('Done', '#2DD4A0', 'done')]
+HR_COLS = [('To do', '#4F8EF7', 'todo'), ('Open role', '#F75C6E', None), ('Sourcing', '#F7C04F', None),
+           ('Interviewing', '#A78BFA', None), ('Done', '#2DD4A0', 'done')]
+DNI = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')
+V_RABOTE = 'In progress'
 
 # Проект: участники (первый — владелец), колонки спринта, сколько задач в неделю, задачи
 PROEKTY = [
-    dict(key='sales', name='Отдел продаж', color='#4F8EF7', cols=STD_COLS, per_week=(7, 10),
-         desc='Воронка, звонки, работа с возражениями и план продаж отдела.',
+    dict(key='sales', name='Sales', color='#4F8EF7', cols=STD_COLS, per_week=(7, 10),
+         desc='Pipeline, calls, objection handling and the monthly sales plan.',
          members=['erlan', 'madina', 'timur', 'kamila', 'demo'],
-         weekly=['Планёрка отдела продаж', 'Отчёт по воронке за неделю', 'Разбор недозвонов',
-                 'Прослушать 10 звонков и дать обратную связь'],
-         tasks=['Обновить скрипт первого звонка', 'Позвонить по заявкам с выставки',
-                'Подготовить коммерческое предложение для корпоративного клиента',
-                'Дожать сделки на стадии «Думают»', 'Провести обучение новичка по CRM',
-                'Сверить оплаты с бухгалтерией', 'Собрать возражения за месяц',
-                'Обзвонить клиентов без оплаты больше 14 дней', 'Подготовить акцию к концу месяца',
-                'Созвон с партнёром по рекомендациям', 'Собрать отзывы довольных клиентов',
-                'Разобрать потерянные сделки за квартал', 'Проверить заполнение полей в сделках',
-                'Записать видео-инструкцию по оформлению договора',
-                'Проверить новый оффер в скрипте на 30 звонках', 'Настроить напоминания о повторном звонке']),
-    dict(key='marketing', name='Маркетинг', color='#F75C6E', cols=STD_COLS, per_week=(6, 9),
-         desc='Реклама, контент и заявки: всё, что приводит клиентов в отдел продаж.',
+         weekly=['Sales team stand-up', 'Weekly pipeline report', 'Review missed calls',
+                 'Listen to 10 calls and give feedback'],
+         tasks=['Update the first-call script', 'Call back leads from the education fair',
+                'Prepare a proposal for a corporate client',
+                'Follow up on deals stuck in “Thinking it over”', 'Onboard a new rep to the CRM',
+                'Reconcile payments with accounting', 'Collect this month’s objections',
+                'Call clients with no payment for 14+ days', 'Prepare the end-of-month promo',
+                'Call with the referral partner', 'Collect testimonials from happy clients',
+                'Review lost deals for the quarter', 'Check required fields in deals',
+                'Record a video guide on contract paperwork',
+                'Test the new offer in the script on 30 calls', 'Set up follow-up call reminders']),
+    dict(key='marketing', name='Marketing', color='#F75C6E', cols=STD_COLS, per_week=(6, 9),
+         desc='Ads, content and lead generation — everything that brings clients to Sales.',
          members=['asel', 'igor', 'anna', 'demo'],
-         weekly=['Отчёт по рекламным кабинетам', 'Контент-план на неделю', 'Проверить стоимость заявки по каналам'],
-         tasks=['Запустить кампанию в Instagram на новую аудиторию', 'Подготовить 5 креативов для таргета',
-                'Обновить лендинг: блок с отзывами', 'Настроить UTM-метки для рассылки',
-                'Ретаргетинг на посетителей сайта', 'Согласовать рекламный бюджет на месяц',
-                'Снять рилс с отзывом клиента', 'Email-рассылка по базе', 'Разбор конкурентов: офферы и цены',
-                'Обновить шапку профиля и хайлайты', 'Подготовить кейс для сайта', 'Протестировать лид-форму',
-                'Собрать семантику для контекстной рекламы', 'Перезапустить кампании с CPL выше плана',
-                'Дизайн баннера для акции', 'Презентация продукта для партнёров']),
-    dict(key='hr', name='HR и найм', color='#A78BFA', cols=HR_COLS, per_week=(4, 6),
-         desc='Подбор, адаптация и кадровые документы.',
+         weekly=['Ad account report', 'Weekly content plan', 'Check cost per lead by channel'],
+         tasks=['Launch an Instagram campaign for a new audience', 'Prepare 5 ad creatives',
+                'Landing page: add a testimonials block', 'Set up UTM tags for the newsletter',
+                'Retarget website visitors', 'Approve next month’s ad budget',
+                'Shoot a client testimonial reel', 'Email campaign to the client base', 'Competitor review: offers and prices',
+                'Refresh profile header and highlights', 'Write a case study for the website', 'Test the lead form',
+                'Build a keyword list for search ads', 'Relaunch campaigns with CPL above target',
+                'Banner design for the promo', 'Product deck for partners']),
+    dict(key='hr', name='HR & Hiring', color='#A78BFA', cols=HR_COLS, per_week=(4, 6),
+         desc='Recruiting, onboarding and HR paperwork.',
          members=['saule', 'zhanna', 'demo'],
-         weekly=['Сверить табель за неделю'],
-         tasks=['Разместить вакансию менеджера по продажам', 'Провести 4 собеседования', 'Подготовить оффер кандидату',
-                'Онбординг нового сотрудника', 'Обновить шаблон трудового договора',
-                'Обратная связь после испытательного срока', 'Составить график отпусков на следующий год',
-                'Опрос вовлечённости', 'Подготовить приказ о приёме', 'Найти куратора в отдел операций',
-                'Обновить памятку для новичков', 'Провести exit-интервью', 'Организовать корпоратив']),
-    dict(key='dev', name='Разработка платформы', color='#2DD4A0', cols=STD_COLS, per_week=(5, 8),
-         desc='Доработки TaskHub и внутренних интеграций.',
+         weekly=['Reconcile the weekly timesheet'],
+         tasks=['Post a Sales Development Rep vacancy', 'Run 4 interviews', 'Prepare an offer for the candidate',
+                'Onboard a new hire', 'Update the employment contract template',
+                'Probation period feedback', 'Draft next year’s vacation schedule',
+                'Engagement survey', 'Prepare the hiring order', 'Find a Student Success Manager for Operations',
+                'Update the new-hire handbook', 'Run an exit interview', 'Organize the team offsite']),
+    dict(key='dev', name='Platform Development', color='#2DD4A0', cols=STD_COLS, per_week=(5, 8),
+         desc='TaskHub improvements and internal integrations.',
          members=['dauren', 'maksim', 'anna', 'demo'],
-         weekly=['Ревью кода и выкатка'],
-         tasks=['Фильтр по отделам в разделе «Расходы»', 'Исправить сортировку в бэклоге', 'Кэш дашборда CRM',
-                'Уведомления о дедлайне за день', 'Экспорт задач в CSV', 'Мобильная вёрстка карточки задачи',
-                'Ротация ключей интеграций', 'Отдельная база для разработки', 'Журнал ошибок записи уведомлений',
-                'Тёмная тема: проверить контраст', 'Ускорить загрузку «Моих задач»', 'Ревью RLS по новым таблицам',
-                'Права на раздел CRM по отделам', 'Автотест входа и восстановления пароля',
-                'Ежедневная резервная копия базы', 'Импорт задач из Google-таблицы']),
-    dict(key='ops', name='Операции и качество', color='#F7C04F', cols=DAY_COLS, per_week=(6, 9),
-         desc='Контроль качества обслуживания, регламенты и работа кураторов.',
+         weekly=['Code review and release'],
+         tasks=['Department filter in Expenses', 'Fix sorting in the backlog', 'Cache the CRM dashboard',
+                'Due-tomorrow notifications', 'Export tasks to CSV', 'Mobile layout for the task card',
+                'Rotate integration keys', 'Separate database for development', 'Log failed notification writes',
+                'Dark theme: check contrast', 'Speed up “My tasks” loading', 'Review RLS on new tables',
+                'CRM access by department', 'Automated test for sign-in and password reset',
+                'Daily database backup', 'Import tasks from a Google Sheet']),
+    dict(key='ops', name='Operations & Quality', color='#F7C04F', cols=DAY_COLS, per_week=(6, 9),
+         desc='Service quality, procedures and the student success team.',
          members=['zhanna', 'ruslan', 'demo'],
-         weekly=['Проверка качества: 20 обращений', 'Еженедельный отчёт по качеству',
-                 'Обновить базу ответов на частые вопросы'],
-         tasks=['Разобрать жалобы клиентов за неделю', 'Обновить регламент обработки заявок',
-                'Калибровка оценок с кураторами', 'Чек-лист для нового куратора', 'Сверить SLA ответа в чатах',
-                'Шаблоны быстрых ответов', 'Проверить, все ли договоры подписаны', 'Разобрать повторные обращения',
-                'Встреча с кураторами по итогам месяца', 'Обновить скрипт приветствия в чате']),
-    dict(key='finance', name='Финансы', color='#60C0E8', cols=STD_COLS, per_week=(3, 5),
-         desc='Платежи, сверки и отчётность.',
+         weekly=['Quality check: 20 conversations', 'Weekly quality report',
+                 'Update the FAQ knowledge base'],
+         tasks=['Review this week’s client complaints', 'Update the inquiry handling procedure',
+                'Score calibration with the team', 'Checklist for a new team member', 'Check chat response SLA',
+                'Quick reply templates', 'Make sure all contracts are signed', 'Review repeat inquiries',
+                'Monthly team review meeting', 'Update the chat greeting script']),
+    dict(key='finance', name='Finance', color='#60C0E8', cols=STD_COLS, per_week=(3, 5),
+         desc='Payments, reconciliations and reporting.',
          members=['nurlan', 'demo'],
-         weekly=['Оплатить согласованные заявки на расходы'],
-         tasks=['Закрыть месяц: сверка банка и кассы', 'Платёжный календарь на месяц', 'Оплатить счета поставщиков',
-                'Отчёт по расходам отделов', 'Акт сверки с подрядчиками', 'Данные для налоговой декларации',
-                'Обновить бюджет на квартал']),
+         weekly=['Pay approved expense requests'],
+         tasks=['Month-end close: bank and cash reconciliation', 'Monthly payment calendar', 'Pay supplier invoices',
+                'Expense report by department', 'Contractor reconciliation statements', 'Data for the tax return',
+                'Update the quarterly budget']),
 ]
 
 # Бэклог: эпики с подзадачами и отдельные задачи на будущее
 BEKLOG = {
-    'sales': [('Эпик: запуск нового тарифа', ['Посчитать экономику тарифа', 'Обновить скрипт под тариф',
-                                              'Обучить менеджеров', 'Карточка тарифа в CRM']),
-              'Разделить воронку на новых и повторных клиентов', 'Регламент передачи сделки между менеджерами',
-              'Стандарт ответа в мессенджерах за 15 минут'],
-    'marketing': [('Эпик: ребрендинг соцсетей', ['Новая сетка публикаций', 'Шаблоны сторис', 'Обложки хайлайтов']),
-                  'Партнёрская программа для блогеров', 'Квиз на лендинге', 'Тест рекламы в Telegram'],
-    'hr': ['Система наставничества', 'База знаний для новичков', 'Пересмотреть грейды и вилки'],
-    'dev': [('Эпик: заявки на расходы', ['Таблица и права доступа', 'Форма заявки', 'Еженедельный разбор',
-                                        'Отметка оплаты бухгалтерией', 'Уведомления по заявкам']),
-            ('Эпик: аналитика эффективности v2', ['Сводка по проектам', 'График по неделям', 'Фильтр по отделам']),
-            'Поиск по задачам во всех проектах', 'Вложения в комментариях перетаскиванием'],
-    'ops': ['Оценка качества по чек-листу в TaskHub', 'Еженедельный NPS-опрос', 'Регламент эскалации жалоб'],
-    'finance': ['Автоматическая сверка выписки', 'Шаблон отчёта для учредителя'],
+    'sales': [('Epic: launch the new plan', ['Model the plan economics', 'Update the script for the new plan',
+                                             'Train the reps', 'Plan card in the CRM']),
+              'Split the pipeline into new and returning clients', 'Deal handover procedure between reps',
+              'Messenger reply standard: within 15 minutes'],
+    'marketing': [('Epic: social media rebrand', ['New post grid', 'Story templates', 'Highlight covers']),
+                  'Influencer partner program', 'Quiz on the landing page', 'Test ads in Telegram'],
+    'hr': ['Mentorship program', 'Knowledge base for new hires', 'Review grades and salary bands'],
+    'dev': [('Epic: expense requests', ['Table and access rights', 'Request form', 'Weekly review',
+                                        'Payment mark by accounting', 'Request notifications']),
+            ('Epic: efficiency analytics v2', ['Summary by project', 'Weekly chart', 'Department filter']),
+            'Search across all projects', 'Drag-and-drop attachments in comments'],
+    'ops': ['Checklist-based quality scoring in TaskHub', 'Weekly NPS survey', 'Complaint escalation procedure'],
+    'finance': ['Automatic bank statement reconciliation', 'Report template for the founder'],
 }
 
+# Задачи, лично поставленные демо-пользователю: чтобы «Мои задачи» были заполнены во всех колонках
+LICHNYE = [('Approve the department plans for the month', -2, 'sales'),
+           ('Review the team efficiency report', 0, 'dev'),
+           ('Founder meeting: weekly results', 1, 'finance'),
+           ('Approve the marketing budget', 3, 'marketing'),
+           ('Approve the Student Success Manager candidate', 6, 'hr'),
+           ('Quarterly quality review', 15, 'ops')]
+
 OPISANIYA = [
-    'Результат — ссылка в комментарии к задаче.',
-    'Сверить с прошлым месяцем и отметить расхождения.',
-    'Черновик показать до среды, финальную версию — к пятнице.',
-    'Данные берём из CRM за последние 30 дней.',
-    'Если не хватает доступа — написать в чат отдела.',
-    'Критерий готовности: проверено руководителем.',
+    'Post the result as a link in the task comments.',
+    'Compare with last month and flag the differences.',
+    'Draft by Wednesday, final version by Friday.',
+    'Use CRM data for the last 30 days.',
+    'If you are missing access, ask in the team chat.',
+    'Definition of done: reviewed by the manager.',
 ]
 
 KOMMENTARII = [
-    'Сделано, файл в папке отдела.', 'Посмотри, пожалуйста, до пятницы.', 'Жду данные от маркетинга.',
-    'Согласовано, можно запускать.', 'Перенёс дедлайн: клиент попросил созвон в четверг.',
-    'Готово, можно проверять.', 'Добавила скриншоты в описание.', 'Какой бюджет закладываем?',
-    'Беру в работу.', 'Есть вопрос по формулировке — обсудим на планёрке.', 'Нужна ещё одна итерация правок.',
-    'Цифры сходятся, закрываю.',
+    'Done, the file is in the team folder.', 'Please take a look by Friday.', 'Waiting for data from Marketing.',
+    'Approved, good to launch.', 'Moved the due date: the client asked for a call on Thursday.',
+    'Ready for review.', 'Added screenshots to the description.', 'What budget are we planning?',
+    'Taking this one.', 'One question on the wording — let’s discuss at the stand-up.', 'Needs one more round of edits.',
+    'Numbers match, closing.',
 ]
 
-# имя ребёнка и род (0 — мужской, 1 — женский) → фамилия в нужной форме
-DETI = [('Алихан', 0), ('Ансар', 0), ('Батыр', 0), ('Дамир', 0), ('Ержан', 0), ('Ильяс', 0), ('Мирас', 0),
-        ('Санжар', 0), ('Тамерлан', 0), ('Эмир', 0), ('Айжан', 1), ('Амина', 1), ('Айсулу', 1), ('Дарина', 1),
-        ('Жасмин', 1), ('Лейла', 1), ('Нурай', 1), ('Сафия', 1), ('Томирис', 1), ('Ясмина', 1)]
-FAMILII = [('Сериков', 'Серикова', 'Сериковых'), ('Ахметов', 'Ахметова', 'Ахметовых'), ('Омаров', 'Омарова', 'Омаровых'),
-           ('Ибраев', 'Ибраева', 'Ибраевых'), ('Тулегенов', 'Тулегенова', 'Тулегеновых'), ('Нуриев', 'Нуриева', 'Нуриевых'),
-           ('Садыков', 'Садыкова', 'Садыковых'), ('Бекенов', 'Бекенова', 'Бекеновых'), ('Жаксыбеков', 'Жаксыбекова', 'Жаксыбековых')]
+OBOSNOVANIYA = ['Needed for the team’s current work.', 'The old one broke.',
+                'We can’t launch the campaign on time without it.', 'Planned purchase.']
+
+# имена детей и фамилии для раздела «Ученики» (CRM); род нужен для формы фамилии
+DETI = [('Alikhan', 0), ('Ansar', 0), ('Batyr', 0), ('Damir', 0), ('Yerzhan', 0), ('Ilyas', 0), ('Miras', 0),
+        ('Sanzhar', 0), ('Tamerlan', 0), ('Emir', 0), ('Aizhan', 1), ('Amina', 1), ('Aisulu', 1), ('Darina', 1),
+        ('Jasmine', 1), ('Leila', 1), ('Nurai', 1), ('Safiya', 1), ('Tomiris', 1), ('Yasmina', 1)]
+FAMILII = [('Serikov', 'Serikova', 'Serikov'), ('Akhmetov', 'Akhmetova', 'Akhmetov'), ('Omarov', 'Omarova', 'Omarov'),
+           ('Ibrayev', 'Ibrayeva', 'Ibrayev'), ('Tulegenov', 'Tulegenova', 'Tulegenov'), ('Nuriyev', 'Nuriyeva', 'Nuriyev'),
+           ('Sadykov', 'Sadykova', 'Sadykov'), ('Bekenov', 'Bekenova', 'Bekenov'), ('Zhaksybekov', 'Zhaksybekova', 'Zhaksybekov')]
 
 OCENKI = [15, 30, 30, 45, 60, 60, 60, 90, 120, 120, 180, 240]
 
 ZAYAVKI = [
     # кто, что, категория, сумма, статус, дней назад, оплачено (сумма | None), заметка решения
-    ('asel', 'Подписка на Canva Pro на год', 'software', 59000, 'approved', 26, 59000, None),
-    ('igor', 'Пополнение рекламного кабинета', 'marketing', 350000, 'approved', 3, None, 'Согласовано, оплатить до пятницы'),
-    ('dauren', 'Ноутбук для нового разработчика', 'equipment', 620000, 'needs_info', 5, None,
-     'Пришли, пожалуйста, 2–3 варианта с ценами'),
-    ('saule', 'Подарки сотрудникам на дни рождения (квартал)', 'other', 45000, 'pending', 2, None, None),
-    ('zhanna', 'Гарнитуры для кураторов, 4 шт.', 'equipment', 96000, 'pending', 1, None, None),
-    ('erlan', 'Тренинг по переговорам для отдела продаж', 'services', 280000, 'rejected', 12, None,
-     'Переносим на следующий квартал: бюджет обучения на этот исчерпан'),
-    ('anna', 'Фотосессия для рекламных креативов', 'services', 150000, 'approved', 19, 140000, None),
-    ('maksim', 'Сервис мониторинга ошибок, месяц', 'software', 12500, 'approved', 33, 12500, None),
-    ('madina', 'Канцелярия и бумага для офиса', 'office', 18000, 'approved', 15, 18000, None),
-    ('ruslan', 'Кулер для воды в офис', 'office', 75000, 'cancelled', 9, None, None),
-    ('demo', 'Продление домена и хостинга сайта', 'software', 42000, 'approved', 40, 42000, None),
-    ('timur', 'Визитки для отдела продаж', 'office', 25000, 'pending', 0, None, None),
+    ('asel', 'Canva Pro annual subscription', 'software', 59000, 'approved', 26, 59000, None),
+    ('igor', 'Ad account top-up', 'marketing', 350000, 'approved', 3, None, 'Approved, please pay by Friday'),
+    ('dauren', 'Laptop for the new developer', 'equipment', 620000, 'needs_info', 5, None,
+     'Please send 2–3 options with prices'),
+    ('saule', 'Birthday gifts for the team (quarter)', 'other', 45000, 'pending', 2, None, None),
+    ('zhanna', 'Headsets for the success team, 4 pcs', 'equipment', 96000, 'pending', 1, None, None),
+    ('erlan', 'Negotiation training for the sales team', 'services', 280000, 'rejected', 12, None,
+     'Moving this to next quarter: this quarter’s training budget is used up'),
+    ('anna', 'Photo shoot for ad creatives', 'services', 150000, 'approved', 19, 140000, None),
+    ('maksim', 'Error monitoring service, 1 month', 'software', 12500, 'approved', 33, 12500, None),
+    ('madina', 'Office stationery and paper', 'office', 18000, 'approved', 15, 18000, None),
+    ('ruslan', 'Water cooler for the office', 'office', 75000, 'cancelled', 9, None, None),
+    ('demo', 'Website domain and hosting renewal', 'software', 42000, 'approved', 40, 42000, None),
+    ('timur', 'Business cards for the sales team', 'office', 25000, 'pending', 0, None, None),
 ]
 
 STATI = [
-    dict(title='Как ставить задачи коллегам', category='taskhub', required=True, author='demo',
-         summary='Постановщик, исполнитель, дедлайн и оценка времени — что заполнять обязательно.',
-         content="""Задача без исполнителя и срока — это пожелание. Ниже — что заполнить, чтобы задачу сделали вовремя.
+    dict(title='How to assign tasks to colleagues', category='taskhub', required=True, author='demo',
+         summary='Reporter, assignee, due date and estimate — what you must fill in.',
+         content="""A task without an assignee and a due date is just a wish. Here is what to fill in so it gets done on time.
 
-## Шаги
+## Steps
 
-1. Откройте проект и нажмите **«+ Задача»** в бэклоге или прямо в колонке спринта.
-2. Напишите название глаголом: «Подготовить отчёт», а не «Отчёт».
-3. Выберите **исполнителя**. Постановщиком автоматически становитесь вы.
-4. Поставьте **дедлайн** и **оценку времени** — без них неделю нельзя честно зафиксировать.
-5. Если задача большая, сделайте из неё эпик и разбейте на подзадачи.
+1. Open the project and click **“+ Task”** in the backlog or right in a sprint column.
+2. Start the title with a verb: “Prepare the report”, not “Report”.
+3. Pick an **assignee**. You become the reporter automatically.
+4. Set a **due date** and an **estimate** — without them the week can’t be locked honestly.
+5. If the task is big, turn it into an epic and split it into subtasks.
 
-## Частые вопросы
+## FAQ
 
-**Можно ли поставить задачу человеку из другого отдела?** Да, если он участник проекта.
+**Can I assign a task to someone from another department?** Yes, if they are a project member.
 
-**Что будет, если дедлайн прошёл?** Исполнитель и постановщик получат уведомление, задача подсветится в «Моих задачах».
+**What happens when the due date passes?** The assignee and the reporter get a notification, and the task is highlighted in “My tasks”.
 """),
-    dict(title='Фиксация недели и эффективность', category='taskhub', required=False, author='dauren',
-         summary='Почему спринт фиксируют в понедельник и как считается процент.',
-         content="""В понедельник команда фиксирует список задач недели. С этим списком потом сравнивается факт.
+    dict(title='Locking the week and efficiency', category='taskhub', required=False, author='dauren',
+         summary='Why the sprint is locked on Monday and how the percentage is calculated.',
+         content="""On Monday the team locks the list of tasks for the week. The actual result is compared with this list later.
 
-## Как считается эффективность
+## How efficiency is calculated
 
-| Что входит | Как учитывается |
+| What counts | How |
 |---|---|
-| Выполненные задачи | время по оценке идёт в числитель |
-| Невыполненные | время идёт в знаменатель |
-| Отменённые и эпики | не учитываются |
+| Completed tasks | their estimates go into the numerator |
+| Not completed | their estimates go into the denominator |
+| Cancelled tasks and epics | not counted |
 
-**Эффективность = время выполненных / время всех задач недели.** Если оценок нет — считаем по количеству.
+**Efficiency = time of completed tasks / time of all tasks of the week.** Without estimates, we count tasks.
 
-## Частые вопросы
+## FAQ
 
-**Можно ли добавить задачу после фиксации?** Да, но в план недели она уже не попадёт.
+**Can I add a task after the week is locked?** Yes, but it won’t be part of the week’s plan.
 """),
-    dict(title='Заявки на расходы: от просьбы до оплаты', category='processes', required=True, author='nurlan',
-         summary='Кто одобряет, когда разбираем заявки и как отмечается оплата.',
-         content="""Любая покупка за счёт компании начинается с заявки в разделе **«Расходы»**.
+    dict(title='Expense requests: from ask to payment', category='processes', required=True, author='nurlan',
+         summary='Who approves, when requests are reviewed and how payment is recorded.',
+         content="""Every company-paid purchase starts with a request in **Expenses**.
 
-## Шаги
+## Steps
 
-1. Нажмите **«Новая заявка»**, укажите сумму, категорию и зачем это нужно.
-2. Заявки разбираются раз в неделю. Решение — «Одобрено», «Отклонено» или «Нужны уточнения».
-3. Одобренную заявку бухгалтерия оплачивает и отмечает фактическую сумму.
+1. Click **“New request”** and enter the amount, the category and why it is needed.
+2. Requests are reviewed once a week. The decision is “Approved”, “Rejected” or “Needs info”.
+3. Accounting pays the approved request and records the actual amount.
 
-**Важно:** фактическая сумма может отличаться от запрошенной — это нормально, она хранится отдельно.
+**Note:** the actual amount may differ from the requested one — that’s fine, it is stored separately.
 """),
-    dict(title='Первая неделя нового сотрудника', category='hr', required=False, author='saule',
-         summary='Что сделать в первые пять дней: доступы, знакомство, первые задачи.',
-         content="""## День 1
-- Получить доступы к почте, TaskHub и CRM.
-- Познакомиться с наставником.
+    dict(title='A new hire’s first week', category='hr', required=False, author='saule',
+         summary='What to do in the first five days: access, introductions, first tasks.',
+         content="""## Day 1
+- Get access to email, TaskHub and the CRM.
+- Meet your mentor.
 
-## Дни 2–3
-- Прочитать обязательные инструкции в разделе «Инструкции».
-- Взять 2–3 небольшие задачи в спринте своего отдела.
+## Days 2–3
+- Read the required guides in **Guides**.
+- Take 2–3 small tasks in your team’s sprint.
 
-## Дни 4–5
-- Первая встреча с руководителем: что понятно, что нет.
+## Days 4–5
+- First one-on-one with your manager: what is clear and what is not.
 """),
-    dict(title='Стандарт ответа клиенту в мессенджере', category='sales', required=False, author='erlan',
-         summary='Черновик на проверке у руководителя продаж.', status='review',
-         content="""## Сроки
-Ответ в рабочее время — **не позже 15 минут**.
+    dict(title='Messenger reply standard', category='sales', required=False, author='erlan',
+         summary='Draft under review by the Head of Sales.', status='review',
+         content="""## Response time
+During working hours — **within 15 minutes**.
 
-## Структура ответа
-1. Поздороваться по имени.
-2. Ответить на вопрос.
-3. Предложить следующий шаг: созвон, расчёт, встречу.
+## Reply structure
+1. Greet the client by name.
+2. Answer the question.
+3. Offer the next step: a call, a quote or a meeting.
 """),
 ]
 
@@ -329,7 +344,7 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
             d_from = start + dt.timedelta(weeks=n + 1)
             d_to = d_from + dt.timedelta(days=6)
             tekushiy = d_from == m0
-            sp = dict(id=new(), project_id=pr['id'], name=f'Спринт {n + 1}', date_from=d_from.isoformat(),
+            sp = dict(id=new(), project_id=pr['id'], name=f'Sprint {n + 1}', date_from=d_from.isoformat(),
                       date_to=d_to.isoformat(), status='active' if tekushiy else 'closed', created_by=ids[owner],
                       created_at=ts(d_from, 9, 30), is_fixed=True, fixed_at=ts(d_from, 11), fixed_task_ids=[])
             out['sprints'].append(sp)
@@ -342,7 +357,7 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
             col_done = next(c for c in cols if c['role'] == 'done')
             srednie = [c for c in cols if c['role'] is None]
             dni = {c['name']: i for i, c in enumerate(srednie) if c['name'] in
-                   ('Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота')}
+                   DNI}
 
             nazvaniya = list(pr['weekly']) + rnd.sample(pr['tasks'], k=min(len(pr['tasks']), rnd.randint(*pr['per_week'])))
             nazvaniya = nazvaniya[:pr['per_week'][1]]
@@ -374,7 +389,7 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
                     t['updated_at'] = t['closed_at']
                     t['column_id'] = col_done['id']
                 elif t['workflow_status'] in ('in_progress', 'review'):
-                    t['column_id'] = (next((c['id'] for c in srednie if c['name'] == 'В работе'), None)
+                    t['column_id'] = (next((c['id'] for c in srednie if c['name'] == V_RABOTE), None)
                                       or srednie[min(len(srednie) - 1, 1)]['id'])
                     if dni:
                         t['column_id'] = srednie[dni[list(dni)[min(deadline.weekday(), 5)]]]['id']
@@ -417,12 +432,7 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
                 t['backlog_order'] = poryadok
 
     # задачи, лично поставленные демо-пользователю: чтобы «Мои задачи» были заполнены во всех колонках
-    for title, sdvig, proekt in [('Согласовать план отделов на месяц', -2, 'sales'),
-                                 ('Проверить отчёт по эффективности команд', 0, 'dev'),
-                                 ('Встреча с учредителем: итоги недели', 1, 'finance'),
-                                 ('Утвердить бюджет маркетинга', 3, 'marketing'),
-                                 ('Одобрить кандидата на позицию куратора', 6, 'hr'),
-                                 ('Квартальный разбор качества', 15, 'ops')]:
+    for title, sdvig, proekt in LICHNYE:
         pr = next(p for p in PROEKTY if p['key'] == proekt)
         zadacha(pr, title=title, assignee_id=ids['demo'], creator_id=ids[pr['members'][0]], priority='high',
                 deadline=(today + dt.timedelta(days=sdvig)).isoformat(), backlog_order=0,
@@ -518,8 +528,7 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
         sozdana = now - dt.timedelta(days=dney, hours=rnd.randint(1, 6))
         z = dict(id=new(), requester_id=ids[kto], title=title, category=cat, amount=summa, currency='KZT',
                  department=po_klyuchu[kto]['dept'], status=status,
-                 justification=rnd.choice(['Нужно для текущих задач отдела.', 'Старое вышло из строя.',
-                                           'Без этого не запустим кампанию в срок.', 'Плановая покупка.']),
+                 justification=rnd.choice(OBOSNOVANIYA),
                  needed_by=(sozdana.date() + dt.timedelta(days=rnd.randint(5, 14))).isoformat(),
                  attachments=[], created_at=sozdana.isoformat(), updated_at=sozdana.isoformat())
         out['expense_requests'].append(z)
@@ -542,14 +551,14 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
         if oplata:
             oplacheno = sozdana + dt.timedelta(days=min(dney, 4), hours=5)
             z.update(paid_at=oplacheno.isoformat(), paid_by=ids['nurlan'], paid_amount=oplata,
-                     paid_note='Оплачено со счёта компании' if oplata == summa else 'Нашли дешевле у другого подрядчика')
+                     paid_note='Paid from the company account' if oplata == summa else 'Found a cheaper supplier')
             out['expense_request_activities'].append(dict(id=new(), request_id=z['id'], actor_id=ids['nurlan'],
                                                           type='paid', old_value=None, new_value=str(oplata),
                                                           created_at=oplacheno.isoformat()))
         if status == 'needs_info':
             out['expense_request_comments'].append(dict(
                 id=new(), request_id=z['id'], author_id=ids[kto], attachments=[],
-                text='Добавил три варианта в описание, самый дешёвый — второй.',
+                text='Added three options to the description, the second one is the cheapest.',
                 created_at=(sozdana + dt.timedelta(days=1)).isoformat()))
         if status == 'pending':
             uved(ids['demo'], 'expense_submitted', actor=ids[kto], zayavka=z['id'], data={'title': title},
@@ -577,7 +586,7 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
     for _ in range(5):
         otmetka = otmetka.replace(day=1) - dt.timedelta(days=1)
     out['student_baseline'].append(dict(id=new(), as_of=otmetka.isoformat(), total=520,
-                                        note='Отметка по выгрузке платформы'))
+                                        note='Baseline from the learning platform export'))
     istoriya, sdelka = 500001, 90001
     den = otmetka + dt.timedelta(days=1)
     while den <= today:
@@ -595,9 +604,9 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
                     happened_at=dt.datetime(den.year, den.month, den.day, rnd.randint(4, 12), rnd.randint(0, 59),
                                             tzinfo=dt.timezone.utc).isoformat(),
                     students=0 if propusk else len(imena), student_names=imena,
-                    deal_title=f'{rebyonok[0]}, {rnd.randint(1, 11)} класс' if len(imena) == 1 else f'Семья {fam[2]}',
+                    deal_title=f'{rebyonok[0]}, grade {rnd.randint(1, 11)}' if len(imena) == 1 else f'{fam[2]} family',
                     counted=not propusk, origin_stage='C4:NEW' if propusk else 'WON',
-                    skip_reason='сделка пришла из «Неразобранное», а не из «Полная оплата есть»' if propusk else None))
+                    skip_reason='the deal came from “Unsorted”, not from “Paid in full”' if propusk else None))
                 istoriya += 1
                 sdelka += 1
             for _ in range(rnd.randint(3, 6)):
@@ -609,9 +618,9 @@ def build(ids: dict[str, str], today: dt.date) -> dict[str, list[dict]]:
                     happened_at=dt.datetime(den.year, den.month, den.day, rnd.randint(5, 13), rnd.randint(0, 59),
                                             tzinfo=dt.timezone.utc).isoformat(),
                     students=0 if propusk else 1, student_names=[f'{fam[rebyonok[1]]} {rebyonok[0]}'],
-                    deal_title=f'{rebyonok[0]}, {rnd.randint(1, 11)} класс', counted=not propusk, origin_stage='C10:NEW',
-                    skip_reason=rnd.choice(['отчисление по этой сделке уже отмечали раньше',
-                                            'пришёл из «Архив должников» — там ученик уже не числится'])
+                    deal_title=f'{rebyonok[0]}, grade {rnd.randint(1, 11)}', counted=not propusk, origin_stage='C10:NEW',
+                    skip_reason=rnd.choice(['a withdrawal for this deal was already recorded',
+                                            'came from “Debtors archive” — the student is no longer enrolled there'])
                     if propusk else None))
                 istoriya += 1
         den += dt.timedelta(days=1)

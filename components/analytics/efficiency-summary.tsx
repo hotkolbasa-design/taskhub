@@ -3,6 +3,7 @@
 import { useMemo, useRef, useEffect } from 'react'
 import { efficiencyColor } from '@/lib/utils/efficiency'
 import { mondayOf, addDays, todayYmd, fmtDay, fmtWeekRange } from '@/lib/utils/week'
+import { t } from '@/lib/i18n'
 
 // Универсальная строка сводки — может быть проектом или сотрудником.
 export type SummaryRow = {
@@ -63,7 +64,7 @@ function RowAvatar({ row, started }: { row: SummaryRow; started: boolean }) {
           : row.avatarText}
       </div>
       <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full"
-        title={started ? 'Начал спринт на этой неделе' : row.ongoingFrom ? 'Спринт с прошлой недели' : 'Спринт не начат'}
+        title={started ? t('Начал спринт на этой неделе') : row.ongoingFrom ? t('Спринт с прошлой недели') : t('Спринт не начат')}
         style={{ background: started ? 'var(--green)' : row.ongoingFrom ? 'var(--yellow)' : 'var(--text2)', border: '2px solid var(--surface)' }} />
     </div>
   )
@@ -121,13 +122,13 @@ export default function EfficiencySummary({
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
           style={{ background: 'color-mix(in srgb, var(--green) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--green) 30%, transparent)' }}>
           <span className="w-2 h-2 rounded-full" style={{ background: 'var(--green)' }} />
-          <span style={{ color: 'var(--text2)' }}>Начали спринт:</span>
+          <span style={{ color: 'var(--text2)' }}>{t('Начали спринт:')}</span>
           <span className="font-semibold font-mono" style={{ color: 'var(--green)' }}>{startedCount}/{rows.length}</span>
         </div>
         {teamAvg != null && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-            <span style={{ color: 'var(--text2)' }}>Средняя:</span>
+            <span style={{ color: 'var(--text2)' }}>{t('Средняя:')}</span>
             <span className="font-semibold font-mono" style={{ color: efficiencyColor(teamAvg) }}>{teamAvg}%</span>
           </div>
         )}
@@ -142,20 +143,20 @@ export default function EfficiencySummary({
             <div className="flex items-center px-4 py-2.5 sticky left-0 z-10"
               style={{ width: NAME_W, flexShrink: 0, background: 'var(--surface2)', borderRight: '1px solid var(--border)' }}>
               <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{entityLabel}</span>
-              <span className="text-xs ml-2" style={{ color: 'var(--text2)', opacity: 0.6 }}>· тренд</span>
+              <span className="text-xs ml-2" style={{ color: 'var(--text2)', opacity: 0.6 }}>{t('· тренд')}</span>
             </div>
             {pastWeeks.length === 0 ? (
-              <div className="flex items-center px-4" style={{ flex: 1, minWidth: 160, color: 'var(--text2)', fontSize: 12 }}>Нет закрытых недель</div>
+              <div className="flex items-center px-4" style={{ flex: 1, minWidth: 160, color: 'var(--text2)', fontSize: 12 }}>{t('Нет закрытых недель')}</div>
             ) : pastWeeks.map((w, i) => (
               <div key={w} className="flex flex-col items-center justify-center py-2"
                 style={{ width: WEEK_W, flexShrink: 0 }} title={`${fmtDay(w)} — ${fmtDay(addDays(w, 6))}`}>
                 <span className="font-mono" style={{ fontSize: 11, color: 'var(--text2)' }}>{fmtDay(w)}</span>
-                {i === 0 && <span style={{ fontSize: 9, color: 'var(--text2)', opacity: 0.6 }}>↤ ранее</span>}
+                {i === 0 && <span style={{ fontSize: 9, color: 'var(--text2)', opacity: 0.6 }}>{t('↤ ранее')}</span>}
               </div>
             ))}
             <div className="flex flex-col items-center justify-center py-2 sticky right-0 z-10"
               style={{ width: CUR_W, flexShrink: 0, background: 'color-mix(in srgb, var(--accent) 16%, var(--surface2))', borderLeft: '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' }}>
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>Текущая</span>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>{t('Текущая')}</span>
               <span className="font-mono" style={{ fontSize: 10, color: 'var(--text2)' }}>{fmtWeekRange(currentMon)}</span>
             </div>
           </div>
@@ -203,12 +204,12 @@ export default function EfficiencySummary({
                 ) : row.ongoingFrom ? (
                   <span className="text-xs px-2 py-1 rounded-md whitespace-nowrap"
                     style={{ color: 'var(--yellow)', background: 'color-mix(in srgb, var(--yellow) 12%, transparent)' }}>
-                    идёт с {fmtDay(row.ongoingFrom)}
+                    {t('идёт с {d}', { d: fmtDay(row.ongoingFrom) })}
                   </span>
                 ) : (
                   <span className="text-xs px-2 py-1 rounded-md whitespace-nowrap"
                     style={{ color: 'var(--text2)', background: 'var(--surface2)' }}>
-                    не начат
+                    {t('не начат')}
                   </span>
                 )}
               </div>
@@ -217,7 +218,7 @@ export default function EfficiencySummary({
 
           {rows.length === 0 && (
             <div className="flex items-center justify-center py-16">
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>Нет данных для отображения</p>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('Нет данных для отображения')}</p>
             </div>
           )}
         </div>

@@ -6,22 +6,16 @@ import {
   applyMetricEdit, convDrift, monthFact, planToDate, metricStatus, forecastMonth, DEFAULT_PLAN,
 } from '@/lib/crm/plan'
 import type { DashData, MonthPlan, PlanMetricKey, PlanMetrics, MetricStatus, HunterStat, WeekPlanRow } from '@/lib/crm/types'
+import { t, tc, plural, INTL_LOCALE, LOCALE } from '@/lib/i18n'
 
 const TODAY = new Date().toISOString().slice(0, 10)
-const NF = new Intl.NumberFormat('ru-RU')
+const NF = new Intl.NumberFormat(INTL_LOCALE)
+const DEC = LOCALE === 'en' ? '.' : ','
 
 const n = (v: number) => NF.format(Math.round(v))
 
-function plural(v: number, one: string, few: string, many: string): string {
-  const abs = Math.abs(Math.round(v)) % 100
-  const last = abs % 10
-  if (abs > 10 && abs < 20) return many
-  if (last > 1 && last < 5) return few
-  if (last === 1) return one
-  return many
-}
-const thousands = (v: number) => NF.format(Math.round(v / 1000)) + 'к'
-const pct = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',') + ' %'
+const thousands = (v: number) => NF.format(Math.round(v / 1000)) + tc('crm', 'к')
+const pct = (v: number) => String(Math.round(v * 10) / 10).replace('.', DEC) + ' %'
 
 function fmt(key: PlanMetricKey, v: number): string {
   if (key === 'revenue') return thousands(v)
@@ -77,7 +71,7 @@ function samePlan(a: MonthPlan, b: MonthPlan): boolean {
 function StatusMark({ status }: { status: MetricStatus }) {
   if (!status) return null
   const color = status === 'ok' ? 'var(--green)' : status === 'near' ? 'var(--yellow)' : 'var(--red)'
-  const title = status === 'ok' ? 'план на сегодня выполнен' : status === 'near' ? 'почти по плану' : 'отстаём от плана на сегодня'
+  const title = status === 'ok' ? t('план на сегодня выполнен') : status === 'near' ? t('почти по плану') : t('отстаём от плана на сегодня')
   return (
     <span title={title} aria-label={title} className="inline-flex items-center justify-center shrink-0"
       style={{ width: 14, height: 14, borderRadius: 7, background: color, color: '#fff', fontSize: 9, lineHeight: '14px', fontWeight: 700 }}>
@@ -114,7 +108,7 @@ function MetricTile({ metric, plan, fact, due, showFact, editable, onEdit }: {
   return (
     <div className="px-3 py-2.5 flex flex-col" style={{ background: 'var(--surface2)' }}>
       {/* подпись в две строки не должна опускать цифру: высота подписи фиксирована */}
-      <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{metric.name}</div>
+      <div className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text2)', opacity: 0.75, minHeight: 30 }}>{tc('crm', metric.name)}</div>
 
       <div className="mt-auto pt-0.5">
         {editing ? (
@@ -132,7 +126,7 @@ function MetricTile({ metric, plan, fact, due, showFact, editable, onEdit }: {
         ) : (
           <button
             onClick={() => { if (editable) { setRaw(String(Math.round(plan))); setEditing(true) } }}
-            title={editable ? 'нажмите, чтобы поставить своё число' : undefined}
+            title={editable ? t('нажмите, чтобы поставить своё число') : undefined}
             className="text-lg font-semibold text-left w-full"
             style={{
               background: 'none', border: 'none', padding: 0,
@@ -150,7 +144,7 @@ function MetricTile({ metric, plan, fact, due, showFact, editable, onEdit }: {
         <div className="flex items-center gap-1.5 mt-1">
           <StatusMark status={status} />
           <span className="text-[11px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-            факт {fmt(metric.key, fact)}
+            {t('факт {v}', { v: fmt(metric.key, fact) })}
           </span>
         </div>
       )}
@@ -188,7 +182,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
         <div className="flex items-center gap-1.5 mt-0.5">
           <StatusMark status={metricStatus(fact, dueValue)} />
           <span className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-            {n(fact)} из {n(dueValue)}
+            {t('{a} из {b}', { a: n(fact), b: n(dueValue) })}
           </span>
         </div>
       )}
@@ -197,17 +191,16 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
 
   return (
     <div>
-      <SectionLabel n="03" label="Хантеры" />
+      <SectionLabel n="03" label={tc('crm', 'Хантеры')} />
 
       <p className="text-xs mb-4" style={{ color: 'var(--text2)' }}>
-        Сверху план, под ним факт со значком — как в таблицах выше. План месяца делится по долям ставки,
-        а конверсия и доходимость от доли не зависят: это качество работы с теми заявками, что человеку достались.
+        {tc('crm', 'Сверху план, под ним факт со значком — как в таблицах выше. План месяца делится по долям ставки, а конверсия и доходимость от доли не зависят: это качество работы с теми заявками, что человеку достались.')}
       </p>
 
       <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>С начала месяца</h3>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('С начала месяца')}</h3>
         <span className="text-[11px]" style={{ color: 'var(--text2)' }}>
-          «из N» — сколько должно быть к сегодняшнему дню, «месяц N» — за весь месяц
+          {t('«из N» — сколько должно быть к сегодняшнему дню, «месяц N» — за весь месяц')}
         </span>
       </div>
 
@@ -217,7 +210,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
             <tr>
               {['Хантер', 'Доля', 'Заявки', 'Назначено', 'Конверсия', 'Дошли до собеса', 'Должен был'].map((h, i) => (
                 <th key={h} className={`px-3 py-2.5 text-[10px] uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-right'}`}
-                  style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                  style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>{tc('crm', h)}</th>
               ))}
             </tr>
           </thead>
@@ -244,7 +237,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
                       fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums',
                       color: conv >= norm ? 'var(--green)' : conv >= norm * 0.7 ? 'var(--text)' : 'var(--red)',
                     }}>{pct(conv)}</span>
-                    <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>норма {pct(norm)}</div>
+                    <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{t('норма {v}', { v: pct(norm) })}</div>
                   </td>
                   <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
                     <span className="text-sm font-semibold" style={{
@@ -253,7 +246,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
                         : reach >= heldNorm ? 'var(--green)' : reach >= heldNorm * 0.8 ? 'var(--text)' : 'var(--red)',
                     }}>{h.bookedDeals > 0 ? pct(reach) : '—'}</span>
                     <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-                      {h.bookedDeals > 0 ? `${n(h.heldDeals)} из ${n(h.bookedDeals)}` : 'нет назначений'}
+                      {h.bookedDeals > 0 ? t('{a} из {b}', { a: n(h.heldDeals), b: n(h.bookedDeals) }) : t('нет назначений')}
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -266,7 +259,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
               )
             })}
             <tr>
-              <td className="px-3 py-2.5 text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)' }}>Итого</td>
+              <td className="px-3 py-2.5 text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)' }}>{tc('crm', 'Итого')}</td>
               <td className="px-3 py-2.5 text-right text-xs" style={{ background: 'var(--surface2)', color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>100 %</td>
               <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{n(totalLeads)}</td>
               <td className="px-3 py-2.5 text-right text-sm font-semibold" style={{ background: 'var(--surface2)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{n(totalApp)}</td>
@@ -285,9 +278,9 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
       </div>
 
       <div className="flex items-baseline justify-between gap-3 mb-2 mt-5 flex-wrap">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>По неделям</h3>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('По неделям')}</h3>
         <span className="text-[11px]" style={{ color: 'var(--text2)' }}>
-          назначенные собеседования · у будущих недель стоит только план, факт появится с её началом
+          {t('назначенные собеседования · у будущих недель стоит только план, факт появится с её началом')}
         </span>
       </div>
 
@@ -297,7 +290,7 @@ function HuntersSection({ hunters, weeks, monthPlan, due, norm, heldNorm, future
             <tr>
               <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wider"
                 style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
-                Хантер
+                {tc('crm', 'Хантер')}
               </th>
               {weeks.map(w => (
                 <th key={w.key} className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider"
@@ -413,7 +406,7 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
   // Показываем два знака: после правки заявок конверсия приходит как 24,074074074074076.
   // Округляем только на экране — в модели точное значение, иначе соседние ступени сдвинутся.
   const numField = (value: number, apply: (v: number) => void) => ({
-    value: String(Math.round(value * 100) / 100).replace('.', ','),
+    value: String(Math.round(value * 100) / 100).replace('.', DEC),
     onChange: (raw: string) => {
       const v = parseFloat(raw.replace(',', '.'))
       if (Number.isFinite(v) && v > 0) apply(v)
@@ -447,15 +440,15 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
   return (
     <div>
       {/* ── 01 · План на месяц ─────────────────────────────────────────────── */}
-      <SectionLabel n="01" label="План на месяц" />
+      <SectionLabel n="01" label={t('План на месяц')} />
 
       <div className="rounded-2xl p-5 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
           <div className="text-xs leading-relaxed max-w-2xl" style={{ color: 'var(--text2)' }}>
-            Цель по сделкам разворачивается вверх по воронке нормативами конверсии.
+            {t('Цель по сделкам разворачивается вверх по воронке нормативами конверсии.')}
             {future
-              ? ' Месяц ещё не начался — план можно выставить заранее, факт начнёт наполняться с первого числа.'
-              : ` ${closedCount} из ${rows.length} недель закрыто — их факт уже учтён в разбивке ниже.`}
+              ? t(' Месяц ещё не начался — план можно выставить заранее, факт начнёт наполняться с первого числа.')
+              : t(' {closed} из {total} недель закрыто — их факт уже учтён в разбивке ниже.', { closed: closedCount, total: rows.length })}
           </div>
           {!frozen && (
             <button onClick={save} disabled={!dirty || saving}
@@ -469,26 +462,26 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
               }}
             >
               {saving && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
-              {saving ? 'Сохраняем…' : saved ? 'План сохранён' : 'Сохранить план'}
+              {saving ? t('Сохраняем…') : saved ? t('План сохранён') : t('Сохранить план')}
             </button>
           )}
-          {frozen && <span className="px-3 py-1.5 rounded-lg text-xs" style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>Месяц заморожен — только просмотр</span>}
+          {frozen && <span className="px-3 py-1.5 rounded-lg text-xs" style={{ background: 'var(--surface2)', color: 'var(--text2)' }}>{t('Месяц заморожен — только просмотр')}</span>}
         </div>
 
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-          <Field label="Сделки, цель" hint={`≈ ${Math.round(draft.target * 1.15)} учеников · 1,15 на сделку`} disabled={frozen}
+          <Field label={t('Сделки, цель')} hint={t('≈ {n} учеников · 1,15 на сделку', { n: Math.round(draft.target * 1.15) })} disabled={frozen}
             {...numField(draft.target, v => patchModel({ target: v }))} />
-          <Field label="Заявка → назначено" hint="норматив 25 %, цель 30 %" disabled={frozen}
+          <Field label={tc('crm', 'Заявка → назначено')} hint={t('норматив 25 %, цель 30 %')} disabled={frozen}
             {...numField(draft.conv.lead2app, v => patchModel({ conv: { ...draft.conv, lead2app: v } }))} />
-          <Field label="Назначено → проведено" hint="норматив 75 %" disabled={frozen}
+          <Field label={t('Назначено → проведено')} hint={t('норматив 75 %')} disabled={frozen}
             {...numField(draft.conv.app2held, v => patchModel({ conv: { ...draft.conv, app2held: v } }))} />
-          <Field label="Проведено → предоплата" hint="норматив 60–65 %" disabled={frozen}
+          <Field label={t('Проведено → предоплата')} hint={t('норматив 60–65 %')} disabled={frozen}
             {...numField(draft.conv.held2pre, v => patchModel({ conv: { ...draft.conv, held2pre: v } }))} />
-          <Field label="Предоплата → оплата" hint="норматив 80 %" disabled={frozen}
+          <Field label={t('Предоплата → оплата')} hint={t('норматив 80 %')} disabled={frozen}
             {...numField(draft.conv.pre2paid, v => patchModel({ conv: { ...draft.conv, pre2paid: v } }))} />
-          <Field label="Средний чек, ₸" hint="из факта прошлого месяца" disabled={frozen}
+          <Field label={t('Средний чек, ₸')} hint={t('из факта прошлого месяца')} disabled={frozen}
             {...numField(draft.check, v => patchModel({ check: v }))} />
-          <Field label="CPL, потолок $" hint="цена заявки в CRM" disabled={frozen}
+          <Field label={t('CPL, потолок $')} hint={tc('crm', 'цена заявки в CRM')} disabled={frozen}
             {...numField(draft.cpl, v => patchModel({ cpl: v }))} />
         </div>
 
@@ -508,22 +501,22 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
         </div>
 
         <div className="text-xs mt-3" style={{ color: 'var(--text2)' }}>
-          Сквозная конверсия заявки → оплата — <b style={{ color: 'var(--text)' }}>{pct(throughput(draft))}</b>.
-          {' '}Цена клиента при этом плане — <b style={{ color: 'var(--text)' }}>${(metrics.budget / metrics.paid).toFixed(1).replace('.', ',')}</b>,
-          {' '}выручка <b style={{ color: 'var(--text)' }}>{n(metrics.revenue)} ₸</b>.
+          {tc('crm', 'Сквозная конверсия заявки → оплата —')} <b style={{ color: 'var(--text)' }}>{pct(throughput(draft))}</b>.
+          {' '}{t('Цена клиента при этом плане —')} <b style={{ color: 'var(--text)' }}>${(metrics.budget / metrics.paid).toFixed(1).replace('.', DEC)}</b>,
+          {' '}{tc('crm', 'выручка')} <b style={{ color: 'var(--text)' }}>{n(metrics.revenue)} ₸</b>.
           {!future && fact.leads > 0 && (
-            <> При сегодняшнем темпе месяц закончится на <b style={{ color: forecast.paid >= metrics.paid ? 'var(--green)' : 'var(--red)' }}>{n(forecast.paid)} {plural(forecast.paid, 'сделке', 'сделках', 'сделках')}</b> против плана {n(metrics.paid)}.</>
+            <> {t('При сегодняшнем темпе месяц закончится на')} <b style={{ color: forecast.paid >= metrics.paid ? 'var(--green)' : 'var(--red)' }}>{n(forecast.paid)} {plural(Math.round(forecast.paid), 'сделке', 'сделках', 'сделках', 'crm')}</b> {t('против плана {n}.', { n: n(metrics.paid) })}</>
           )}
         </div>
 
         {drift.length > 0 && !frozen && (
           <div className="flex items-start gap-2 mt-3 flex-wrap text-xs" style={{ color: 'var(--text2)' }}>
             <span>
-              Ручная правка увела конверсии от норматива:{' '}
+              {t('Ручная правка увела конверсии от норматива:')}{' '}
               {drift.map((d, i) => (
                 <span key={d.key}>
                   {i > 0 && ', '}
-                  <b style={{ color: 'var(--yellow)' }}>{d.label} {pct(d.value)}</b> вместо {pct(d.norm)}
+                  <b style={{ color: 'var(--yellow)' }}>{tc('crm', d.label)} {pct(d.value)}</b> {t('вместо {v}', { v: pct(d.norm) })}
                 </span>
               ))}.
             </span>
@@ -531,29 +524,29 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
               className="px-2 py-0.5 rounded text-[11px]"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', cursor: 'pointer' }}
             >
-              Вернуть нормативы
+              {t('Вернуть нормативы')}
             </button>
           </div>
         )}
       </div>
 
       {/* ── 02 · Разбивка по неделям ───────────────────────────────────────── */}
-      <SectionLabel n="02" label="Разбивка по неделям" />
+      <SectionLabel n="02" label={t('Разбивка по неделям')} />
 
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <Seg
           value={draft.mode}
           onChange={id => patch({ mode: id as MonthPlan['mode'] })}
           options={[
-            { id: 'even', label: 'Ровно по дням' },
-            { id: 'catch', label: 'Догонять остатком' },
-            { id: 'manual', label: 'Ручные веса' },
+            { id: 'even', label: t('Ровно по дням') },
+            { id: 'catch', label: t('Догонять остатком') },
+            { id: 'manual', label: t('Ручные веса') },
           ]}
         />
         <span className="text-xs" style={{ color: 'var(--text2)' }}>
-          {draft.mode === 'even' ? 'план делится пропорционально дням, факт на него не влияет'
-            : draft.mode === 'catch' ? 'остаток месяца ложится на открытые недели'
-            : 'вес недели меняется кликом по множителю в шапке'}
+          {draft.mode === 'even' ? t('план делится пропорционально дням, факт на него не влияет')
+            : draft.mode === 'catch' ? t('остаток месяца ложится на открытые недели')
+            : t('вес недели меняется кликом по множителю в шапке')}
         </span>
       </div>
 
@@ -562,14 +555,14 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
           <thead>
             <tr>
               <th className="text-left px-3 py-2.5 text-[10px] uppercase tracking-wider sticky left-0"
-                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', minWidth: 190, zIndex: 1 }}>Метрика</th>
+                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', minWidth: 190, zIndex: 1 }}>{tc('crm', 'Метрика')}</th>
               {rows.map(r => (
                 <th key={r.key} className="px-3 py-2.5 text-right"
                   style={{ background: r.current ? 'color-mix(in srgb, var(--accent) 10%, var(--surface2))' : 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
                   <div className="flex flex-col items-end gap-0.5">
                     <span className="text-xs" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{r.label}</span>
                     <span className="text-[10px]" style={{ color: 'var(--text2)' }}>
-                      {r.days} дн.{r.closed ? ' · закрыта' : r.current ? ' · идёт' : ''}
+                      {t('{n} дн.', { n: r.days })}{r.closed ? t(' · закрыта') : r.current ? t(' · идёт') : ''}
                     </span>
                     {/* множитель виден и у закрытой недели: он объясняет её план */}
                     {draft.mode === 'manual' && !frozen && (
@@ -586,21 +579,21 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
                           border: '1px solid ' + (r.weight !== 1 ? 'var(--accent)' : 'var(--border)'),
                           cursor: 'pointer',
                         }}
-                      >×{String(r.weight).replace('.', ',')}</button>
+                      >×{String(r.weight).replace('.', DEC)}</button>
                     )}
                   </div>
                 </th>
               ))}
               <th className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wider"
-                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>Месяц</th>
+                style={{ color: 'var(--text2)', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>{tc('crm', 'Месяц')}</th>
             </tr>
           </thead>
           <tbody>
             {PLAN_METRICS.map(m => (
               <tr key={m.key}>
                 <td className="px-3 py-2.5 sticky left-0" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', zIndex: 1 }}>
-                  <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{m.name}</div>
-                  <div className="text-[10px]" style={{ color: 'var(--text2)' }}>{m.sub}</div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{tc('crm', m.name)}</div>
+                  <div className="text-[10px]" style={{ color: 'var(--text2)' }}>{tc('crm', m.sub)}</div>
                 </td>
                 {rows.map(r => {
                   const planned = r.plan[m.key]
@@ -633,7 +626,7 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
 
                       {!r.closed && shifted && (
                         <div className="text-[10px] mt-0.5" style={{ color: 'var(--text2)', opacity: 0.8, fontFamily: 'var(--font-mono)' }}>
-                          {shift > 0 ? '+' : '−'}{fmt(m.key, Math.abs(shift))} к ровному
+                          {shift > 0 ? '+' : '−'}{fmt(m.key, Math.abs(shift))} {t('к ровному')}
                         </div>
                       )}
                     </td>
@@ -660,19 +653,18 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
 
       {closedCount > 0 && draft.mode !== 'even' && (
         gap > 0
-          ? <Alert tone="warn" title={`Отставание ${gap} ${gap === 1 ? 'сделка' : gap < 5 ? 'сделки' : 'сделок'}`}>
-              Разложено на {openWeeks} {openWeeks === 1 ? 'оставшуюся неделю' : 'оставшиеся недели'}: каждая получила примерно +{Math.ceil(gap / Math.max(1, openWeeks))} к ровному плану. Цель месяца не снижена.
+          ? <Alert tone="warn" title={t('Отставание {n} {deals}', { n: gap, deals: gap === 1 ? tc('crm', 'сделка') : gap < 5 ? tc('crm', 'сделки') : tc('crm', 'сделок') })}>
+              {t('Разложено на {n} {weeks}: каждая получила примерно +{x} к ровному плану. Цель месяца не снижена.', { n: openWeeks, weeks: openWeeks === 1 ? t('оставшуюся неделю') : t('оставшиеся недели'), x: Math.ceil(gap / Math.max(1, openWeeks)) })}
             </Alert>
           : gap < 0
-            ? <Alert tone="good" title={`Опережение на ${Math.abs(gap)}`}>
-                Оставшимся неделям план снижен на ту же величину — темп не завышается искусственно.
+            ? <Alert tone="good" title={t('Опережение на {n}', { n: Math.abs(gap) })}>
+                {t('Оставшимся неделям план снижен на ту же величину — темп не завышается искусственно.')}
               </Alert>
             : null
       )}
 
       <div className="text-xs mt-3 mb-6" style={{ color: 'var(--text2)' }}>
-        У закрытой недели план показан для сравнения — в итог месяца идёт её факт. Поэтому сумма чисел по строке
-        расходится с планом месяца ровно на величину недобора.
+        {t('У закрытой недели план показан для сравнения — в итог месяца идёт её факт. Поэтому сумма чисел по строке расходится с планом месяца ровно на величину недобора.')}
       </div>
 
       {/* ── 03 · Хантеры ───────────────────────────────────────────────────── */}
@@ -689,17 +681,17 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
       )}
 
       {/* ── 04 · Хватит ли мощности ────────────────────────────────────────── */}
-      <SectionLabel n="04" label="Хватит ли мощности" />
+      <SectionLabel n="04" label={t('Хватит ли мощности')} />
 
       <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Field label="Ставок хантеров" hint="неполный день — долей" disabled={frozen}
+          <Field label={t('Ставок хантеров')} hint={t('неполный день — долей')} disabled={frozen}
             {...numField(draft.capacity.hunters, v => patch({ capacity: { ...draft.capacity, hunters: v } }))} />
-          <Field label="Потолок заявок на ставку" hint="в неделю, со звонком" disabled={frozen}
+          <Field label={tc('crm', 'Потолок заявок на ставку')} hint={t('в неделю, со звонком')} disabled={frozen}
             {...numField(draft.capacity.cap, v => patch({ capacity: { ...draft.capacity, cap: v } }))} />
-          <Field label="Слотов собеседований в день" hint="все проводящие вместе" disabled={frozen}
+          <Field label={t('Слотов собеседований в день')} hint={t('все проводящие вместе')} disabled={frozen}
             {...numField(draft.capacity.slots, v => patch({ capacity: { ...draft.capacity, slots: v } }))} />
-          <Field label="Доля заявок со звонком, %" hint="остальные — без телефона" disabled={frozen}
+          <Field label={tc('crm', 'Доля заявок со звонком, %')} hint={t('остальные — без телефона')} disabled={frozen}
             {...numField(draft.capacity.callable, v => patch({ capacity: { ...draft.capacity, callable: v } }))} />
         </div>
 
@@ -707,17 +699,17 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
           {caps.map(c => (
             <div key={c.key} className="rounded-xl p-3.5" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
               <div className="text-xs" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-                {c.label}{c.closed ? ' · факт' : ''}
+                {c.label}{c.closed ? t(' · факт') : ''}
               </div>
               <div className="text-base font-semibold mt-1" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
-                {n(c.needLeads)} заявок
+                {tc('crm', '{n} заявок', { n: n(c.needLeads) })}
               </div>
               <div className="text-[10px]" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-                потолок {n(c.leadCap)} · загрузка {Math.round(c.leadLoad * 100)}&nbsp;%
+                {t('потолок {cap} · загрузка {load}', { cap: n(c.leadCap), load: Math.round(c.leadLoad * 100) })}&nbsp;%
               </div>
               <Bar load={c.leadLoad} />
               <div className="text-[10px] mt-2" style={{ color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-                {n(c.needSlots)} собеседований из {n(c.slotCap)} слотов · {Math.round(c.slotLoad * 100)}&nbsp;%
+                {t('{need} собеседований из {cap} слотов · {load}', { need: n(c.needSlots), cap: n(c.slotCap), load: Math.round(c.slotLoad * 100) })}&nbsp;%
               </div>
               <Bar load={c.slotLoad} />
             </div>
@@ -725,16 +717,14 @@ export function PlanView({ data, onSavePlan }: { data: DashData; onSavePlan: (pl
         </div>
 
         {overloaded.length > 0
-          ? <Alert tone="bad" title={`Не влезает: ${overloaded.join(', ')}`}>
-              Догоняющий план требует больше, чем отдел может обработать.
-              {overLeads.length > 0 && <> По заявкам: нужно {String(needHunters).replace('.', ',')} ставки хантеров вместо {String(draft.capacity.hunters).replace('.', ',')}.</>}
-              {overSlots.length > 0 && <> По собеседованиям: нужно {needSlots} слотов в день вместо {draft.capacity.slots} — узкое место здесь, а не в обзвоне.</>}
-              {' '}Остальные выходы: снять часть заявок со слабого канала, растянуть догон на следующий месяц
-              или признать, что цель месяца уезжает.
+          ? <Alert tone="bad" title={t('Не влезает: {weeks}', { weeks: overloaded.join(', ') })}>
+              {t('Догоняющий план требует больше, чем отдел может обработать.')}
+              {overLeads.length > 0 && <> {tc('crm', 'По заявкам: нужно {need} ставки хантеров вместо {have}.', { need: String(needHunters).replace('.', DEC), have: String(draft.capacity.hunters).replace('.', DEC) })}</>}
+              {overSlots.length > 0 && <> {t('По собеседованиям: нужно {need} слотов в день вместо {have} — узкое место здесь, а не в обзвоне.', { need: needSlots, have: draft.capacity.slots })}</>}
+              {' '}{tc('crm', 'Остальные выходы: снять часть заявок со слабого канала, растянуть догон на следующий месяц или признать, что цель месяца уезжает.')}
             </Alert>
-          : <Alert tone="good" title="Нагрузка в пределах потолка">
-              Пиковая неделя укладывается в {String(draft.capacity.hunters).replace('.', ',')} ставки хантеров
-              и сетку в {draft.capacity.slots} слотов. Заявки сверх этого лучше не покупать — они лягут мёртвым грузом.
+          : <Alert tone="good" title={t('Нагрузка в пределах потолка')}>
+              {tc('crm', 'Пиковая неделя укладывается в {fte} ставки хантеров и сетку в {slots} слотов. Заявки сверх этого лучше не покупать — они лягут мёртвым грузом.', { fte: String(draft.capacity.hunters).replace('.', DEC), slots: draft.capacity.slots })}
             </Alert>
         }
       </div>

@@ -9,6 +9,7 @@ import { getNotifications, markAsRead, markAllAsRead, type AppNotification } fro
 import { getPendingUsersCount } from '@/app/(dashboard)/admin/actions'
 import { canAccessCrm } from '@/lib/utils/crm-access'
 import ProfileModal from '@/components/profile-modal'
+import { t } from '@/lib/i18n'
 
 type Profile = {
   full_name: string | null
@@ -20,7 +21,7 @@ type Profile = {
 
 const adminItem = {
   href: '/admin',
-  label: 'Пользователи',
+  label: t('Пользователи'),
   icon: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
@@ -31,7 +32,7 @@ const adminItem = {
 
 const crmItem = {
   href: '/crm',
-  label: 'CRM',
+  label: t('CRM'),
   icon: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M2 11.5l3-4 2.5 3 3.5-5.5 2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -43,7 +44,7 @@ const crmItem = {
 // Открывается в новой вкладке: хантер держит подсказчик рядом с Битриксом во время звонка
 const podskazchikItem = {
   href: '/podskazchik',
-  label: 'Подсказчик',
+  label: t('Подсказчик'),
   newTab: true,
   icon: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -55,7 +56,7 @@ const podskazchikItem = {
 
 const predlozheniyaItem = {
   href: '/predlozheniya',
-  label: 'Предложения',
+  label: t('Предложения'),
   icon: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M3 13l1-3.5L10.5 3a1.4 1.4 0 012 2L6 11.5 3 13z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
@@ -67,7 +68,7 @@ const predlozheniyaItem = {
 const navItems = [
   {
     href: '/dashboard',
-    label: 'Дашборд',
+    label: t('Дашборд'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" />
@@ -79,7 +80,7 @@ const navItems = [
   },
   {
     href: '/my-tasks',
-    label: 'Мои задачи',
+    label: t('Мои задачи'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -89,7 +90,7 @@ const navItems = [
   },
   {
     href: '/projects',
-    label: 'Проекты',
+    label: t('Проекты'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M1.5 5.5h13M1.5 5.5V12a1.5 1.5 0 001.5 1.5h10A1.5 1.5 0 0014.5 12V5.5M1.5 5.5V4A1.5 1.5 0 013 2.5h2.586a1 1 0 01.707.293L7 3.5h6A1.5 1.5 0 0114.5 5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -98,7 +99,7 @@ const navItems = [
   },
   {
     href: '/analytics',
-    label: 'Аналитика',
+    label: t('Аналитика'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M2 11l3.5-4 3 3 4-5.5 2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -108,7 +109,7 @@ const navItems = [
   },
   {
     href: '/articles',
-    label: 'Инструкции',
+    label: t('Инструкции'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M3 2.5h6.5L13 6v7.5a1 1 0 01-1 1H3a1 1 0 01-1-1v-10a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
@@ -118,7 +119,7 @@ const navItems = [
   },
   {
     href: '/expenses',
-    label: 'Расходы',
+    label: t('Расходы'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="1.5" y="3.5" width="13" height="9" rx="2" stroke="currentColor" strokeWidth="1.5"/>
@@ -129,7 +130,7 @@ const navItems = [
   },
   {
     href: '/trash',
-    label: 'Корзина',
+    label: t('Корзина'),
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M2.5 4.5h11M6 4.5V3a1 1 0 011-1h2a1 1 0 011 1v1.5M4.5 4.5l.75 8.5A1.5 1.5 0 006.75 14.5h2.5a1.5 1.5 0 001.5-1.5l.75-8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -142,34 +143,34 @@ const navItems = [
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1) return 'только что'
-  if (m < 60) return `${m} мин`
+  if (m < 1) return t('только что')
+  if (m < 60) return t('{n} мин', { n: m })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h} ч`
-  return `${Math.floor(h / 24)} дн`
+  if (h < 24) return t('{n} ч', { n: h })
+  return t('{n} дн', { n: Math.floor(h / 24) })
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  task_assigned:    'Назначили на задачу',
-  assignee_changed: 'Изменён исполнитель',
-  creator_changed:  'Изменён постановщик',
-  status_changed:   'Изменён статус',
-  comment_added:    'Новый комментарий',
-  deadline_soon:    'Дедлайн завтра',
-  deadline_overdue: 'Дедлайн просрочен',
-  expense_submitted: 'Новая заявка на расход',
-  expense_decided:   'Решение по заявке',
-  expense_comment:   'Комментарий к заявке',
-  expense_paid:      'Заявка оплачена',
-  article_published: 'Новая инструкция',
-  article_updated:   'Инструкция обновилась',
+  task_assigned:    t('Назначили на задачу'),
+  assignee_changed: t('Изменён исполнитель'),
+  creator_changed:  t('Изменён постановщик'),
+  status_changed:   t('Изменён статус'),
+  comment_added:    t('Новый комментарий'),
+  deadline_soon:    t('Дедлайн завтра'),
+  deadline_overdue: t('Дедлайн просрочен'),
+  expense_submitted: t('Новая заявка на расход'),
+  expense_decided:   t('Решение по заявке'),
+  expense_comment:   t('Комментарий к заявке'),
+  expense_paid:      t('Заявка оплачена'),
+  article_published: t('Новая инструкция'),
+  article_updated:   t('Инструкция обновилась'),
 }
 
 export default function SidebarNav({ profile, demo = false }: { profile: Profile | null; demo?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  const displayName = profile?.full_name || profile?.login || 'Пользователь'
+  const displayName = profile?.full_name || profile?.login || t('Пользователь')
   const [signingOut, setSigningOut] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
@@ -289,9 +290,9 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
           </span>
           {/* демо-копию показывают посторонним: компания и данные вымышленные, бренд Globalos не нужен */}
           {demo && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md ml-1" title="Демо-версия: компания, люди и цифры вымышлены"
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md ml-1" title={t('Демо-версия: компания, люди и цифры вымышлены')}
               style={{ color: 'var(--accent)', background: 'var(--surface2)' }}>
-              демо
+              {t('демо')}
             </span>
           )}
         </div>
@@ -325,7 +326,7 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
                 <span
                   className="ml-auto flex items-center justify-center rounded-full text-white font-bold"
                   style={{ background: 'var(--accent)', fontSize: 10, minWidth: 18, height: 18, padding: '0 5px', lineHeight: '18px' }}
-                  title={`Ожидают подтверждения: ${pendingCount}`}
+                  title={t('Ожидают подтверждения: {n}', { n: pendingCount })}
                 >
                   {pendingCount > 99 ? '99+' : pendingCount}
                 </span>
@@ -361,7 +362,7 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
               </span>
             )}
           </span>
-          Уведомления
+          {t('Уведомления')}
           {unreadCount > 0 && (
             <span
               className="ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full"
@@ -409,7 +410,7 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
               <path d="M6 2.5H3A1.5 1.5 0 001.5 4v8A1.5 1.5 0 003 13.5h3M10.5 11l3-3-3-3M13.5 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
-          {signingOut ? 'Выход…' : 'Выйти'}
+          {signingOut ? t('Выход…') : t('Выйти')}
         </button>
       </div>
 
@@ -432,7 +433,7 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
         >
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
             <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              Уведомления {unreadCount > 0 && <span style={{ color: 'var(--text2)' }}>· {unreadCount}</span>}
+              {t('Уведомления')} {unreadCount > 0 && <span style={{ color: 'var(--text2)' }}>· {unreadCount}</span>}
             </span>
             {unreadCount > 0 && (
               <button
@@ -441,7 +442,7 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
                 className="text-xs disabled:opacity-50"
                 style={{ color: 'var(--accent)', cursor: 'pointer' }}
               >
-                {markingAll ? 'Отмечаю…' : 'Прочитать все'}
+                {markingAll ? t('Отмечаю…') : t('Прочитать все')}
               </button>
             )}
           </div>
@@ -449,7 +450,7 @@ export default function SidebarNav({ profile, demo = false }: { profile: Profile
           <div style={{ maxHeight: 420, overflowY: 'auto' }}>
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text2)' }}>
-                Нет уведомлений
+                {t('Нет уведомлений')}
               </div>
             ) : (
               notifications.map(n => (

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getAnalyticsProjects, getProjectAnalytics, type ProjectAnalytics } from '@/lib/queries/analytics'
 import AnalyticsView from '@/components/analytics/analytics-view'
+import { t } from '@/lib/i18n'
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()
@@ -38,7 +39,7 @@ export default async function AnalyticsPage() {
           <path d="M3 14l4-4 3 3 4-5 3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           <rect x="1.5" y="1.5" width="17" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
         </svg>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Аналитика эффективности</h1>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('Аналитика эффективности')}</h1>
       </div>
 
       <div className="flex-1 overflow-hidden">

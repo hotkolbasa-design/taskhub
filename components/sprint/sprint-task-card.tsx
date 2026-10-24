@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import type { SprintTask } from '@/types'
 import { minutesToDisplay } from '@/lib/utils/time'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, tc, INTL_LOCALE } from '@/lib/i18n'
 
 const AVATAR_COLORS = ['#7C5CF6', '#A78BFA', '#2DD4A0', '#F7C04F', '#F75C6E', '#60C0E8']
 
@@ -15,22 +16,22 @@ function getAvatarColor(str: string) {
 }
 
 const WORKFLOW_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  new:         { label: 'Новая',       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
-  in_progress: { label: 'В работе',    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
-  review:      { label: 'На проверке', color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
-  done:        { label: 'Выполнена',   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
-  cancelled:   { label: 'Отменена',    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
+  new:         { label: t('Новая'),       color: '#8892A4', bg: 'rgba(136,146,164,0.12)' },
+  in_progress: { label: t('В работе'),    color: '#7C5CF6', bg: 'rgba(124,92,246,0.12)'  },
+  review:      { label: t('На проверке'), color: '#F7C04F', bg: 'rgba(247,192,79,0.12)'  },
+  done:        { label: t('Выполнена'),   color: '#2DD4A0', bg: 'rgba(45,212,160,0.12)'  },
+  cancelled:   { label: t('Отменена'),    color: '#8892A4', bg: 'rgba(136,146,164,0.08)' },
 }
 const WORKFLOW_KEYS = ['new', 'in_progress', 'review', 'done', 'cancelled']
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  medium: { label: 'Средний', color: '#F7A84F', bg: 'rgba(247,168,79,0.14)' },
-  high:   { label: 'Высокий', color: '#F75C6E', bg: 'rgba(247,92,110,0.14)' },
+  medium: { label: t('Средний'), color: '#F7A84F', bg: 'rgba(247,168,79,0.14)' },
+  high:   { label: t('Высокий'), color: '#F75C6E', bg: 'rgba(247,92,110,0.14)' },
 }
 const PRIORITY_OPTIONS: { value: 'medium' | 'high' | null; label: string; color: string }[] = [
-  { value: null,     label: 'Нет',     color: '#8892A4' },
-  { value: 'medium', label: 'Средний', color: '#F7A84F' },
-  { value: 'high',   label: 'Высокий', color: '#F75C6E' },
+  { value: null,     label: tc('priority', 'Нет'),     color: '#8892A4' },
+  { value: 'medium', label: t('Средний'), color: '#F7A84F' },
+  { value: 'high',   label: t('Высокий'), color: '#F75C6E' },
 ]
 
 // Общий портал-дропдаун: гасит всплытие (не открывает drawer / не стартует drag), закрывается по скроллу
@@ -133,7 +134,7 @@ function PriorityDropdown({ value, onChange }: { value: 'medium' | 'high' | null
         </button>
       ) : (
         <button ref={triggerRef} type="button" onClick={toggle} onPointerDown={e => e.stopPropagation()}
-          title="Приоритет"
+          title={t('Приоритет')}
           className="flex items-center px-1.5 py-0.5 rounded shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
           style={{ background: 'var(--surface)', color: 'var(--text2)', cursor: 'pointer' }}>
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -178,7 +179,7 @@ export default function SprintTaskCard({ task, isOverlay = false, onWorkflowChan
     : false
 
   const deadlineLabel = task.deadline
-    ? new Date(task.deadline + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    ? new Date(task.deadline + 'T00:00:00').toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' })
     : null
 
   const assigneeName = task.assignee?.full_name || task.assignee?.login

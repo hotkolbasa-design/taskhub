@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { t, tc, LOCALE } from '@/lib/i18n'
 
 type Move = {
   id: string
@@ -54,13 +55,13 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
       <div className="flex items-center justify-center py-16 gap-2 text-sm" style={{ color: 'var(--text2)' }}>
         <span className="w-4 h-4 rounded-full border-2 animate-spin"
           style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'var(--accent)' }} />
-        Считаем учеников…
+        {t('Считаем учеников…')}
       </div>
     )
   }
 
   if (error || !data) {
-    return <div className="py-10 text-sm" style={{ color: 'var(--red)' }}>Не удалось получить данные: {error}</div>
+    return <div className="py-10 text-sm" style={{ color: 'var(--red)' }}>{t('Не удалось получить данные: {error}', { error: error ?? '' })}</div>
   }
 
   // По дням смотрят на форму кривой, по неделям — на сами числа,
@@ -71,7 +72,7 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
     enrolled: d.enrolled,
     expelled: d.expelled,
     total: d.total,
-    title: `${formatDate(d.date)}: ${d.total} учеников (+${d.enrolled} / −${d.expelled})`,
+    title: t('{date}: {total} учеников (+{plus} / −{minus})', { date: formatDate(d.date), total: d.total, plus: d.enrolled, minus: d.expelled }),
   }))
 
   const weeks = data.weeks ?? []
@@ -86,10 +87,10 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
-        <Tile label="Учеников сейчас" value={data.current} hint={`отметка ${data.baselineTotal} на ${formatDate(data.baselineDate)}`} big />
-        <Tile label="Пришло за месяц" value={data.enrolled} color={data.enrolled ? '#2DD4A0' : undefined} prefix={data.enrolled ? '+' : ''} />
-        <Tile label="Отчислено за месяц" value={data.expelled} color={data.expelled ? '#F75C6E' : undefined} prefix={data.expelled ? '−' : ''} />
-        <Tile label="Чистый прирост" value={Math.abs(data.net)} color={data.net >= 0 ? '#2DD4A0' : '#F75C6E'} prefix={data.net >= 0 ? '+' : '−'} />
+        <Tile label={t('Учеников сейчас')} value={data.current} hint={t('отметка {n} на {date}', { n: data.baselineTotal, date: formatDate(data.baselineDate) })} big />
+        <Tile label={t('Пришло за месяц')} value={data.enrolled} color={data.enrolled ? '#2DD4A0' : undefined} prefix={data.enrolled ? '+' : ''} />
+        <Tile label={t('Отчислено за месяц')} value={data.expelled} color={data.expelled ? '#F75C6E' : undefined} prefix={data.expelled ? '−' : ''} />
+        <Tile label={t('Чистый прирост')} value={Math.abs(data.net)} color={data.net >= 0 ? '#2DD4A0' : '#F75C6E'} prefix={data.net >= 0 ? '+' : '−'} />
       </div>
 
       {(scale === 'days' ? buckets.length > 0 : weeks.length > 0) && (
@@ -97,7 +98,7 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                {scale === 'days' ? 'Численность по дням' : 'Движение по неделям'}
+                {scale === 'days' ? t('Численность по дням') : t('Движение по неделям')}
               </span>
               <div className="flex items-center gap-1">
                 {(['days', 'weeks'] as const).map(v => (
@@ -108,15 +109,15 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                       color: scale === v ? '#7C5CF6' : 'var(--text2)',
                       border: '1px solid var(--border)', cursor: 'pointer',
                     }}>
-                    {v === 'days' ? 'Дни' : 'Недели'}
+                    {v === 'days' ? tc('crm', 'Дни') : tc('crm', 'Недели')}
                   </button>
                 ))}
               </div>
             </div>
             {scale === 'days' && (
               <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text2)' }}>
-                <Legend color="#2DD4A0" text="пришли" />
-                <Legend color="#F75C6E" text="ушли" />
+                <Legend color="#2DD4A0" text={tc('crm', 'пришли')} />
+                <Legend color="#F75C6E" text={tc('crm', 'ушли')} />
               </div>
             )}
           </div>
@@ -145,11 +146,11 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
             <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <Th>Неделя</Th>
-                  <Th right>Пришло</Th>
-                  <Th right>Отчислено</Th>
-                  <Th right>Изменение</Th>
-                  <Th right>Учеников на конец недели</Th>
+                  <Th>{tc('crm', 'Неделя')}</Th>
+                  <Th right>{tc('crm', 'Пришло')}</Th>
+                  <Th right>{tc('crm', 'Отчислено')}</Th>
+                  <Th right>{tc('crm', 'Изменение')}</Th>
+                  <Th right>{t('Учеников на конец недели')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -181,17 +182,17 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
 
       <div className="rounded-xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
-          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>Движение за месяц</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t('Движение за месяц')}</span>
         </div>
         {data.moves.length === 0 ? (
           <div className="px-5 py-8 text-sm text-center" style={{ color: 'var(--text2)' }}>
-            В этом месяце движений не было
+            {t('В этом месяце движений не было')}
           </div>
         ) : (
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <Th>Дата</Th><Th>Событие</Th><Th>Ученики</Th><Th right>Сколько</Th><Th>Сделка</Th>
+                <Th>{tc('crm', 'Дата')}</Th><Th>{tc('crm', 'Событие')}</Th><Th>{tc('crm', 'Ученики')}</Th><Th right>{tc('crm', 'Сколько')}</Th><Th>{tc('crm', 'Сделка')}</Th>
               </tr>
             </thead>
             <tbody>
@@ -203,13 +204,13 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                       color: m.kind === 'enroll' ? '#2DD4A0' : '#F75C6E',
                       background: m.kind === 'enroll' ? 'rgba(45,212,160,0.15)' : 'rgba(247,92,110,0.15)',
                     }}>
-                      {m.kind === 'enroll' ? 'Зачисление' : 'Отчисление'}
+                      {m.kind === 'enroll' ? tc('crm', 'Зачисление') : tc('crm', 'Отчисление')}
                     </span>
                   </td>
                   <td className="px-4 py-2.5" style={{ color: 'var(--text)' }}>
-                    {m.student_names.length > 0 ? m.student_names.join(', ') : <span style={{ color: 'var(--text2)' }}>ФИО не заполнено</span>}
+                    {m.student_names.length > 0 ? m.student_names.join(', ') : <span style={{ color: 'var(--text2)' }}>{t('ФИО не заполнено')}</span>}
                     {m.counted === false && m.skip_reason && (
-                      <span className="block text-xs mt-0.5" style={{ color: 'var(--text2)' }}>не учтено: {m.skip_reason}</span>
+                      <span className="block text-xs mt-0.5" style={{ color: 'var(--text2)' }}>{t('не учтено: {reason}', { reason: reasonText(m.skip_reason) })}</span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
@@ -218,11 +219,11 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                   <td className="px-4 py-2.5">
                     {/* в демо сделки выдуманные — ссылка на портал Битрикса вела бы в никуда */}
                     {data.demo ? (
-                      <span className="text-xs" style={{ color: 'var(--text2)' }}>{m.deal_title || `Сделка ${m.deal_id}`}</span>
+                      <span className="text-xs" style={{ color: 'var(--text2)' }}>{m.deal_title || t('Сделка {id}', { id: m.deal_id })}</span>
                     ) : (
                       <a href={`${DEAL_URL}/${m.deal_id}/`} target="_blank" rel="noreferrer"
                         className="text-xs" style={{ color: 'var(--accent)' }}>
-                        {m.deal_title || `Сделка ${m.deal_id}`}
+                        {m.deal_title || t('Сделка {id}', { id: m.deal_id })}
                       </a>
                     )}
                   </td>
@@ -234,13 +235,9 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
       </div>
 
       <p className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
-        Счёт ведётся от отметки <b>{data.baselineTotal}</b> учеников на {formatDate(data.baselineDate)}.
-        Плюс — когда сделка попадает в «Зарегистрировать на платформу» <b>из стадии «Полная оплата есть»</b>;
-        заведённые вручную из «Неразобранное» и «Новые написавшие номера» не в счёт.
-        Минус — когда в «Запросили отчисление» уходит тот, кто <b>до этого числился учеником</b>:
-        из воронки «Все ученики» или из зачисления. Перенос из «Выбышие должники» и повторная
-        отметка по той же сделке не в счёт — это наведение порядка в карточках, а не уход.
-        В одной сделке может быть до четырёх учеников, считается каждый заполненный «ФИО ученика».
+        {t('Счёт ведётся от отметки')} <b>{data.baselineTotal}</b> {t('учеников на {date}.', { date: formatDate(data.baselineDate) })}
+        {' '}{t('Плюс — когда сделка попадает в «Зарегистрировать на платформу»')} <b>{t('из стадии «Полная оплата есть»')}</b>{t('; заведённые вручную из «Неразобранное» и «Новые написавшие номера» не в счёт.')}
+        {' '}{t('Минус — когда в «Запросили отчисление» уходит тот, кто')} <b>{t('до этого числился учеником')}</b>{t(': из воронки «Все ученики» или из зачисления. Перенос из «Выбышие должники» и повторная отметка по той же сделке не в счёт — это наведение порядка в карточках, а не уход. В одной сделке может быть до четырёх учеников, считается каждый заполненный «ФИО ученика».')}
       </p>
     </div>
   )
@@ -280,6 +277,15 @@ function Th({ children, right }: { children: React.ReactNode; right?: boolean })
       {children}
     </th>
   )
+}
+
+function reasonText(reason: string): string {
+  if (LOCALE !== 'en') return reason
+  const notPaid = reason.match(/^сделка пришла из «(.+)», а не из «Полная оплата есть»$/)
+  if (notPaid) return t('сделка пришла из «{stage}», а не из «Полная оплата есть»', { stage: t(notPaid[1]) })
+  const notStudent = reason.match(/^пришёл из «(.+)» — там ученик уже не числится$/)
+  if (notStudent) return t('пришёл из «{stage}» — там ученик уже не числится', { stage: t(notStudent[1]) })
+  return t(reason)
 }
 
 function formatDate(iso: string): string {

@@ -15,6 +15,7 @@ import { getTasksMissingData, fixSprint, unfixSprint, closeSprint } from '@/app/
 import TaskCard from './task-card'
 import CreateTaskModal from './create-task-modal'
 import { useKeepInView } from '@/components/common/use-keep-in-view'
+import { t, INTL_LOCALE, numericDate } from '@/lib/i18n'
 
 const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
 const WEEKDAYS_SHORT = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
@@ -54,7 +55,7 @@ function MiniCalendar({ value, onChange }: { value: string; onChange: (v: string
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 3L4.5 6L7.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
         <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
-          {MONTHS_RU[month]} {year}
+          {t(MONTHS_RU[month])} {year}
         </span>
         <button type="button" onClick={() => setView(new Date(year, month + 1, 1))}
           className="p-1 rounded" style={{ color: 'var(--text2)', cursor: 'pointer' }}
@@ -65,7 +66,7 @@ function MiniCalendar({ value, onChange }: { value: string; onChange: (v: string
       </div>
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {WEEKDAYS_SHORT.map(wd => (
-          <div key={wd} className="text-center text-xs" style={{ color: 'var(--text2)', fontSize: 10 }}>{wd}</div>
+          <div key={wd} className="text-center text-xs" style={{ color: 'var(--text2)', fontSize: 10 }}>{t(wd)}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-0.5">
@@ -121,7 +122,7 @@ function PeriodEditor({
   function formatFull(iso: string) {
     if (!iso) return '—'
     const d = new Date(iso + 'T00:00:00')
-    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(2)}`
+    return numericDate(`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(2)}`, d, false)
   }
 
   return createPortal(
@@ -130,7 +131,7 @@ function PeriodEditor({
       onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{ background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: 20, width: 280, boxShadow: '0 16px 48px rgba(0,0,0,0.5)', animation: 'dropdownIn 0.12s ease-out' }}>
-        <p className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Период спринта</p>
+        <p className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>{t('Период спринта')}</p>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-3">
@@ -142,7 +143,7 @@ function PeriodEditor({
                 color: step === s ? '#fff' : 'var(--text2)',
                 cursor: 'pointer',
               }}>
-              {s === 'from' ? `Начало: ${formatFull(dateFrom)}` : `Конец: ${formatFull(dateTo)}`}
+              {s === 'from' ? t('Начало: {date}', { date: formatFull(dateFrom) }) : t('Конец: {date}', { date: formatFull(dateTo) })}
             </button>
           ))}
         </div>
@@ -161,12 +162,12 @@ function PeriodEditor({
             style={{ background: 'var(--surface2)', color: 'var(--text2)', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}>
-            Отмена
+            {t('Отмена')}
           </button>
           <button type="button" onClick={handleSave} disabled={saving || !dateFrom || !dateTo}
             className="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
             style={{ background: 'var(--accent)', color: '#fff', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? t('Сохранение…') : t('Сохранить')}
           </button>
         </div>
       </div>
@@ -397,7 +398,7 @@ function SprintRootBottomDrop({ disabled }: { disabled: boolean }) {
         transition: 'background 0.15s, border-color 0.15s',
       }}
     >
-      {isOver ? 'Отдельная задача' : ''}
+      {isOver ? t('Отдельная задача') : ''}
     </div>
   )
 }
@@ -443,7 +444,7 @@ function EfficiencyStat({ overall, rows }: { overall: number; rows: EffRow[] }) 
   return (
     <>
       <button ref={triggerRef} type="button" onClick={toggle}
-        className="flex flex-col items-center px-3 py-1" title="Текущая эффективность спринта"
+        className="flex flex-col items-center px-3 py-1" title={t('Текущая эффективность спринта')}
         style={{ minWidth: 52, cursor: 'pointer', background: open ? 'var(--surface)' : 'transparent' }}>
         <span className="text-sm font-semibold leading-none flex items-center gap-0.5"
           style={{ color: efficiencyColor(overall), fontFamily: 'var(--font-mono)' }}>
@@ -452,7 +453,7 @@ function EfficiencyStat({ overall, rows }: { overall: number; rows: EffRow[] }) 
             <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>эффект.</span>
+        <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>{t('эффект.')}</span>
       </button>
 
       {open && pos && createPortal(
@@ -463,18 +464,18 @@ function EfficiencyStat({ overall, rows }: { overall: number; rows: EffRow[] }) 
             padding: 10, boxShadow: '0 16px 48px rgba(0,0,0,0.5)', animation: 'dropdownIn 0.12s ease-out',
           }}>
           <div className="flex items-center justify-between px-1 pb-2 mb-1" style={{ borderBottom: '1px solid var(--border)' }}>
-            <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>По исполнителям</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>{t('По исполнителям')}</span>
             <span className="text-xs font-semibold" style={{ color: efficiencyColor(overall), fontFamily: 'var(--font-mono)' }}>
-              всего {overall}%
+              {t('всего {n}%', { n: overall })}
             </span>
           </div>
           {rows.length === 0 ? (
-            <div className="text-xs px-1 py-1.5" style={{ color: 'var(--text2)' }}>Нет задач</div>
+            <div className="text-xs px-1 py-1.5" style={{ color: 'var(--text2)' }}>{t('Нет задач')}</div>
           ) : rows.map((r, i) => (
             <div key={r.assignee?.login ?? `none-${i}`} className="flex items-center gap-2 px-1 py-1.5">
               <EffAvatar name={r.assignee?.full_name ?? null} login={r.assignee?.login ?? '—'} />
               <span className="text-xs truncate flex-1" style={{ color: 'var(--text)' }}>
-                {r.assignee?.full_name || r.assignee?.login || 'Без исполнителя'}
+                {r.assignee?.full_name || r.assignee?.login || t('Без исполнителя')}
               </span>
               <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text2)' }}>{r.done}/{r.total}</span>
               <div className="w-10 h-1.5 rounded-full overflow-hidden shrink-0" style={{ background: 'var(--surface2)' }}>
@@ -571,7 +572,7 @@ export default function SprintPanel({
 
   function formatDate(iso: string) {
     const d = new Date(iso + 'T00:00:00')
-    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(2)}`
+    return numericDate(`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(2)}`, d, false)
   }
 
   function getEpicStats(epicId: string) {
@@ -752,14 +753,14 @@ export default function SprintPanel({
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              Добавить задачу
+              {t('Добавить задачу')}
             </button>
             <button
               type="button"
               onClick={() => setDeletingConfirm(true)}
               className="p-1.5 rounded-md"
               style={{ color: 'var(--text2)', cursor: 'pointer' }}
-              title="Удалить спринт"
+              title={t('Удалить спринт')}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}
             >
@@ -778,7 +779,7 @@ export default function SprintPanel({
             {taskCount > 0 && (
               <div className="flex flex-col items-center px-3 py-1" style={{ minWidth: 44 }}>
                 <span className="text-sm font-semibold leading-none" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{taskCount}</span>
-                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>задач</span>
+                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>{t('задач')}</span>
               </div>
             )}
             {taskCount > 0 && epicCount > 0 && (
@@ -787,7 +788,7 @@ export default function SprintPanel({
             {epicCount > 0 && (
               <div className="flex flex-col items-center px-3 py-1" style={{ minWidth: 44 }}>
                 <span className="text-sm font-semibold leading-none" style={{ color: 'var(--yellow)', fontFamily: 'var(--font-mono)' }}>{epicCount}</span>
-                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>эпика</span>
+                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>{t('эпика')}</span>
               </div>
             )}
             {totalMinutes > 0 && (epicCount > 0 || taskCount > 0) && (
@@ -796,7 +797,7 @@ export default function SprintPanel({
             {totalMinutes > 0 && (
               <div className="flex flex-col items-center px-3 py-1" style={{ minWidth: 44 }}>
                 <span className="text-sm font-semibold leading-none" style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{minutesToDisplay(totalMinutes)}</span>
-                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>объём</span>
+                <span className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--text2)' }}>{t('объём')}</span>
               </div>
             )}
             {taskCount > 0 && (
@@ -817,15 +818,15 @@ export default function SprintPanel({
                     <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
                   </svg>
                   {sprint.fixed_at
-                    ? `Зафиксировано ${new Date(sprint.fixed_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`
-                    : 'Зафиксировано'}
+                    ? t('Зафиксировано {date}', { date: new Date(sprint.fixed_at).toLocaleDateString(INTL_LOCALE, { day: 'numeric', month: 'short' }) })
+                    : t('Зафиксировано')}
                 </span>
                 {isAdmin && (
                   <button
                     type="button"
                     onClick={handleUnfix}
                     disabled={unfixing}
-                    title="Удалить снапшот"
+                    title={t('Удалить снапшот')}
                     className="p-1.5 rounded-md"
                     style={{ color: 'var(--text2)', cursor: 'pointer' }}
                     onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
@@ -859,7 +860,7 @@ export default function SprintPanel({
                       <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
                     </svg>
                 }
-                Зафиксировать
+                {t('Зафиксировать')}
               </button>
             )}
 
@@ -880,7 +881,7 @@ export default function SprintPanel({
                       <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                 }
-                Завершить
+                {t('Завершить')}
               </button>
             )}
           </div>
@@ -909,9 +910,9 @@ export default function SprintPanel({
               </svg>
             </div>
 
-            <p className="text-base font-semibold text-center mb-2" style={{ color: 'var(--text)' }}>Удалить спринт?</p>
+            <p className="text-base font-semibold text-center mb-2" style={{ color: 'var(--text)' }}>{t('Удалить спринт?')}</p>
             <p className="text-sm text-center mb-6" style={{ color: 'var(--text2)' }}>
-              Все задачи и эпики вернутся в бэклог. Это действие нельзя отменить.
+              {t('Все задачи и эпики вернутся в бэклог. Это действие нельзя отменить.')}
             </p>
 
             <div className="flex gap-3">
@@ -923,7 +924,7 @@ export default function SprintPanel({
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}
               >
-                Отмена
+                {t('Отмена')}
               </button>
               <button
                 type="button"
@@ -932,7 +933,7 @@ export default function SprintPanel({
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
                 style={{ background: 'var(--red)', color: '#fff', cursor: deleting ? 'default' : 'pointer', opacity: deleting ? 0.7 : 1 }}
               >
-                {deleting ? 'Удаление…' : 'Удалить'}
+                {deleting ? t('Удаление…') : t('Удалить')}
               </button>
             </div>
           </div>
@@ -955,9 +956,9 @@ export default function SprintPanel({
               </svg>
             </div>
 
-            <p className="text-base font-semibold text-center mb-2" style={{ color: 'var(--text)' }}>Завершить спринт?</p>
+            <p className="text-base font-semibold text-center mb-2" style={{ color: 'var(--text)' }}>{t('Завершить спринт?')}</p>
             <p className="text-sm text-center mb-6" style={{ color: 'var(--text2)' }}>
-              Спринт будет зафиксирован и закрыт. Добавлять и убирать задачи больше нельзя. Результаты появятся в истории.
+              {t('Спринт будет зафиксирован и закрыт. Добавлять и убирать задачи больше нельзя. Результаты появятся в истории.')}
             </p>
 
             <div className="flex gap-3">
@@ -969,7 +970,7 @@ export default function SprintPanel({
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface2)')}
               >
-                Отмена
+                {t('Отмена')}
               </button>
               <button
                 type="button"
@@ -981,9 +982,9 @@ export default function SprintPanel({
                 {closing
                   ? <span className="flex items-center justify-center gap-2">
                       <span className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
-                      Завершение…
+                      {t('Завершение…')}
                     </span>
-                  : 'Завершить спринт'
+                  : t('Завершить спринт')
                 }
               </button>
             </div>
@@ -1007,17 +1008,17 @@ export default function SprintPanel({
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Зафиксировать неделю</p>
-                <p className="text-xs" style={{ color: 'var(--text2)' }}>После фиксации задачи нельзя удалять из спринта</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('Зафиксировать неделю')}</p>
+                <p className="text-xs" style={{ color: 'var(--text2)' }}>{t('После фиксации задачи нельзя удалять из спринта')}</p>
               </div>
             </div>
 
             {((missingData?.missingDeadline.length ?? 0) > 0 || (missingData?.missingTime.length ?? 0) > 0) ? (
               <div className="rounded-xl p-3 mb-4 flex flex-col gap-3" style={{ background: 'rgba(247,192,79,0.07)', border: '1px solid rgba(247,192,79,0.2)' }}>
-                <p className="text-xs font-medium" style={{ color: 'var(--yellow)' }}>Есть задачи с незаполненными данными</p>
+                <p className="text-xs font-medium" style={{ color: 'var(--yellow)' }}>{t('Есть задачи с незаполненными данными')}</p>
                 {(missingData?.missingDeadline.length ?? 0) > 0 && (
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs" style={{ color: 'var(--text2)' }}>Без дедлайна:</p>
+                    <p className="text-xs" style={{ color: 'var(--text2)' }}>{t('Без дедлайна:')}</p>
                     {missingData!.missingDeadline.map(t => (
                       <p key={t.id} className="text-sm pl-2" style={{ color: 'var(--text)', borderLeft: '2px solid rgba(247,192,79,0.4)' }}>{t.title}</p>
                     ))}
@@ -1025,7 +1026,7 @@ export default function SprintPanel({
                 )}
                 {(missingData?.missingTime.length ?? 0) > 0 && (
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs" style={{ color: 'var(--text2)' }}>Без оценки времени:</p>
+                    <p className="text-xs" style={{ color: 'var(--text2)' }}>{t('Без оценки времени:')}</p>
                     {missingData!.missingTime.map(t => (
                       <p key={t.id} className="text-sm pl-2" style={{ color: 'var(--text)', borderLeft: '2px solid rgba(247,192,79,0.4)' }}>{t.title}</p>
                     ))}
@@ -1038,7 +1039,7 @@ export default function SprintPanel({
                   <circle cx="8" cy="8" r="6.5" stroke="var(--green)" strokeWidth="1.3"/>
                   <path d="M5 8l2 2 4-4" stroke="var(--green)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <p className="text-sm" style={{ color: 'var(--green)' }}>Все задачи заполнены — дедлайны и оценки на месте</p>
+                <p className="text-sm" style={{ color: 'var(--green)' }}>{t('Все задачи заполнены — дедлайны и оценки на месте')}</p>
               </div>
             )}
 
@@ -1047,13 +1048,13 @@ export default function SprintPanel({
                 className="px-4 py-2 rounded-lg text-sm" style={{ color: 'var(--text2)', background: 'var(--surface2)', border: '1px solid var(--border)', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}>
-                Отмена
+                {t('Отмена')}
               </button>
               <button type="button" onClick={handleConfirmFix}
                 className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'rgba(247,192,79,0.15)', color: 'var(--yellow)', border: '1px solid rgba(247,192,79,0.3)', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(247,192,79,0.25)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(247,192,79,0.15)')}>
-                {(missingData?.missingDeadline.length ?? 0) > 0 || (missingData?.missingTime.length ?? 0) > 0 ? 'Всё равно зафиксировать' : 'Зафиксировать'}
+                {(missingData?.missingDeadline.length ?? 0) > 0 || (missingData?.missingTime.length ?? 0) > 0 ? t('Всё равно зафиксировать') : t('Зафиксировать')}
               </button>
             </div>
           </div>
@@ -1131,7 +1132,7 @@ export default function SprintPanel({
                   <rect x="19" y="19" width="9" height="9" rx="1.5" stroke="var(--text2)" strokeWidth="1.3"/>
                 </svg>
                 <p className="text-sm text-center" style={{ color: 'var(--text2)' }}>
-                  Перетащите задачи из бэклога<br />или нажмите «В спринт»
+                  {t('Перетащите задачи из бэклога')}<br />{t('или нажмите «В спринт»')}
                 </p>
               </div>
             )}

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidateTag } from 'next/cache'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
 import { backlogArchivePatch, archiveAction, syncEpicSubtasksArchive, nextBacklogOrder } from '@/lib/queries/task-archive'
+import { t } from '@/lib/i18n'
 
 async function getCurrentUserId() {
   const supabase = await createClient()
@@ -23,7 +24,7 @@ export async function createTask(projectId: string, data: {
   priority?: 'medium' | 'high' | null
 }) {
   const userId = await getCurrentUserId()
-  if (!userId) throw new Error('Не авторизован')
+  if (!userId) throw new Error(t('Не авторизован'))
 
   const admin = createAdminClient()
 
@@ -55,7 +56,7 @@ export async function createTask(projectId: string, data: {
     backlog_order: nextOrder,
   }).select('id').single()
 
-  if (error || !task) throw new Error(error?.message ?? 'Ошибка создания задачи')
+  if (error || !task) throw new Error(error?.message ?? t('Ошибка создания задачи'))
 
   // Уведомляем исполнителя, если это не сам создатель
   if (data.assignee_id && data.assignee_id !== userId) {
@@ -96,7 +97,7 @@ export async function moveToSprint(taskId: string, projectId: string) {
     .limit(1)
     .maybeSingle()
 
-  if (!sprint) throw new Error('Нет активного спринта')
+  if (!sprint) throw new Error(t('Нет активного спринта'))
 
   const { data: col } = await admin
     .from('sprint_columns')
@@ -280,7 +281,7 @@ export async function createComment(
   attachments?: { url: string; name: string; size: number }[]
 ) {
   const userId = await getCurrentUserId()
-  if (!userId) throw new Error('Не авторизован')
+  if (!userId) throw new Error(t('Не авторизован'))
   const admin = createAdminClient()
   const { error } = await admin.from('comments').insert({
     task_id: taskId,
@@ -438,12 +439,12 @@ export async function updateSprintPeriod(sprintId: string, projectId: string, da
 
 export async function createSprint(projectId: string, dateFrom: string, dateTo: string) {
   const userId = await getCurrentUserId()
-  if (!userId) throw new Error('Не авторизован')
+  if (!userId) throw new Error(t('Не авторизован'))
 
   const admin = createAdminClient()
 
   const { count } = await admin.from('sprints').select('id', { count: 'exact', head: true }).eq('project_id', projectId)
-  const name = `Спринт ${(count ?? 0) + 1}`
+  const name = t('Спринт {n}', { n: (count ?? 0) + 1 })
 
   const { data: sprint, error } = await admin.from('sprints').insert({
     project_id: projectId,
@@ -454,12 +455,12 @@ export async function createSprint(projectId: string, dateFrom: string, dateTo: 
     created_by: userId,
   }).select().maybeSingle()
 
-  if (error || !sprint) throw new Error(error?.message ?? 'Не удалось создать спринт')
+  if (error || !sprint) throw new Error(error?.message ?? t('Не удалось создать спринт'))
 
   await admin.from('sprint_columns').insert([
-    { sprint_id: sprint.id, name: 'К выполнению', color: '#7C5CF6', order_index: 0, role: 'todo' },
-    { sprint_id: sprint.id, name: 'В работе',     color: '#F7C04F', order_index: 1, role: null },
-    { sprint_id: sprint.id, name: 'Готово',        color: '#2DD4A0', order_index: 2, role: 'done' },
+    { sprint_id: sprint.id, name: t('К выполнению'), color: '#7C5CF6', order_index: 0, role: 'todo' },
+    { sprint_id: sprint.id, name: t('В работе'),     color: '#F7C04F', order_index: 1, role: null },
+    { sprint_id: sprint.id, name: t('Готово'),        color: '#2DD4A0', order_index: 2, role: 'done' },
   ])
 
   revalidateTag(`tasks-${projectId}`, "default")
@@ -468,7 +469,7 @@ export async function createSprint(projectId: string, dateFrom: string, dateTo: 
 
 export async function duplicateTask(taskId: string, projectId: string) {
   const userId = await getCurrentUserId()
-  if (!userId) throw new Error('Не авторизован')
+  if (!userId) throw new Error(t('Не авторизован'))
 
   const admin = createAdminClient()
 
@@ -478,7 +479,7 @@ export async function duplicateTask(taskId: string, projectId: string) {
     .eq('id', taskId)
     .maybeSingle()
 
-  if (!original) throw new Error('Задача не найдена')
+  if (!original) throw new Error(t('Задача не найдена'))
 
   const { data: last } = await admin
     .from('tasks')
@@ -493,7 +494,7 @@ export async function duplicateTask(taskId: string, projectId: string) {
 
   const { error } = await admin.from('tasks').insert({
     project_id: projectId,
-    title: `Копия — ${original.title}`,
+    title: t('Копия — {title}', { title: original.title }),
     type: original.type,
     status: 'backlog',
     workflow_status: 'new',
@@ -520,7 +521,7 @@ export async function convertTaskType(taskId: string, projectId: string, toType:
     .eq('id', taskId)
     .maybeSingle()
 
-  if (!task) throw new Error('Задача не найдена')
+  if (!task) throw new Error(t('Задача не найдена'))
   if (task.type === toType) return
 
   if (toType === 'epic') {
@@ -592,7 +593,7 @@ export async function createSprintTask(
   }
 ): Promise<string> {
   const userId = await getCurrentUserId()
-  if (!userId) throw new Error('Не авторизован')
+  if (!userId) throw new Error(t('Не авторизован'))
 
   const admin = createAdminClient()
 
@@ -633,7 +634,7 @@ export async function createSprintTask(
     description: data.description ?? null,
   }).select('id').single()
 
-  if (error || !task) throw new Error(error?.message ?? 'Ошибка создания задачи')
+  if (error || !task) throw new Error(error?.message ?? t('Ошибка создания задачи'))
 
   // Уведомляем исполнителя, если это не сам создатель
   if (data.assignee_id && data.assignee_id !== userId) {

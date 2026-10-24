@@ -3,15 +3,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateTag } from 'next/cache'
+import { t } from '@/lib/i18n'
 
 const WEEKDAY_COLUMNS = [
-  { name: 'Новые',       color: '#8892A4' },
-  { name: 'Понедельник', color: '#7C5CF6' },
-  { name: 'Вторник',     color: '#A78BFA' },
-  { name: 'Среда',       color: '#2DD4A0' },
-  { name: 'Четверг',     color: '#F7C04F' },
-  { name: 'Пятница',     color: '#F75C6E' },
-  { name: 'Суббота',     color: '#60C0E8' },
+  { name: t('Новые'),       color: '#8892A4' },
+  { name: t('Понедельник'), color: '#7C5CF6' },
+  { name: t('Вторник'),     color: '#A78BFA' },
+  { name: t('Среда'),       color: '#2DD4A0' },
+  { name: t('Четверг'),     color: '#F7C04F' },
+  { name: t('Пятница'),     color: '#F75C6E' },
+  { name: t('Суббота'),     color: '#60C0E8' },
 ]
 
 export async function createSprint(projectId: string, data: {
@@ -23,7 +24,7 @@ export async function createSprint(projectId: string, data: {
 }) {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Не авторизован')
+  if (!session) throw new Error(t('Не авторизован'))
 
   const admin = createAdminClient()
 
@@ -40,13 +41,13 @@ export async function createSprint(projectId: string, data: {
     .select()
     .single()
 
-  if (error || !sprint) throw new Error(error?.message ?? 'Ошибка создания спринта')
+  if (error || !sprint) throw new Error(error?.message ?? t('Ошибка создания спринта'))
 
   const middleCols = data.mode === 'weekdays' ? WEEKDAY_COLUMNS : (data.customColumns ?? [])
   const cols = [
-    { name: 'К выполнению', color: '#2DD4A0', role: 'todo' as const },
+    { name: t('К выполнению'), color: '#2DD4A0', role: 'todo' as const },
     ...middleCols.map(c => ({ ...c, role: null as null })),
-    { name: 'Готово', color: '#2DD4A0', role: 'done' as const },
+    { name: t('Готово'), color: '#2DD4A0', role: 'done' as const },
   ]
 
   await admin
@@ -257,7 +258,7 @@ export async function createSprintColumn(
     order_index: orderIndex,
   }).select().single()
 
-  if (error || !col) throw new Error(error?.message ?? 'Ошибка создания колонки')
+  if (error || !col) throw new Error(error?.message ?? t('Ошибка создания колонки'))
   revalidateTag(`tasks-${projectId}`, "default")
   revalidateTag('my-tasks', "default")
   return col as { id: string; sprint_id: string; name: string; color: string; order_index: number }

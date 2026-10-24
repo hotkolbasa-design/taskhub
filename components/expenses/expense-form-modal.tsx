@@ -6,6 +6,7 @@ import { createExpenseRequest, updateExpenseRequest } from '@/app/(dashboard)/ex
 import { uploadFile } from '@/lib/storage/upload'
 import { CATEGORIES, Dropdown, DatePicker, Spinner, money } from './expense-ui'
 import type { ExpenseAttachment, ExpenseCategory, ExpenseRequest } from '@/types'
+import { t, tc } from '@/lib/i18n'
 
 type Props = {
   request?: ExpenseRequest | null
@@ -43,7 +44,7 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
         setAttachments(prev => [...prev, uploaded])
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить файл')
+      setError(e instanceof Error ? e.message : t('Не удалось загрузить файл'))
     }
     setUploading(false)
   }
@@ -52,8 +53,8 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
     e.preventDefault()
     setError(null)
 
-    if (!title.trim()) { setError('Напишите, что нужно купить'); return }
-    if (amountNumber <= 0) { setError('Укажите примерную сумму'); return }
+    if (!title.trim()) { setError(t('Напишите, что нужно купить')); return }
+    if (amountNumber <= 0) { setError(t('Укажите примерную сумму')); return }
 
     setSaving(true)
     try {
@@ -70,7 +71,7 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
       onSaved()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сохранить заявку')
+      setError(err instanceof Error ? err.message : tc('expenses', 'Не удалось сохранить заявку'))
       setSaving(false)
     }
   }
@@ -83,7 +84,7 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-            {editing ? `Заявка ${request?.number}` : 'Новая заявка на расход'}
+            {editing ? tc('expenses', 'Заявка {number}', { number: String(request?.number) }) : tc('expenses', 'Новая заявка на расход')}
           </span>
           <button onClick={onClose} style={{ color: 'var(--text2)', cursor: 'pointer' }}>
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -93,9 +94,9 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
-          <Field label="Что нужно купить">
+          <Field label={t('Что нужно купить')}>
             <input value={title} onChange={e => setTitle(e.target.value)} autoFocus
-              placeholder="5 ноутбуков для отдела продаж"
+              placeholder={t('5 ноутбуков для отдела продаж')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -103,9 +104,9 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
             />
           </Field>
 
-          <Field label="Зачем это нужно">
+          <Field label={t('Зачем это нужно')}>
             <textarea value={justification} onChange={e => setJustification(e.target.value)} rows={3}
-              placeholder="Текущие машины не тянут CRM, менеджеры теряют время на загрузку"
+              placeholder={t('Текущие машины не тянут CRM, менеджеры теряют время на загрузку')}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-y"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
@@ -114,10 +115,10 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Категория">
+            <Field label={t('Категория')}>
               <Dropdown value={category} options={CATEGORIES} onChange={setCategory} />
             </Field>
-            <Field label="Сумма, ₸">
+            <Field label={t('Сумма, ₸')}>
               <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal"
                 placeholder="2 000 000"
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
@@ -131,11 +132,11 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
             </Field>
           </div>
 
-          <Field label="К какой дате нужно">
+          <Field label={t('К какой дате нужно')}>
             <DatePicker value={neededBy} onChange={setNeededBy} />
           </Field>
 
-          <Field label="Счета, коммерческие предложения">
+          <Field label={t('Счета, коммерческие предложения')}>
             <div className="flex flex-col gap-2">
               {attachments.map((a, i) => (
                 <div key={a.url} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
@@ -157,7 +158,7 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
                     <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                   </svg>
                 )}
-                {uploading ? 'Загрузка…' : 'Прикрепить файл'}
+                {uploading ? t('Загрузка…') : t('Прикрепить файл')}
                 <input type="file" multiple className="hidden" disabled={uploading}
                   onChange={e => { handleFiles(e.target.files); e.target.value = '' }} />
               </label>
@@ -172,11 +173,11 @@ export default function ExpenseFormModal({ request, onClose, onSaved }: Props) {
             className="flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
             style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
             {saving && <Spinner />}
-            {saving ? 'Сохранение…' : editing ? 'Сохранить' : 'Отправить на рассмотрение'}
+            {saving ? t('Сохранение…') : editing ? t('Сохранить') : t('Отправить на рассмотрение')}
           </button>
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>
-            Отмена
+            {t('Отмена')}
           </button>
         </div>
       </div>

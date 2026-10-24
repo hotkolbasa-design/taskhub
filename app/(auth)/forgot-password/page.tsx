@@ -4,10 +4,11 @@ import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { t } from '@/lib/i18n'
 
 const errorMessages: Record<string, string> = {
-  link:    'Ссылка недействительна или устарела. Запросите новую.',
-  expired: 'Срок действия ссылки истёк. Запросите новую.',
+  link:    t('Ссылка недействительна или устарела. Запросите новую.'),
+  expired: t('Срок действия ссылки истёк. Запросите новую.'),
 }
 
 export default function ForgotPasswordPage() {
@@ -49,25 +50,24 @@ function ForgotPasswordForm() {
   if (sent) {
     return (
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-white mb-4 text-center">Письмо отправлено</h1>
+        <h1 className="text-2xl font-semibold text-white mb-4 text-center">{t('Письмо отправлено')}</h1>
         <p className="text-sm text-gray-400 text-center leading-relaxed">
-          Если аккаунт с адресом <span className="text-white">{email}</span> существует, на него ушло письмо
-          со ссылкой для смены пароля. Ссылка действует час.
+          {t('Если аккаунт с адресом ')}<span className="text-white">{email}</span>{t(' существует, на него ушло письмо со ссылкой для смены пароля. Ссылка действует час.')}
         </p>
         <p className="mt-4 text-sm text-gray-500 text-center leading-relaxed">
-          Письма нет — проверьте папку «Спам» или{' '}
+          {t('Письма нет — проверьте папку «Спам» или')}{' '}
           <button
             type="button"
             onClick={() => setSent(false)}
             className="text-[#7C5CF6] hover:underline cursor-pointer"
           >
-            отправьте ещё раз
+            {t('отправьте ещё раз')}
           </button>
           .
         </p>
         <p className="mt-6 text-center text-sm text-gray-500">
           <Link href="/login" className="text-[#7C5CF6] hover:underline">
-            Вернуться ко входу
+            {t('Вернуться ко входу')}
           </Link>
         </p>
       </div>
@@ -76,9 +76,9 @@ function ForgotPasswordForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold text-white mb-2 text-center">Восстановление пароля</h1>
+      <h1 className="text-2xl font-semibold text-white mb-2 text-center">{t('Восстановление пароля')}</h1>
       <p className="text-sm text-gray-500 mb-8 text-center">
-        Укажите email — пришлём ссылку для смены пароля
+        {t('Укажите email — пришлём ссылку для смены пароля')}
       </p>
 
       {linkError && errorMessages[linkError] && (
@@ -111,14 +111,14 @@ function ForgotPasswordForm() {
           {loading && (
             <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
           )}
-          {loading ? 'Отправка…' : 'Отправить ссылку'}
+          {loading ? t('Отправка…') : t('Отправить ссылку')}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
-        Вспомнили пароль?{' '}
+        {t('Вспомнили пароль?')}{' '}
         <Link href="/login" className="text-[#7C5CF6] hover:underline">
-          Войти
+          {t('Войти')}
         </Link>
       </p>
     </div>

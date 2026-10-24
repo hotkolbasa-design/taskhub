@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createNotifications } from '@/lib/notifications'
 import { getArticleReaders } from '@/lib/queries/articles'
+import { t } from '@/lib/i18n'
 import type { ArticleCategory, ArticleStatus, ExpenseAttachment } from '@/types'
 
 type Caller = { id: string; isAdmin: boolean; department: string | null }
@@ -12,14 +13,14 @@ type Caller = { id: string; isAdmin: boolean; department: string | null }
 async function requireCaller(): Promise<Caller> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Не авторизован')
+  if (!user) throw new Error(t('Не авторизован'))
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, role, department')
     .eq('id', user.id)
     .maybeSingle()
-  if (!profile) throw new Error('Не авторизован')
+  if (!profile) throw new Error(t('Не авторизован'))
 
   return { id: profile.id, isAdmin: profile.role === 'admin', department: profile.department ?? null }
 }
@@ -36,7 +37,7 @@ export async function createArticle(input: {
   category: ArticleCategory
 }) {
   const caller = await requireCaller()
-  if (!input.title.trim()) throw new Error('Нужен заголовок')
+  if (!input.title.trim()) throw new Error(t('Нужен заголовок'))
 
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -75,11 +76,11 @@ export async function updateArticle(id: string, input: {
     .select('author_id, status, version, title')
     .eq('id', id)
     .maybeSingle()
-  if (!current) throw new Error('Инструкция не найдена')
+  if (!current) throw new Error(t('Инструкция не найдена'))
 
   const isOwner = current.author_id === caller.id
   if (!caller.isAdmin && !(isOwner && current.status !== 'published')) {
-    throw new Error('Опубликованную инструкцию правит только админ')
+    throw new Error(t('Опубликованную инструкцию правит только админ'))
   }
 
   const patch: Record<string, unknown> = {
@@ -110,8 +111,8 @@ export async function submitArticle(id: string) {
   const caller = await requireCaller()
   const admin = createAdminClient()
   const { data: current } = await admin.from('articles').select('author_id, title').eq('id', id).maybeSingle()
-  if (!current) throw new Error('Инструкция не найдена')
-  if (current.author_id !== caller.id && !caller.isAdmin) throw new Error('Это не ваша инструкция')
+  if (!current) throw new Error(t('Инструкция не найдена'))
+  if (current.author_id !== caller.id && !caller.isAdmin) throw new Error(t('Это не ваша инструкция'))
 
   const { error } = await admin.from('articles').update({ status: 'review' }).eq('id', id)
   if (error) throw new Error(error.message)
@@ -134,11 +135,11 @@ export async function submitArticle(id: string) {
 
 export async function publishArticle(id: string) {
   const caller = await requireCaller()
-  if (!caller.isAdmin) throw new Error('Публикует только админ')
+  if (!caller.isAdmin) throw new Error(t('Публикует только админ'))
 
   const admin = createAdminClient()
   const { data: current } = await admin.from('articles').select('title, status').eq('id', id).maybeSingle()
-  if (!current) throw new Error('Инструкция не найдена')
+  if (!current) throw new Error(t('Инструкция не найдена'))
 
   const { error } = await admin
     .from('articles')
@@ -152,7 +153,7 @@ export async function publishArticle(id: string) {
 
 export async function unpublishArticle(id: string) {
   const caller = await requireCaller()
-  if (!caller.isAdmin) throw new Error('Снимает с публикации только админ')
+  if (!caller.isAdmin) throw new Error(t('Снимает с публикации только админ'))
   const admin = createAdminClient()
   const { error } = await admin.from('articles').update({ status: 'draft' }).eq('id', id)
   if (error) throw new Error(error.message)
@@ -166,7 +167,7 @@ export async function deleteArticle(id: string) {
   if (!current) return
   const isOwner = current.author_id === caller.id
   if (!caller.isAdmin && !(isOwner && current.status === 'draft')) {
-    throw new Error('Удалить может автор в черновике или админ')
+    throw new Error(t('Удалить может автор в черновике или админ'))
   }
   const { error } = await admin.from('articles').delete().eq('id', id)
   if (error) throw new Error(error.message)
@@ -179,7 +180,7 @@ export async function markArticleRead(id: string) {
   const admin = createAdminClient()
 
   const { data: article } = await admin.from('articles').select('version').eq('id', id).maybeSingle()
-  if (!article) throw new Error('Инструкция не найдена')
+  if (!article) throw new Error(t('Инструкция не найдена'))
 
   const { error } = await admin
     .from('article_reads')
@@ -193,7 +194,7 @@ export async function markArticleRead(id: string) {
 
 export async function fetchArticleReaders(id: string) {
   const caller = await requireCaller()
-  if (!caller.isAdmin) throw new Error('Нет доступа')
+  if (!caller.isAdmin) throw new Error(t('Нет доступа'))
   return getArticleReaders(id)
 }
 

@@ -8,25 +8,26 @@ import {
 } from '@/app/(dashboard)/expenses/actions'
 import { CATEGORY_LABEL, StatusBadge, Spinner, money, formatDate, personName } from './expense-ui'
 import type { ExpenseRequest, ExpenseComment, ExpenseActivity } from '@/types'
+import { t, tc } from '@/lib/i18n'
 
 type FeedItem =
   | { kind: 'comment'; at: string; data: ExpenseComment }
   | { kind: 'activity'; at: string; data: ExpenseActivity }
 
 const ACTIVITY_TEXT: Record<string, string> = {
-  created: 'подал заявку',
-  status_changed: 'изменил статус',
-  edited: 'отредактировал заявку',
-  paid: 'отметил оплату',
-  payment_undone: 'снял отметку об оплате',
+  created: tc('expenses', 'подал заявку'),
+  status_changed: t('изменил статус'),
+  edited: tc('expenses', 'отредактировал заявку'),
+  paid: t('отметил оплату'),
+  payment_undone: t('снял отметку об оплате'),
 }
 
 const STATUS_WORD: Record<string, string> = {
-  pending: 'На рассмотрении',
-  approved: 'Одобрено',
-  rejected: 'Отклонено',
-  needs_info: 'На доработку',
-  cancelled: 'Отозвано',
+  pending: t('На рассмотрении'),
+  approved: t('Одобрено'),
+  rejected: t('Отклонено'),
+  needs_info: t('На доработку'),
+  cancelled: t('Отозвано'),
 }
 
 export default function ExpenseDrawer({ request, canApprove, canPay, currentUserId, refreshing, onClose, onChanged, onEdit }: {
@@ -88,7 +89,7 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
       await loadFeed()
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не получилось')
+      setError(e instanceof Error ? e.message : t('Не получилось'))
     }
     setBusy(null)
   }
@@ -102,7 +103,7 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
       await loadFeed()
       onChanged()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Комментарий не отправился')
+      setError(e instanceof Error ? e.message : t('Комментарий не отправился'))
     }
     setSending(false)
   }
@@ -128,7 +129,7 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
         {refreshing && (
           <div className="flex items-center gap-2 px-5 py-2 text-xs"
             style={{ background: 'rgba(124,92,246,0.08)', color: 'var(--text2)' }}>
-            <Spinner size={12} /> Обновляем данные…
+            <Spinner size={12} /> {t('Обновляем данные…')}
           </div>
         )}
 
@@ -140,34 +141,34 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
             </div>
             {request.paid_at && request.paid_amount !== null && request.paid_amount !== request.amount && (
               <div className="text-sm mt-1" style={{ color: 'var(--text2)' }}>
-                оплачено по факту: <span style={{ color: '#7C5CF6' }}>{money(request.paid_amount, request.currency)}</span>
+                {t('оплачено по факту:')} <span style={{ color: '#7C5CF6' }}>{money(request.paid_amount, request.currency)}</span>
               </div>
             )}
           </div>
 
           {request.justification && (
-            <Block label="Зачем">
+            <Block label={t('Зачем')}>
               <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text)' }}>{request.justification}</p>
             </Block>
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <Info label="Автор" value={personName(request.requester)} />
-            <Info label="Отдел" value={request.department || '—'} />
-            <Info label="Категория" value={CATEGORY_LABEL[request.category] ?? request.category} />
-            <Info label="Нужно к" value={formatDate(request.needed_by)} />
-            <Info label="Подана" value={formatDate(request.created_at)} />
-            {decided && <Info label="Решение" value={`${personName(request.decider)}, ${formatDate(request.decided_at)}`} />}
+            <Info label={tc('expenses', 'Автор')} value={personName(request.requester)} />
+            <Info label={t('Отдел')} value={request.department || '—'} />
+            <Info label={t('Категория')} value={CATEGORY_LABEL[request.category] ?? request.category} />
+            <Info label={t('Нужно к')} value={formatDate(request.needed_by)} />
+            <Info label={tc('expenses', 'Подана')} value={formatDate(request.created_at)} />
+            {decided && <Info label={t('Решение')} value={`${personName(request.decider)}, ${formatDate(request.decided_at)}`} />}
           </div>
 
           {request.decision_note && (
-            <Block label="Комментарий к решению">
+            <Block label={t('Комментарий к решению')}>
               <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text)' }}>{request.decision_note}</p>
             </Block>
           )}
 
           {request.paid_at && (
-            <Block label="Оплата">
+            <Block label={t('Оплата')}>
               <p className="text-sm" style={{ color: 'var(--text)' }}>
                 {money(request.paid_amount ?? request.amount, request.currency)} · {personName(request.payer)} · {formatDate(request.paid_at)}
               </p>
@@ -176,7 +177,7 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
           )}
 
           {request.attachments.length > 0 && (
-            <Block label="Файлы">
+            <Block label={t('Файлы')}>
               <div className="flex flex-col gap-1.5">
                 {request.attachments.map(a => (
                   <a key={a.url} href={a.url} target="_blank" rel="noreferrer"
@@ -188,37 +189,37 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
 
           {/* Решение — принимает любой из утверждающих в одиночку */}
           {canApprove && (request.status === 'pending' || request.status === 'needs_info') && (
-            <Block label="Решение">
+            <Block label={t('Решение')}>
               <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-                placeholder="Комментарий (необязательно)"
+                placeholder={t('Комментарий (необязательно)')}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-y mb-2"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
               <div className="flex gap-2">
                 <ActionButton busy={busy === 'approve'} color="#2DD4A0"
                   onClick={() => run('approve', () => decideExpenseRequest(request.id, 'approved', note))}>
-                  Одобрить
+                  {t('Одобрить')}
                 </ActionButton>
                 <ActionButton busy={busy === 'reject'} color="#F75C6E"
                   onClick={() => run('reject', () => decideExpenseRequest(request.id, 'rejected', note))}>
-                  Отклонить
+                  {t('Отклонить')}
                 </ActionButton>
                 <ActionButton busy={busy === 'info'} color="#4F8EF7" outline
                   onClick={() => run('info', () => decideExpenseRequest(request.id, 'needs_info', note))}>
-                  На доработку
+                  {t('На доработку')}
                 </ActionButton>
               </div>
             </Block>
           )}
 
           {canPay && request.status === 'approved' && !request.paid_at && (
-            <Block label="Оплата">
+            <Block label={t('Оплата')}>
               {payOpen ? (
                 <div className="flex flex-col gap-2">
                   <input value={paidAmount} onChange={e => setPaidAmount(e.target.value)} inputMode="decimal"
                     className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                     style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-mono)' }} />
                   <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-                    placeholder="Чем платили, у кого купили"
+                    placeholder={t('Чем платили, у кого купили')}
                     className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-y"
                     style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
                   <div className="flex gap-2">
@@ -227,14 +228,14 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
                         await markExpensePaid(request.id, Number(paidAmount.replace(/\s/g, '').replace(',', '.')) || request.amount, note)
                         setPayOpen(false)
                       })}>
-                      Подтвердить оплату
+                      {t('Подтвердить оплату')}
                     </ActionButton>
-                    <ActionButton onClick={() => setPayOpen(false)} color="var(--text2)" outline>Отмена</ActionButton>
+                    <ActionButton onClick={() => setPayOpen(false)} color="var(--text2)" outline>{t('Отмена')}</ActionButton>
                   </div>
                 </div>
               ) : (
                 <ActionButton color="#7C5CF6" outline onClick={() => { setPaidAmount(String(request.amount)); setNote(''); setPayOpen(true) }}>
-                  Отметить оплаченной
+                  {tc('expenses', 'Отметить оплаченной')}
                 </ActionButton>
               )}
             </Block>
@@ -243,31 +244,31 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
           {canPay && request.paid_at && (
             <button onClick={() => run('undo', () => undoExpensePaid(request.id))}
               className="text-xs text-left self-start" style={{ color: 'var(--text2)', cursor: 'pointer' }}>
-              {busy === 'undo' ? 'Отмена…' : 'Снять отметку об оплате'}
+              {busy === 'undo' ? t('Отмена…') : t('Снять отметку об оплате')}
             </button>
           )}
 
           <div className="flex gap-2">
             {canEdit && (
-              <ActionButton color="var(--text2)" outline onClick={onEdit}>Редактировать</ActionButton>
+              <ActionButton color="var(--text2)" outline onClick={onEdit}>{t('Редактировать')}</ActionButton>
             )}
             {canEdit && (
               <ActionButton busy={busy === 'cancel'} color="var(--text2)" outline
                 onClick={() => run('cancel', () => cancelExpenseRequest(request.id))}>
-                Отозвать
+                {t('Отозвать')}
               </ActionButton>
             )}
           </div>
 
           {error && <p className="text-sm" style={{ color: 'var(--red)' }}>{error}</p>}
 
-          <Block label="Обсуждение">
+          <Block label={t('Обсуждение')}>
             {loadingFeed && feed.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-4 text-sm" style={{ color: 'var(--text2)' }}>
-                <Spinner size={16} /> Загружаем обсуждение…
+                <Spinner size={16} /> {t('Загружаем обсуждение…')}
               </div>
             ) : feed.length === 0 ? (
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>Пока пусто</p>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('Пока пусто')}</p>
             ) : (
               <div className="flex flex-col gap-3">
                 {feed.map(item => item.kind === 'comment' ? (
@@ -285,7 +286,7 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
                       <> → <span style={{ color: 'var(--text)' }}>{STATUS_WORD[item.data.new_value] ?? item.data.new_value}</span></>
                     )}
                     {item.data.type === 'edited' && item.data.old_value && item.data.new_value && (
-                      <>: сумма {money(Number(item.data.old_value))} → {money(Number(item.data.new_value))}</>
+                      <>: {t('сумма')} {money(Number(item.data.old_value))} → {money(Number(item.data.new_value))}</>
                     )}
                     {' · '}{formatDate(item.data.created_at)}
                   </div>
@@ -298,13 +299,13 @@ export default function ExpenseDrawer({ request, canApprove, canPay, currentUser
         <div className="px-5 py-4 flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
           <input value={comment} onChange={e => setComment(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment() } }}
-            placeholder="Написать комментарий…"
+            placeholder={t('Написать комментарий…')}
             className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
             style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
           <button onClick={sendComment} disabled={sending || !comment.trim()}
             className="px-4 py-2 rounded-lg text-sm disabled:opacity-50"
             style={{ background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
-            {sending ? <Spinner /> : 'Отправить'}
+            {sending ? <Spinner /> : t('Отправить')}
           </button>
         </div>
       </div>
