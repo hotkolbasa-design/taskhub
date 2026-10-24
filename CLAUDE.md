@@ -37,7 +37,7 @@
   `isDemo()` из `lib/demo/mode.ts`: у демо-сайта их ключей нет.
 - **Демо-сайт только для просмотра:** любую запись через клиенты Supabase режет
   `lib/demo/read-only.ts` (ответ 403 `DEMO_READ_ONLY`). Новая запись мимо Supabase проверяет
-  `isDemoReadOnly()`. `createUnguardedAdminClient()` — только для `/api/demo`. Подробно —
+  `isDemoReadOnly()`. `createUnguardedAdminClient()` — только для `/api/demo/enter`. Подробно —
   CLAUDE_REFERENCE.md, «Демо-копия» → «Только просмотр».
 - **`proxy.ts` не проверяет `/api/*`** — маршрут API с данными обязан сам проверить вход и права
   (образец — `allowed()` в `app/api/crm/route.ts`), иначе он открыт любому.

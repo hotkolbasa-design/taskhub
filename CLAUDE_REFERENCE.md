@@ -592,12 +592,20 @@ async function handleRemove(id) {
 | Данные | `scripts/demo_data.py` (задачи, расходы, ученики), `lib/demo/crm-sheets.ts` (листы CRM) |
 | Журнал | `~/Library/Logs/taskhub-demo-sync.log`; при сбое — уведомление macOS «Демо TaskHub» |
 
-**Вход для работодателей — без пароля:** https://taskhub-demo-sigma.vercel.app/api/demo (24.10.2026). Маршрут
-`app/api/demo/route.ts` входит под `demo@taskhub.local` паролем из переменной `DEMO_PASSWORD` проекта
-Vercel `taskhub-demo` и уводит на `/dashboard`; если посетитель сменил пароль общей учётки — возвращает его
-сервисным ключом и входит снова. Без `DEMO_MODE=1` отдаёт 404. На `/login` демо-сайта — кнопка
-«Войти в демо без пароля». Эту ссылку и ставим в профили, резюме и Notion; сам пароль нигде не публикуем.
-Сменился `DEMO_PASSWORD` в `.env.local.dev` — обновить и переменную у `taskhub-demo`.
+**Вход для работодателей — без пароля:** https://taskhub-demo-sigma.vercel.app/api/demo (24.10.2026). Эту
+ссылку и ставим в профили, резюме и Notion; сам пароль нигде не публикуем. Устроено в два шага:
+- `app/api/demo/route.ts` — лёгкая страница 200: `<title>`, `og:title`/`og:description`/`og:url`,
+  `noindex`, кнопка «Open the demo» и скрипт `location.replace('/api/demo/enter')`. Браузер уходит на вход
+  сразу, боты превью скриптов не выполняют и берут карточку. Картинки `og:image` нет — в `public/`
+  подходящей не нашлось. Раньше вход был прямо здесь (307 с кукой сессии ~4 КБ и переход на тяжёлый
+  `/dashboard`), и превью-боты ссылку не открывали: Upwork писал «We can't access the link», LinkedIn
+  Featured сохранял `/login`.
+- `app/api/demo/enter/route.ts` — сам вход под `demo@taskhub.local` паролем из переменной `DEMO_PASSWORD`
+  проекта Vercel `taskhub-demo`, затем `/dashboard`; если пароль общей учётки всё же сменили — возвращает
+  его сервисным ключом (`createUnguardedAdminClient`) и входит снова.
+
+Оба без `DEMO_MODE=1` отдают 404. На `/login` демо-сайта — кнопка «Войти в демо без пароля» (ведёт на
+`/api/demo`). Сменился `DEMO_PASSWORD` в `.env.local.dev` — обновить и переменную у `taskhub-demo`.
 
 **Вход:** `demo@taskhub.local` — администратор «Дана Алиева», видит всё. Пароль — `DEMO_PASSWORD` в
 `.env.local.dev`, он общий для всех 16 демо-учёток `<логин>@taskhub.local` (логины — `LYUDI` в
@@ -683,7 +691,7 @@ Vercel `taskhub-demo` и уводит на `/dashboard`; если посетит
 - **Остальное:** `/api/crm` POST — 403 сразу; запись в листы CRM (`lib/crm/sheets.ts`) бросает
   `DemoReadOnlyError`; кроны `auto-fix-sprints` и `freeze` в демо выходят сразу (спринты,
   уведомления и снимки там такие, какими их залила пересборка).
-- **Исключение одно:** `createUnguardedAdminClient()` — только для `app/api/demo/route.ts`
+- **Исключение одно:** `createUnguardedAdminClient()` — только для `app/api/demo/enter/route.ts`
   (вернуть пароль общей учётки). Больше нигде.
 - **Второй рубеж — права демо-базы:** `scripts/demo-sync.py` после заливки отбирает у `anon` и
   `authenticated` INSERT/UPDATE/DELETE/TRUNCATE в `public` (константа `TOLKO_CHTENIE`, применено

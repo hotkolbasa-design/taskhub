@@ -17,7 +17,7 @@ export function createAdminClient() {
 }
 
 /**
- * Сервисный клиент без защиты демо. Только для app/api/demo/route.ts: вернуть пароль общей
+ * Сервисный клиент без защиты демо. Только для app/api/demo/enter/route.ts: вернуть пароль общей
  * демо-учётки, если его всё-таки сменили. Больше нигде не использовать.
  */
 export function createUnguardedAdminClient() {
