@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isDemoReadOnly } from '@/lib/demo/read-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createNotifications, buildRecipients } from '@/lib/notifications'
 import { syncStudentMoves } from '@/lib/crm/students'
@@ -8,6 +9,8 @@ export async function GET(req: NextRequest) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // демо только для просмотра: спринты и уведомления там уже такие, какими их залила пересборка
+  if (isDemoReadOnly()) return NextResponse.json({ skipped: 'demo-read-only' })
 
   const admin = createAdminClient()
   const results: Record<string, number> = { sprints_fixed: 0, deadline_soon: 0, deadline_overdue: 0 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isDemoReadOnly } from '@/lib/demo/read-only'
 import { computeDashboardData } from '@/lib/crm/compute'
 import { readSnapshot, writeSnapshot } from '@/lib/crm/snapshots'
 
@@ -23,6 +24,8 @@ export async function GET(req: NextRequest) {
   if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // демо только для просмотра: снимки месяцев там не пишутся
+  if (isDemoReadOnly()) return NextResponse.json({ skipped: 'demo-read-only' })
 
   const now = new Date()
   const target = searchParams.get('month') ?? previousMonth(now)

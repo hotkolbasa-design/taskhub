@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { demoReadOnlyOptions } from '@/lib/demo/read-only-server'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -22,6 +23,8 @@ export async function createClient() {
           }
         },
       },
+      // на демо-сайте запись отбивается (lib/demo/read-only.ts), на проде пусто
+      ...demoReadOnlyOptions(),
     }
   )
 }

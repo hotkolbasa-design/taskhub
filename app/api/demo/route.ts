@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { isDemo } from '@/lib/demo/mode'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createUnguardedAdminClient } from '@/lib/supabase/admin'
 
 // Вход в демо по одной ссылке — для работодателей из профилей и резюме: пароль нигде не публикуется.
 // Работает только на демо-сайте (DEMO_MODE=1), на проде маршрута как будто нет.
@@ -28,9 +28,10 @@ export async function GET(request: NextRequest) {
   let { error } = await supabase.auth.signInWithPassword({ email: DEMO_EMAIL, password })
 
   // Учётка общая: посетитель мог сменить в ней пароль — тогда остальные не войдут до пересборки.
-  // Возвращаем пароль сервисным ключом демо-базы и пробуем ещё раз.
+  // Возвращаем пароль сервисным ключом демо-базы и пробуем ещё раз. Клиент — без защиты демо:
+  // обычный createAdminClient на демо-сайте запись отбивает (lib/demo/read-only.ts).
   if (error) {
-    const admin = createAdminClient()
+    const admin = createUnguardedAdminClient()
     const { data } = await admin.auth.admin.listUsers({ perPage: 1000 })
     const user = data?.users.find((u) => u.email === DEMO_EMAIL)
     if (user) {

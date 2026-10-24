@@ -5,6 +5,7 @@ import type { TrashTask } from '@/lib/queries/trash'
 import { restoreTask, getTaskDrawerData, type DrawerData } from '@/app/(dashboard)/trash/actions'
 import TaskDrawer from '@/components/backlog/task-drawer'
 import type { BacklogTask } from '@/types'
+import { DEMO_READ_ONLY_BROWSER } from '@/lib/demo/read-only'
 
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return 'неизвестно'
@@ -34,8 +35,14 @@ function RestoreButton({ taskId, onRestore }: { taskId: string; onRestore: (id: 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation()
     startTransition(async () => {
-      await restoreTask(taskId)
-      onRestore(taskId)
+      try {
+        await restoreTask(taskId)
+        onRestore(taskId)
+      } catch (e) {
+        // в демо запись запрещена: ошибка из перехода уронила бы страницу в error.tsx,
+        // а подсказку и так показывает плашка демо
+        if (!DEMO_READ_ONLY_BROWSER) throw e
+      }
     })
   }
 

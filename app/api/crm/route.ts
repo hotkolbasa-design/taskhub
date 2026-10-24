@@ -15,6 +15,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canAccessCrm } from '@/lib/utils/crm-access'
 import { isDemo } from '@/lib/demo/mode'
+import { isDemoReadOnly } from '@/lib/demo/read-only'
+import { demoReadOnlyResponse } from '@/lib/demo/read-only-server'
 
 // proxy.ts не проверяет /api/*, поэтому права проверяются здесь: до 24.10.2026 цифры CRM,
 // отчёт по хантерам и правка планов были доступны без входа любому, кто знает адрес
@@ -122,6 +124,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!(await allowed())) return denied()
+  // все POST здесь — запись: заморозка, планы, расходы, группы источников
+  if (isDemoReadOnly()) return demoReadOnlyResponse()
   try {
     const body = await req.json()
     const { action } = body

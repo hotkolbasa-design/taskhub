@@ -11,7 +11,8 @@
      так в демо доезжают новые таблицы, колонки, функции и политики.
   3. Учётки демо-сотрудников приводятся к списку из demo_data.LYUDI, пароль у всех —
      DEMO_PASSWORD из .env.local.dev; всё, что зарегистрировали посетители, удаляется.
-  4. Заливаются вымышленные данные с датами от сегодняшнего дня (scripts/demo_data.py).
+  4. Заливаются вымышленные данные с датами от сегодняшнего дня (scripts/demo_data.py),
+     у ролей anon и authenticated отбирается запись в public (демо только для просмотра).
   5. Сбрасывается кэш демо-сайта (DEMO_URL + DEMO_CRON_SECRET из .env.local.dev).
 
 Раз в неделю (решение Марлена 24.10.2026: TaskHub меняется не каждый день). Пересборка идёт
@@ -75,6 +76,13 @@ do $$ declare r record; begin
   end loop;
 end $$;
 """
+
+
+# Демо только для просмотра (решение Марлена 24.10.2026). Приложение режет запись само
+# (lib/demo/read-only.ts) — здесь закрыт обход мимо него: прямые запросы к REST API с публичным
+# ключом anon и токеном демо-учётки. Сервисный ключ (приложение, этот скрипт) не затронут.
+# Вернуть запись до следующей пересборки — grant тех же прав (CLAUDE_REFERENCE.md, «Демо-копия»).
+TOLKO_CHTENIE = 'revoke insert, update, delete, truncate on all tables in schema public from anon, authenticated;'
 
 
 def log(msg: str):
@@ -205,6 +213,7 @@ def peresobrat(env: dict):
         zalit(t, dannye[t], upsert=(t == 'profiles'))
     api.query(api.DEV_REF, f"select setval('public.expense_request_number_seq', {len(dannye['expense_requests'])})",
               write=True)
+    api.query(api.DEV_REF, TOLKO_CHTENIE, write=True)
 
     log('6/6 проверяю')
     schet = api.query(api.DEV_REF, 'select ' + ', '.join(f'(select count(*) from public.{t}) as "{t}"' for t in TABLITSY))[0]

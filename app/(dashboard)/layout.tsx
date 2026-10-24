@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import SidebarNav from '@/components/sidebar-nav'
 import NavigationLoader from '@/components/navigation-loader'
 import { isDemo } from '@/lib/demo/mode'
+import { isDemoReadOnly } from '@/lib/demo/read-only'
+import DemoReadOnlyBar from '@/components/demo/read-only-bar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -24,9 +26,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
       <NavigationLoader />
       <SidebarNav profile={profile} demo={isDemo()} />
-      <main className="flex-1 overflow-auto h-full">
-        {children}
-      </main>
+      {isDemoReadOnly() ? (
+        // демо-сайт: плашка «только просмотр» над страницей, прокрутка — у main, как без неё
+        <div className="flex-1 flex flex-col min-w-0 h-full">
+          <DemoReadOnlyBar />
+          <main className="flex-1 overflow-auto min-h-0">
+            {children}
+          </main>
+        </div>
+      ) : (
+        <main className="flex-1 overflow-auto h-full">
+          {children}
+        </main>
+      )}
     </div>
   )
 }
