@@ -592,6 +592,13 @@ async function handleRemove(id) {
 | Данные | `scripts/demo_data.py` (задачи, расходы, ученики), `lib/demo/crm-sheets.ts` (листы CRM) |
 | Журнал | `~/Library/Logs/taskhub-demo-sync.log`; при сбое — уведомление macOS «Демо TaskHub» |
 
+**Вход для работодателей — без пароля:** https://taskhub-demo-sigma.vercel.app/api/demo (24.10.2026). Маршрут
+`app/api/demo/route.ts` входит под `demo@taskhub.local` паролем из переменной `DEMO_PASSWORD` проекта
+Vercel `taskhub-demo` и уводит на `/dashboard`; если посетитель сменил пароль общей учётки — возвращает его
+сервисным ключом и входит снова. Без `DEMO_MODE=1` отдаёт 404. На `/login` демо-сайта — кнопка
+«Войти в демо без пароля». Эту ссылку и ставим в профили, резюме и Notion; сам пароль нигде не публикуем.
+Сменился `DEMO_PASSWORD` в `.env.local.dev` — обновить и переменную у `taskhub-demo`.
+
 **Вход:** `demo@taskhub.local` — администратор «Дана Алиева», видит всё. Пароль — `DEMO_PASSWORD` в
 `.env.local.dev`, он общий для всех 16 демо-учёток `<логин>@taskhub.local` (логины — `LYUDI` в
 `demo_data.py`). Под `saule@` видно, как платформу видит сотрудник без CRM; под `asel@` —
