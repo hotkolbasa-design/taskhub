@@ -24,7 +24,9 @@ const BOT_UA = /bot|crawler|spider|preview|facebookexternalhit|embedly|slack|wha
 
 export function GET(request: NextRequest) {
   if (!isDemo()) return new NextResponse('Not found', { status: 404 })
-  const isBot = BOT_UA.test(request.headers.get('user-agent') ?? '')
+  // ?card=… — адрес для карточек-превью (LinkedIn Featured): страница всегда без автоперехода, только
+  // кнопка. LinkedIn снимал превью и браузером с обычным User-Agent, проверки выше ему не мешали.
+  const isBot = BOT_UA.test(request.headers.get('user-agent') ?? '') || request.nextUrl.searchParams.has('card')
 
   const pageUrl = esc(new URL('/api/demo', request.url).href)
   const html = `<!doctype html>
