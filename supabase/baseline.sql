@@ -396,7 +396,7 @@ CREATE INDEX IF NOT EXISTS task_activities_created_at_idx ON public.task_activit
 CREATE INDEX IF NOT EXISTS task_activities_task_id_idx ON public.task_activities USING btree (task_id);
 
 -- ======================================================================
--- ФУНКЦИИ (6)
+-- ФУНКЦИИ (8)
 -- ======================================================================
 
 CREATE OR REPLACE FUNCTION public.can_approve_expenses(uid uuid)
@@ -465,6 +465,24 @@ CREATE OR REPLACE FUNCTION public.is_admin(uid uuid)
  SET search_path TO 'public'
 AS $function$
   select coalesce((select p.role = 'admin' from profiles p where p.id = uid), false)
+$function$
+;
+CREATE OR REPLACE FUNCTION public.is_project_member(pid uuid, uid uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (select 1 from project_members where project_id = pid and user_id = uid)
+$function$
+;
+CREATE OR REPLACE FUNCTION public.is_project_owner(pid uuid, uid uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select exists (select 1 from project_members where project_id = pid and user_id = uid and role = 'owner')
 $function$
 ;
 CREATE OR REPLACE FUNCTION public.update_updated_at()
@@ -575,17 +593,11 @@ create policy profiles_select on public.profiles as PERMISSIVE for SELECT to pub
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles as PERMISSIVE for UPDATE to public using ((auth.uid() = id));
 drop policy if exists members_delete on public.project_members;
-create policy members_delete on public.project_members as PERMISSIVE for DELETE to public using ((EXISTS ( SELECT 1
-   FROM project_members pm
-  WHERE ((pm.project_id = project_members.project_id) AND (pm.user_id = auth.uid()) AND (pm.role = 'owner'::text)))));
+create policy members_delete on public.project_members as PERMISSIVE for DELETE to public using (is_project_owner(project_id, auth.uid()));
 drop policy if exists members_insert on public.project_members;
-create policy members_insert on public.project_members as PERMISSIVE for INSERT to public with check (((EXISTS ( SELECT 1
-   FROM project_members project_members_1
-  WHERE ((project_members_1.project_id = project_members_1.project_id) AND (project_members_1.user_id = auth.uid()) AND (project_members_1.role = 'owner'::text)))) OR (auth.uid() = user_id)));
+create policy members_insert on public.project_members as PERMISSIVE for INSERT to public with check (is_project_owner(project_id, auth.uid()));
 drop policy if exists members_select on public.project_members;
-create policy members_select on public.project_members as PERMISSIVE for SELECT to public using (((user_id = auth.uid()) OR (EXISTS ( SELECT 1
-   FROM project_members pm
-  WHERE ((pm.project_id = project_members.project_id) AND (pm.user_id = auth.uid()))))));
+create policy members_select on public.project_members as PERMISSIVE for SELECT to public using (((user_id = auth.uid()) OR is_project_member(project_id, auth.uid())));
 drop policy if exists projects_delete on public.projects;
 create policy projects_delete on public.projects as PERMISSIVE for DELETE to public using ((auth.uid() = created_by));
 drop policy if exists projects_insert on public.projects;

@@ -89,7 +89,7 @@ export type WeekPlanRow = {
 
 export type MetricStatus = 'ok' | 'near' | 'behind' | null
 
-/** Хантер и его доля ставки: у хантера-эксперта половина времени уходит на собеседования. */
+/** Хантер и его доля ставки: у совмещающего с собеседованиями она меньше единицы. */
 export type Hunter = { name: string; share: number }
 
 export type HunterDay = {

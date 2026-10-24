@@ -51,13 +51,10 @@ export async function getMonthPlans(): Promise<Record<string, MonthPlan>> {
   return {}
 }
 
-// Доля ставки: у хантера-эксперта половина времени уходит на собеседования, поэтому
-// заявок ей положено меньше — план между хантерами делится по этим долям
-const DEFAULT_HUNTERS: Hunter[] = [
-  { name: 'Хантер Один', share: 1 },
-  { name: 'Хантер Два', share: 1 },
-  { name: 'Хантер Три', share: 0.375 },
-]
+// Список хантеров и их долей ставки живёт только в таблице (K5:L5): репозиторий открытый,
+// имена сотрудников в коде не держим. Доля ставки нужна, потому что у хантера, который ещё
+// и проводит собеседования, заявок меньше — план между хантерами делится по этим долям
+const DEFAULT_HUNTERS: Hunter[] = []
 
 export async function getHunters(): Promise<Hunter[]> {
   try {
@@ -99,7 +96,7 @@ export async function getHunterPlans(): Promise<Record<string, HunterPlan>> {
     const saved = stored[h.name] ?? {}
     out[h.name] = { ...DEFAULT_HUNTER_PLAN, ...saved } as HunterPlan
     // Дневные нормы по умолчанию — от доли ставки: у хантера на 0,375 ставки требовать
-    // с неё полную норму звонков значит красить её красным круглый месяц
+    // полную норму звонков значит красить его красным круглый месяц
     if (!stored[h.name]) {
       for (const k of ['leads', 'calls', 'talks', 'minutes', 'booked'] as const) {
         out[h.name][k] = Math.round(DEFAULT_HUNTER_PLAN[k] * h.share)
