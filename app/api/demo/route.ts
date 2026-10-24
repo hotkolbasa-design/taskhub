@@ -17,8 +17,16 @@ const DESCRIPTION =
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
+// Превью LinkedIn Featured исполняет скрипты страницы: с автопереходом оно уходило на /login и
+// сохраняло его вместо карточки. Ботам по User-Agent автопереход не отдаём, а роботам-браузерам
+// (navigator.webdriver) скрипт сам не переходит — им остаётся кнопка.
+const BOT_UA = /bot|crawler|spider|preview|facebookexternalhit|embedly|slack|whatsapp|telegram|skype|discord|headless|linkedin|upwork|vkshare|okhttp|python|curl|wget/i
+
 export function GET(request: NextRequest) {
   if (!isDemo()) return new NextResponse('Not found', { status: 404 })
+  // ?card=… — адрес для карточек-превью (LinkedIn Featured): страница всегда без автоперехода, только
+  // кнопка. LinkedIn снимал превью и браузером с обычным User-Agent, проверки выше ему не мешали.
+  const isBot = BOT_UA.test(request.headers.get('user-agent') ?? '') || request.nextUrl.searchParams.has('card')
 
   const pageUrl = esc(new URL('/api/demo', request.url).href)
   const html = `<!doctype html>
@@ -37,7 +45,7 @@ export function GET(request: NextRequest) {
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="${esc(TITLE)}">
 <meta name="twitter:description" content="${esc(DESCRIPTION)}">
-<script>location.replace('/api/demo/enter')</script>
+${isBot ? '' : "<script>if (!navigator.webdriver) location.replace('/api/demo/enter')</script>"}
 <style>
 :root { --bg: #F4F2FD; --surface: #FFFFFF; --text: #0D0B18; --text2: #6B6489; --accent: #7C5CF6; --border: #E2DFF5; }
 * { box-sizing: border-box; }
