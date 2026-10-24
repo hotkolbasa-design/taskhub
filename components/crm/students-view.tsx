@@ -24,6 +24,7 @@ type Stats = {
   days: { date: string; enrolled: number; expelled: number; total: number }[]
   weeks: { label: string; from: string; to: string; enrolled: number; expelled: number; total: number }[]
   moves: Move[]
+  demo?: boolean
 }
 
 const DEAL_URL = 'https://globalonlineschool.bitrix24.kz/crm/deal/details'
@@ -215,10 +216,15 @@ export default function StudentsView({ monthKey }: { monthKey: string }) {
                     {m.counted === false ? '—' : `${m.kind === 'enroll' ? '+' : '−'}${m.students}`}
                   </td>
                   <td className="px-4 py-2.5">
-                    <a href={`${DEAL_URL}/${m.deal_id}/`} target="_blank" rel="noreferrer"
-                      className="text-xs" style={{ color: 'var(--accent)' }}>
-                      {m.deal_title || `Сделка ${m.deal_id}`}
-                    </a>
+                    {/* в демо сделки выдуманные — ссылка на портал Битрикса вела бы в никуда */}
+                    {data.demo ? (
+                      <span className="text-xs" style={{ color: 'var(--text2)' }}>{m.deal_title || `Сделка ${m.deal_id}`}</span>
+                    ) : (
+                      <a href={`${DEAL_URL}/${m.deal_id}/`} target="_blank" rel="noreferrer"
+                        className="text-xs" style={{ color: 'var(--accent)' }}>
+                        {m.deal_title || `Сделка ${m.deal_id}`}
+                      </a>
+                    )}
                   </td>
                 </tr>
               ))}

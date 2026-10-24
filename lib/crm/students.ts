@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWeekGroups, formatWeek } from '@/lib/crm/utils'
+import { isDemo } from '@/lib/demo/mode'
 
 /** Стадия «Зарегистрировать на платформу» воронки «Зачисление в школу» — сюда попадает пришедший ученик. */
 const ENROLL_STAGE = 'C4:PREPARATION'
@@ -259,6 +260,8 @@ function studentsOf(deal: BitrixDeal | undefined): string[] {
  * Повторный запуск безопасен: history_id уникален, уже известные переходы пропускаются.
  */
 export async function syncStudentMoves(): Promise<{ enroll: number; expel: number; skipped: number }> {
+  // в демо движения выдуманные, а пересчёт по Битриксу переписал бы их в «сделка удалена»
+  if (isDemo()) return { enroll: 0, expel: 0, skipped: 0 }
   const admin = createAdminClient()
 
   const { data: baseline } = await admin

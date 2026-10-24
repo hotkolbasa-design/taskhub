@@ -165,7 +165,7 @@ const TYPE_LABEL: Record<string, string> = {
   article_updated:   'Инструкция обновилась',
 }
 
-export default function SidebarNav({ profile }: { profile: Profile | null }) {
+export default function SidebarNav({ profile, demo = false }: { profile: Profile | null; demo?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -282,11 +282,18 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
       <div className="px-5 pt-5 pb-5" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-1.5">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--accent)' }}>
-            <span style={{ color: 'white', fontSize: 14, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em' }}>g</span>
+            <span style={{ color: 'white', fontSize: 14, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.02em' }}>{demo ? 't' : 'g'}</span>
           </div>
           <span className="text-sm font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
-            globalos
+            {demo ? 'taskhub' : 'globalos'}
           </span>
+          {/* демо-копию показывают посторонним: компания и данные вымышленные, бренд Globalos не нужен */}
+          {demo && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md ml-1" title="Демо-версия: компания, люди и цифры вымышлены"
+              style={{ color: 'var(--accent)', background: 'var(--surface2)' }}>
+              демо
+            </span>
+          )}
         </div>
       </div>
 
@@ -295,7 +302,7 @@ export default function SidebarNav({ profile }: { profile: Profile | null }) {
         {(() => {
           const isAdmin = profile?.role === 'admin'
           const extra = [
-            ...(canAccessCrm(profile ?? {}) ? [crmItem, podskazchikItem, predlozheniyaItem] : []),
+            ...(canAccessCrm(profile ?? {}) ? (demo ? [crmItem] : [crmItem, podskazchikItem, predlozheniyaItem]) : []),
             ...(isAdmin ? [adminItem] : []),
           ]
           return [...navItems, ...extra] as { href: string; label: string; icon: ReactNode; newTab?: boolean }[]

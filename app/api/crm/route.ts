@@ -11,6 +11,26 @@ import { readSheetRows } from '@/lib/crm/read-sheet'
 import { getMonthDays, isTestTitle } from '@/lib/crm/utils'
 import { getStudentStats, syncStudentMoves } from '@/lib/crm/students'
 import { unstable_cache } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { canAccessCrm } from '@/lib/utils/crm-access'
+import { isDemo } from '@/lib/demo/mode'
+
+// proxy.ts не проверяет /api/*, поэтому права проверяются здесь: до 24.10.2026 цифры CRM,
+// отчёт по хантерам и правка планов были доступны без входа любому, кто знает адрес
+async function allowed(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { data: profile } = await createAdminClient()
+    .from('profiles')
+    .select('role, status, position, department')
+    .eq('id', user.id)
+    .maybeSingle()
+  return !!profile && profile.status === 'active' && canAccessCrm(profile)
+}
+
+const denied = () => NextResponse.json({ error: 'Нет доступа к CRM' }, { status: 401 })
 
 // Синхронизация движений учеников ходит в Битрикс и пишет в базу. Раньше она
 // запускалась на каждое открытие вкладки — кэш делает её общей на десять минут
@@ -24,6 +44,7 @@ const syncStudentsThrottled = unstable_cache(
 )
 
 export async function GET(req: NextRequest) {
+  if (!(await allowed())) return denied()
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action')
 
@@ -65,7 +86,7 @@ export async function GET(req: NextRequest) {
       if (searchParams.get('sync') !== '0') {
         await syncStudentsThrottled().catch(e => console.error('[students] синхронизация:', e.message))
       }
-      return NextResponse.json(await getStudentStats(month))
+      return NextResponse.json({ ...(await getStudentStats(month)), demo: isDemo() })
     }
 
     if (action === 'debug') {
@@ -100,6 +121,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await allowed())) return denied()
   try {
     const body = await req.json()
     const { action } = body

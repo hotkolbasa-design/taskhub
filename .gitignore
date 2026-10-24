@@ -44,3 +44,6 @@ next-env.d.ts
 # внутренние скриншоты и инструкции — не публиковать
 docs/
 supabase/.temp/
+
+# python
+__pycache__/

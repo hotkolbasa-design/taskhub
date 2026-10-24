@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SidebarNav from '@/components/sidebar-nav'
 import NavigationLoader from '@/components/navigation-loader'
+import { isDemo } from '@/lib/demo/mode'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
       <NavigationLoader />
-      <SidebarNav profile={profile} />
+      <SidebarNav profile={profile} demo={isDemo()} />
       <main className="flex-1 overflow-auto h-full">
         {children}
       </main>

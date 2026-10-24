@@ -1,4 +1,6 @@
 import { google } from 'googleapis'
+import { isDemo } from '@/lib/demo/mode'
+import { demoRead, demoWrite, demoAppend, demoDeleteRow } from '@/lib/demo/crm-sheets'
 
 function getClient() {
   const keyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
@@ -16,6 +18,7 @@ function getClient() {
 const ID = () => process.env.GOOGLE_SPREADSHEET_ID!
 
 export async function sheetValues(name: string, range: string): Promise<(string | number | boolean)[][]> {
+  if (isDemo()) return demoRead(name, range)
   const sheets = getClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: ID(),
@@ -27,6 +30,7 @@ export async function sheetValues(name: string, range: string): Promise<(string 
 }
 
 export async function updateCell(name: string, cell: string, value: string | number): Promise<void> {
+  if (isDemo()) return demoWrite(name, cell, [[value]])
   const sheets = getClient()
   await sheets.spreadsheets.values.update({
     spreadsheetId: ID(),
@@ -42,6 +46,7 @@ export async function updateRange(
   values: (string | number | null)[][],
   inputOption: 'USER_ENTERED' | 'RAW' = 'USER_ENTERED',
 ): Promise<void> {
+  if (isDemo()) return demoWrite(name, range, values)
   const sheets = getClient()
   await sheets.spreadsheets.values.update({
     spreadsheetId: ID(),
@@ -53,6 +58,7 @@ export async function updateRange(
 
 
 export async function appendRow(name: string, values: (string | number | null)[], inputOption: 'USER_ENTERED' | 'RAW' = 'USER_ENTERED'): Promise<void> {
+  if (isDemo()) return demoAppend(name, values)
   const sheets = getClient()
   await sheets.spreadsheets.values.append({
     spreadsheetId: ID(),
@@ -63,6 +69,7 @@ export async function appendRow(name: string, values: (string | number | null)[]
 }
 
 export async function deleteSheetRow(name: string, rowIndex: number): Promise<void> {
+  if (isDemo()) return demoDeleteRow(name, rowIndex)
   const sheets = getClient()
   const meta = await sheets.spreadsheets.get({ spreadsheetId: ID() })
   const sheet = meta.data.sheets?.find(s => s.properties?.title === name)
@@ -82,6 +89,8 @@ export async function deleteSheetRow(name: string, rowIndex: number): Promise<vo
 
 /** Чтение из другой таблицы: звонки и прогресс хантеров живут отдельными файлами. */
 export async function sheetValuesFrom(spreadsheetId: string, name: string, range: string): Promise<(string | number | boolean)[][]> {
+  // в демо листы звонков и прогресса лежат в той же памяти: имена листов не пересекаются
+  if (isDemo()) return demoRead(name, range)
   const sheets = getClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
