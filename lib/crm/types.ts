@@ -41,7 +41,9 @@ export type SpendMetrics = {
   costPerLeadAnalytics: ValuesSet
   budgetKzt: ValuesSet
   costPerLeadCrm: ValuesSet
-  costPerInterview: ValuesSet   // расход на одно проведённое собеседование
+  // Расход на одно проведённое собеседование. Необязательное: ответ из кэша,
+  // посчитанный до появления метрики, этого поля не содержит
+  costPerInterview?: ValuesSet
   costPerClient: ValuesSet
   costPerClientKzt: ValuesSet
   romi: ValuesSet

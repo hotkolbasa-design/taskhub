@@ -21,7 +21,7 @@ type Spend = {
   spent: ValuesSet; impressions: ValuesSet; clicks: ValuesSet
   ctr: ValuesSet; costPerClick: ValuesSet; fbLeads: ValuesSet
   costPerLeadAnalytics: ValuesSet; budgetKzt: ValuesSet
-  costPerLeadCrm: ValuesSet; costPerInterview: ValuesSet; costPerClient: ValuesSet
+  costPerLeadCrm: ValuesSet; costPerInterview?: ValuesSet; costPerClient: ValuesSet
   costPerClientKzt: ValuesSet; romi: ValuesSet
 }
 type SourceData = { source: string; milestones: Milestone[]; revenue?: ValuesSet; spend?: Spend }
@@ -283,7 +283,10 @@ function MoneyRow({ label, v }: { label: string; v: ValuesSet }) {
   )
 }
 
-function ComputedRow({ label, v, fmt }: { label: string; v: ValuesSet; fmt: (n: number) => string }) {
+function ComputedRow({ label, v, fmt }: { label: string; v?: ValuesSet; fmt: (n: number) => string }) {
+  // Данные месяца лежат в кэше несколько минут. Сразу после выкатки новой метрики
+  // оттуда приходит ответ без неё — без этой проверки вся вкладка падала на undefined
+  if (!v?.dayValues) return null
   return (
     <tr>
       <td className="crm-cell crm-col-label crm-cv-row crm-lbl">{label}</td>
