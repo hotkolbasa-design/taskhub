@@ -182,6 +182,7 @@ function buildSpend(
   spendMap: SpendMap,
   rateMap: RateMap,
   leadsMilestone: MilestoneStat,
+  interviewMilestone: MilestoneStat | undefined,
   salesMilestone: MilestoneStat,
   revenue: ValuesSet
 ): SpendMetrics {
@@ -228,6 +229,7 @@ function buildSpend(
     costPerLeadAnalytics: metric(spent, fbLeads),
     budgetKzt,
     costPerLeadCrm: metric(spent, ms(leadsMilestone)),
+    costPerInterview: interviewMilestone ? metric(spent, ms(interviewMilestone)) : metric(spent, ms(leadsMilestone)),
     costPerClient: metric(spent, ms(salesMilestone)),
     costPerClientKzt: metric(budgetKzt, ms(salesMilestone)),
     romi: {
@@ -330,14 +332,14 @@ export function buildMarketingStats(
 
   const overallMilestones = buildMilestones(leadsRows, dealsRows, days, weeks, null, OVERALL_MILESTONES, toSchool)
   const overallRevenue = buildRevenue(dealsRows, days, weeks, null)
-  const overallSpend = buildSpend(null, days, weeks, spendMap, rateMap, overallMilestones[0], overallMilestones[overallMilestones.length - 1], overallRevenue)
+  const overallSpend = buildSpend(null, days, weeks, spendMap, rateMap, overallMilestones[0], overallMilestones[2], overallMilestones[overallMilestones.length - 1], overallRevenue)
 
   const sourceStats: SourceData[] = sources.map(src => {
     const filter = makeSourceFilter(src)
     const list = getMilestonesForSource(src)
     const milestones = buildMilestones(leadsRows, dealsRows, days, weeks, filter, list, toSchool)
     const revenue = buildRevenue(dealsRows, days, weeks, filter)
-    const spend = buildSpend(src, days, weeks, spendMap, rateMap, milestones[0], milestones[milestones.length - 1], revenue)
+    const spend = buildSpend(src, days, weeks, spendMap, rateMap, milestones[0], milestones[2], milestones[milestones.length - 1], revenue)
     return { source: src, milestones, revenue, spend }
   })
 
@@ -378,7 +380,7 @@ export function buildMarketingStats(
       sources: group.sources,
       milestones: mergedMilestones,
       revenue: mergedRevenue,
-      spend: buildSpend(group.name, days, weeks, spendMap, rateMap, leadsMilestone, salesMilestone, mergedRevenue),
+      spend: buildSpend(group.name, days, weeks, spendMap, rateMap, leadsMilestone, mergedMilestones[2], salesMilestone, mergedRevenue),
     }
   })
 

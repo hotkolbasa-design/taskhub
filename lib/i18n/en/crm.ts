@@ -74,6 +74,7 @@ export const crm: Record<string, string> = {
   'Стоимость лида (аналитика), $': 'Cost per lead (ad analytics), $',
   'Бюджет на продвижение, тнг': 'Promotion budget, ₸',
   'Цена лида, $': 'Cost per lead, $',
+  'Цена собеседования, $': 'Cost per interview, $',
   'Цена клиента, $': 'Cost per customer, $',
   'Цена клиента, тнг': 'Cost per customer, ₸',
   'Курс USD / KZT': 'USD / KZT rate',

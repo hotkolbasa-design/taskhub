@@ -41,6 +41,7 @@ export type SpendMetrics = {
   costPerLeadAnalytics: ValuesSet
   budgetKzt: ValuesSet
   costPerLeadCrm: ValuesSet
+  costPerInterview: ValuesSet   // расход на одно проведённое собеседование
   costPerClient: ValuesSet
   costPerClientKzt: ValuesSet
   romi: ValuesSet

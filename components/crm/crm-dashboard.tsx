@@ -21,7 +21,7 @@ type Spend = {
   spent: ValuesSet; impressions: ValuesSet; clicks: ValuesSet
   ctr: ValuesSet; costPerClick: ValuesSet; fbLeads: ValuesSet
   costPerLeadAnalytics: ValuesSet; budgetKzt: ValuesSet
-  costPerLeadCrm: ValuesSet; costPerClient: ValuesSet
+  costPerLeadCrm: ValuesSet; costPerInterview: ValuesSet; costPerClient: ValuesSet
   costPerClientKzt: ValuesSet; romi: ValuesSet
 }
 type SourceData = { source: string; milestones: Milestone[]; revenue?: ValuesSet; spend?: Spend }
@@ -381,6 +381,7 @@ function SpendSection({ src, spend, daysIso, data, editable, onSave }: {
       <ComputedRow label={t('Стоимость лида (аналитика), $')} v={spend.costPerLeadAnalytics} fmt={v => fmtMoney(v, '$')} />
       <ComputedRow label={t('Бюджет на продвижение, тнг')} v={spend.budgetKzt} fmt={v => fmtMoney(v, ' ₸')} />
       <ComputedRow label={t('Цена лида, $')} v={spend.costPerLeadCrm} fmt={v => fmtMoney(v, '$')} />
+      <ComputedRow label={t('Цена собеседования, $')} v={spend.costPerInterview} fmt={v => fmtMoney(v, '$')} />
       <ComputedRow label={t('Цена клиента, $')} v={spend.costPerClient} fmt={v => fmtMoney(v, '$')} />
       <ComputedRow label={t('Цена клиента, тнг')} v={spend.costPerClientKzt} fmt={v => fmtMoney(v, ' ₸')} />
       <ComputedRow label="ROMI, %" v={spend.romi} fmt={fmtPct} />
@@ -670,8 +671,13 @@ function MergedSourceCard({ group, data, onSave, onDelete, allSources, ungrouped
   const [expanded, setExpanded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [localSources, setLocalSources] = useState(group.sources)
-
-  useEffect(() => { setLocalSources(group.sources) }, [group.sources])
+  // Правка группы показывается сразу, но приход новых данных снаружи её сбрасывает.
+  // Сверка при отрисовке вместо эффекта: иначе кадр рисуется старым списком
+  const [syncedSources, setSyncedSources] = useState(group.sources)
+  if (syncedSources !== group.sources) {
+    setSyncedSources(group.sources)
+    setLocalSources(group.sources)
+  }
 
   function handleSaveEdit(newSources: string[]) {
     setLocalSources(newSources)
@@ -934,10 +940,6 @@ function MarketingView({ data, excluded, onToggleExcluded, onSave, onSaveRate, o
   const groups = data.marketing.groups ?? []
   const groupedSourceNames = new Set(groups.flatMap(g => g.sources))
 
-  function toggle(src: string, checked: boolean) {
-    onToggleExcluded(src, checked)
-  }
-
   async function handleSaveGroups(next: MergedGroup[]) {
     await fetch('/api/crm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveGroups', groups: next }) })
     setGroupModalOpen(false)
@@ -1163,17 +1165,25 @@ export default function CrmDashboard() {
   // Load data when month changes
   useEffect(() => {
     if (!selectedMonth) return
-    setLoading(true)
-    fetch(`/api/crm?action=data&month=${selectedMonth}`)
-      .then(r => r.json())
-      .then((d: DashData) => {
-        if ((d as any)?.error) { setError((d as any).error); setLoading(false); return }
+    let alive = true
+    const load = async (month: string) => {
+      setLoading(true)
+      try {
+        const r = await fetch(`/api/crm?action=data&month=${month}`)
+        const d: DashData & { error?: string; excludedSources?: string[] } = await r.json()
+        if (!alive) return
+        if (d.error) { setError(d.error); return }
         setData(d)
         // Sync excluded sources when month changes (fresh load)
-        setExcluded(new Set((d as any).excludedSources ?? []))
-        setLoading(false)
-      })
-      .catch(e => { setError(String(e)); setLoading(false) })
+        setExcluded(new Set(d.excludedSources ?? []))
+      } catch (e) {
+        if (alive) setError(String(e))
+      } finally {
+        if (alive) setLoading(false)
+      }
+    }
+    void load(selectedMonth)
+    return () => { alive = false }
   }, [selectedMonth])
 
   async function safeReload(month: string, fresh = false): Promise<DashData | null> {
