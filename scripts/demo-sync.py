@@ -26,15 +26,22 @@
   demo-sync.py --if-due   пересборка, если на этой неделе её ещё не было; иначе только пинг
   demo-sync.py --ping     только пинг: бесплатный проект Supabase засыпает после недели без запросов
 
-launchd запускает --if-due каждое утро в 07:00 и при входе в систему
-(~/Library/LaunchAgents/local.taskhub-demo-sync.plist); если Мак спал, запуск случится
-при пробуждении. Журнал — ~/Library/Logs/taskhub-demo-sync.log.
+launchd запускает --if-due каждый час и при входе в систему
+(~/Library/LaunchAgents/local.taskhub-demo-sync.plist, под caffeinate -i). Пинг — раз в день,
+пересборка — первым запуском недели, когда за Маком сидят. Журнал — ~/Library/Logs/taskhub-demo-sync.log.
+
+Почему «когда сидят» (04.11.2026): с 27.10 пересборка в 07:00 падала почти каждый день по таймауту
+curl. Мак в это время спит с закрытой крышкой и просыпается «тёмным пробуждением» на секунды:
+скрипт успевал стереть демо-базу и засыпал посреди накатывания схемы — демо по ссылке из профилей
+оставалось пустым до 04.11. Теперь при простое больше PROSTOY_MAX минут пересборка откладывается
+до следующего часа; признак простоя — HIDIdleTime (время без клавиатуры и мыши).
 """
 
 import argparse
 import datetime as dt
 import json
 import pathlib
+import re
 import secrets
 import subprocess
 import sys
@@ -45,6 +52,7 @@ import supabase_api as api
 
 ENV_FILE = api.PROJECT / '.env.local.dev'
 STATE = pathlib.Path.home() / 'Library' / 'Application Support' / 'taskhub-demo' / 'state.json'
+PROSTOY_MAX = 15  # минут без ввода: дольше — Мак, скорее всего, спит, и запрос оборвётся на полпути
 
 # Порядок заливки: сначала то, на что ссылаются внешние ключи
 TABLITSY = ['profiles', 'projects', 'project_members', 'sprints', 'sprint_columns', 'tasks', 'comments',
@@ -177,10 +185,32 @@ def sbrosit_kesh(env: dict, ids: dict[str, str]):
         raise RuntimeError(f'кэш демо-сайта не сброшен: HTTP {code}')
 
 
+def sostoyanie() -> dict:
+    try:
+        return json.loads(STATE.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def zapomnit(**pole):
+    st = sostoyanie()
+    st.update({k: v.isoformat() for k, v in pole.items()})
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    STATE.write_text(json.dumps(st), encoding='utf-8')
+
+
+def prostoy_min() -> float:
+    """Минуты без клавиатуры и мыши. В «тёмном пробуждении» спящего Мака это часы."""
+    out = subprocess.run(['ioreg', '-c', 'IOHIDSystem'], capture_output=True, text=True).stdout
+    m = re.search(r'"HIDIdleTime" = (\d+)', out)
+    return int(m.group(1)) / 6e10 if m else 0.0
+
+
 def ping(env: dict):
     code, _ = api.curl([f"{env['NEXT_PUBLIC_SUPABASE_URL']}/rest/v1/projects?select=id&limit=1",
                         '-H', f"apikey: {env['NEXT_PUBLIC_SUPABASE_ANON_KEY']}"], timeout=60)
     log(f'пинг демо-базы: HTTP {code}')
+    zapomnit(last_ping=dt.date.today())
 
 
 def peresobrat(env: dict):
@@ -223,8 +253,7 @@ def peresobrat(env: dict):
     log('    ' + ', '.join(f'{t} {schet[t]}' for t in TABLITSY))
     sbrosit_kesh(env, ids)
 
-    STATE.parent.mkdir(parents=True, exist_ok=True)
-    STATE.write_text(json.dumps({'last_full': dt.date.today().isoformat()}), encoding='utf-8')
+    zapomnit(last_full=dt.date.today(), last_ping=dt.date.today())
     log('готово')
 
 
@@ -237,11 +266,15 @@ def main():
 
     if args.ping:
         return ping(env)
-    if args.if_due and STATE.exists():
-        last = dt.date.fromisoformat(json.loads(STATE.read_text())['last_full'])
-        today = dt.date.today()
-        if last >= today - dt.timedelta(days=today.weekday()):  # уже пересобирали с понедельника
-            return ping(env)
+    if args.if_due:
+        st, today = sostoyanie(), dt.date.today()
+        if 'last_full' in st and dt.date.fromisoformat(st['last_full']) >= today - dt.timedelta(days=today.weekday()):
+            # уже пересобирали с понедельника: пинг раз в день, остальные часовые запуски молчат
+            return None if st.get('last_ping') == today.isoformat() else ping(env)
+        prostoy = prostoy_min()
+        if prostoy > PROSTOY_MAX:
+            log(f'пересборка отложена: {prostoy:.0f} мин без клавиатуры и мыши, Мак, видимо, спит; повтор через час')
+            return None
     try:
         peresobrat(env)
     except BaseException as e:
