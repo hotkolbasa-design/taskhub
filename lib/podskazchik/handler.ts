@@ -36,13 +36,15 @@ export async function getBaza(fresh: boolean): Promise<Baza | Response> {
 }
 
 // who.code — код из ссылки (вход по коду) или '' (вход через аккаунт: страница шлёт запросы без h=)
-export async function respond(p: URLSearchParams, baza: Baza, who: { name: string; code: string; id?: string }) {
+// who.tester — админ TaskHub или вход «Тест»: видят скрипт v2, пока в «Настройках» скрипт_v2 = тест
+export async function respond(p: URLSearchParams, baza: Baza, who: { name: string; code: string; id?: string; tester?: boolean }) {
   const lang = p.get('lang') === 'kz' ? 'kz' : 'ru'
 
   const log = p.get('log')
   if (log) {
     try {
-      await writeLog([almaty(), who.name, log.slice(0, 20), (p.get('id') ?? '').slice(0, 40), lang, (p.get('t') ?? '').slice(0, 300)])
+      const ver = p.get('v') === '2' ? ' v2' : ''
+      await writeLog([almaty(), who.name, log.slice(0, 20), (p.get('id') ?? '').slice(0, 40), lang + ver, (p.get('t') ?? '').slice(0, 300)])
     } catch { /* журнал не должен мешать звонку */ }
     return json({ ok: true })
   }
@@ -70,9 +72,12 @@ export async function respond(p: URLSearchParams, baza: Baza, who: { name: strin
   }
 
   const ai = !!(await aiKey().catch(() => null))
-  const { hunters: _hunters, ...data } = baza
+  const { hunters: _hunters, etapy_v2, ...data } = baza
   void _hunters
-  const payload = JSON.stringify({ ...data, hunter: { name: who.name, code: who.code }, ai }).replace(/</g, '\\u003c')
+  const mode = (baza.nastroyki['скрипт_v2'] ?? '').toLowerCase()
+  const v2show = etapy_v2.length > 0 && (mode === 'все' || (mode === 'тест' && !!who.tester))
+  const payload = JSON.stringify({ ...data, etapy_v2: v2show ? etapy_v2 : [], v2show, v2test: mode !== 'все', hunter: { name: who.name, code: who.code }, ai })
+    .replace(/</g, '\\u003c')
   return new Response(PAGE_HTML.replace('/*DATA*/null/*END*/', payload), { status: 200, headers: HTML_HEADERS })
 }
 

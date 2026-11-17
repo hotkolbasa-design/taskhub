@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   if (baza instanceof Response) return baza
   const hunter = baza.hunters.find(h => h.code === code)
   if (!hunter) return message('Ссылка не действует. Откройте подсказчик через TaskHub: раздел «Подсказчик».', 403)
-  return respond(p, baza, hunter)
+  return respond(p, baza, { ...hunter, tester: hunter.name === 'Тест' })
 }
 
 export async function POST(req: Request) {

@@ -6,7 +6,8 @@ import { google } from 'googleapis'
 
 export const SHEET_ID = '16ylUmoP7g8V71bz3I6vN10AKgw1ez07waWjLh1KTYV4'
 
-const LISTS = ['Настройки', 'Этапы', 'Чек-листы', 'Мотивы', 'Ситуации', 'Запреты', 'Передать эксперту', 'Слова KZ', 'Хантеры'] as const
+// «Этапы v2» и «Чек-листы v2» — новая версия скрипта (17.11.2026); показ — ключ «скрипт_v2» в «Настройках»
+const LISTS = ['Настройки', 'Этапы', 'Чек-листы', 'Мотивы', 'Ситуации', 'Запреты', 'Передать эксперту', 'Слова KZ', 'Хантеры', 'Этапы v2', 'Чек-листы v2'] as const
 
 function client() {
   const keyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
@@ -36,6 +37,7 @@ export type Baza = {
   nastroyki: Record<string, string>
   gruppy: string[]
   etapy: unknown[]
+  etapy_v2: unknown[]
   motivy: unknown[]
   kartochki: unknown[]
   zaprety: string[]
@@ -58,14 +60,12 @@ function isoDate(s: string): string {
   return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : s
 }
 
-function parse(v: Record<string, unknown[][] | undefined>): Baza {
-  const nastroyki: Record<string, string> = {}
-  for (const r of rows(v['Настройки'])) if (r['Ключ']) nastroyki[r['Ключ']] = r['Значение']
-  if (nastroyki['акция_до']) nastroyki['акция_до'] = isoDate(nastroyki['акция_до'])
+type Etap = { id: string; nazv: string; vremya: string; cel: string; ton: string; bloki: unknown[]; dopusk: string[]; nelzya: string[]; posle: string }
 
-  const checks = rows(v['Чек-листы'])
-  const etapy: { id: string; nazv: string; vremya: string; cel: string; ton: string; bloki: unknown[]; dopusk: string[]; nelzya: string[]; posle: string }[] = []
-  for (const r of rows(v['Этапы'])) {
+function parseEtapy(etapyRows: Row[], checks: Row[]): Etap[] {
+  const etapy: Etap[] = []
+  for (const r of etapyRows) {
+    if (!r['Этап ID']) continue
     let e = etapy.find(x => x.id === r['Этап ID'])
     if (!e) {
       e = { id: r['Этап ID'], nazv: '', vremya: '', cel: '', ton: '', bloki: [], dopusk: [], nelzya: [], posle: '' }
@@ -80,6 +80,16 @@ function parse(v: Record<string, unknown[][] | undefined>): Baza {
     e.nelzya = c.filter(r => r['Тип'] === 'нельзя').map(r => r['Текст'])
     e.posle = c.filter(r => r['Тип'] === 'после').map(r => r['Текст']).join('\n')
   }
+  return etapy
+}
+
+function parse(v: Record<string, unknown[][] | undefined>): Baza {
+  const nastroyki: Record<string, string> = {}
+  for (const r of rows(v['Настройки'])) if (r['Ключ']) nastroyki[r['Ключ']] = r['Значение']
+  if (nastroyki['акция_до']) nastroyki['акция_до'] = isoDate(nastroyki['акция_до'])
+
+  const etapy = parseEtapy(rows(v['Этапы']), rows(v['Чек-листы']))
+  const etapy_v2 = parseEtapy(rows(v['Этапы v2']), rows(v['Чек-листы v2']))
 
   const motivy = rows(v['Мотивы']).map(r => ({
     id: r['ID'], nazv: r['Мотив'], fakt: r['Факт'], ru: r['Текст RU'], kz: r['Текст KZ'], ogovorka: r['Оговорка'], ton: r['Тон'],
@@ -111,7 +121,7 @@ function parse(v: Record<string, unknown[][] | undefined>): Baza {
   return {
     nastroyki,
     gruppy: (nastroyki['группы'] ?? '').split(';').map(s => s.trim()).filter(Boolean),
-    etapy, motivy, kartochki,
+    etapy, etapy_v2, motivy, kartochki,
     zaprety: rows(v['Запреты']).map(r => r['Текст']),
     peredat,
     slova_kz: rows(v['Слова KZ']).map(r => [r['RU'], r['KZ']]),

@@ -16,7 +16,7 @@ async function whoAmI() {
     .eq('id', user.id)
     .maybeSingle()
   if (!profile || profile.status !== 'active' || !canAccessCrm(profile)) return 'denied' as const
-  return { id: profile.id as string, name: profile.full_name || profile.login || 'без имени', code: '' }
+  return { id: profile.id as string, name: profile.full_name || profile.login || 'без имени', code: '', tester: profile.role === 'admin' }
 }
 
 export async function GET(req: Request) {
