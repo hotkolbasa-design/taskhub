@@ -4,6 +4,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { canAccessCrm } from '@/lib/utils/crm-access'
 import { getBaza, message, respond, respondPost } from '@/lib/podskazchik/handler'
+import { isEditor } from '@/lib/podskazchik/redaktor'
 
 async function whoAmI() {
   const supabase = await createClient()
@@ -16,7 +17,10 @@ async function whoAmI() {
     .eq('id', user.id)
     .maybeSingle()
   if (!profile || profile.status !== 'active' || !canAccessCrm(profile)) return 'denied' as const
-  return { id: profile.id as string, name: profile.full_name || profile.login || 'без имени', code: '', tester: profile.role === 'admin' }
+  return {
+    id: profile.id as string, name: profile.full_name || profile.login || 'без имени', code: '', tester: profile.role === 'admin',
+    editor: await isEditor(profile, user.email),
+  }
 }
 
 export async function GET(req: Request) {

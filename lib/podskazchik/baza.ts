@@ -1,6 +1,7 @@
 // Подсказчик хантера: база скрипта лежит в Google-таблице «Подсказчик хантера — база»
 // (владелец kidsbooster, сервисному аккаунту TaskHub выдан доступ на запись).
-// Тексты правят РОП и Марлен прямо в таблице — страница подхватывает их через пару минут.
+// Тексты правят в таблице или со страницы подсказчика (редакторы, lib/podskazchik/redaktor.ts) — страница
+// подхватывает их через пару минут.
 // Исходники базы и описание листов: ~/Desktop/Globalos/Отдел продаж и маркетинг/Подсказчик хантера/
 import { google } from 'googleapis'
 
@@ -9,7 +10,7 @@ export const SHEET_ID = '16ylUmoP7g8V71bz3I6vN10AKgw1ez07waWjLh1KTYV4'
 // «Этапы v2» и «Чек-листы v2» — новая версия скрипта (17.11.2026); показ — ключ «скрипт_v2» в «Настройках»
 const LISTS = ['Настройки', 'Этапы', 'Чек-листы', 'Мотивы', 'Ситуации', 'Запреты', 'Передать эксперту', 'Слова KZ', 'Хантеры', 'Этапы v2', 'Чек-листы v2'] as const
 
-function client() {
+export function client() {
   const keyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
   if (!keyRaw) throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY not configured')
   const auth = new google.auth.GoogleAuth({
@@ -103,7 +104,7 @@ function parse(v: Record<string, unknown[][] | undefined>): Baza {
       frazy_ru: lines(r['Фразы клиента RU']), frazy_kz: lines(r['Фразы клиента KZ']),
       zachem: r['Что за этим'], vopros_ru: r['Уточнить RU'], vopros_kz: r['Уточнить KZ'],
       otvet_ru: r['Ответ RU'], otvet_kz: r['Ответ KZ'], nazad_ru: r['Вернуть к записи RU'], nazad_kz: r['Вернуть к записи KZ'],
-      povtor: r['Если повторяет'], posle: r['После'], ton: r['Тон'], nelzya: r['Нельзя'], primer: r['Пример звонка'],
+      povtor: r['Если повторяет'], povtor_kz: r['Если повторяет KZ'] ?? '', posle: r['После'], ton: r['Тон'], nelzya: r['Нельзя'], primer: r['Пример звонка'],
       svyaz: r['Связано'].split(/[,;\s]+/).filter(Boolean),
     }))
 

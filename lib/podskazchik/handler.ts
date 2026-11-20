@@ -3,6 +3,7 @@
 import { loadBaza, writeLog, type Baza } from './baza'
 import { addSuggestion, mySuggestions } from './predlozheniya'
 import { aiAnswer, aiKey } from './ai'
+import { applyEdit, EditError, type EditChange } from './redaktor'
 import { PAGE_HTML } from './page'
 
 const HTML_HEADERS = {
@@ -37,7 +38,8 @@ export async function getBaza(fresh: boolean): Promise<Baza | Response> {
 
 // who.code — код из ссылки (вход по коду) или '' (вход через аккаунт: страница шлёт запросы без h=)
 // who.tester — админ TaskHub или вход «Тест»: видят скрипт v2, пока в «Настройках» скрипт_v2 = тест
-export async function respond(p: URLSearchParams, baza: Baza, who: { name: string; code: string; id?: string; tester?: boolean }) {
+// who.editor — может править тексты со страницы (только вход под аккаунтом, см. redaktor.ts)
+export async function respond(p: URLSearchParams, baza: Baza, who: { name: string; code: string; id?: string; tester?: boolean; editor?: boolean }) {
   const lang = p.get('lang') === 'kz' ? 'kz' : 'ru'
 
   const log = p.get('log')
@@ -76,16 +78,31 @@ export async function respond(p: URLSearchParams, baza: Baza, who: { name: strin
   void _hunters
   const mode = (baza.nastroyki['скрипт_v2'] ?? '').toLowerCase()
   const v2show = etapy_v2.length > 0 && (mode === 'все' || (mode === 'тест' && !!who.tester))
-  const payload = JSON.stringify({ ...data, etapy_v2: v2show ? etapy_v2 : [], v2show, v2test: mode !== 'все', hunter: { name: who.name, code: who.code }, ai })
+  const payload = JSON.stringify({ ...data, etapy_v2: v2show ? etapy_v2 : [], v2show, v2test: mode !== 'все', hunter: { name: who.name, code: who.code }, ai, editor: !!who.editor })
     .replace(/</g, '\\u003c')
   return new Response(PAGE_HTML.replace('/*DATA*/null/*END*/', payload), { status: 200, headers: HTML_HEADERS })
 }
 
 // POST {act:'suggest', gde, pole, lang, frag, variant, comment} — предложение правки скрипта
-export async function respondPost(req: Request, who: { name: string; id?: string }) {
+// POST {act:'edit', ref:{list,id,blok?,tip?}, changes:[{field,old,value}], gde, comment} — правка редактора сразу в базу
+export async function respondPost(req: Request, who: { name: string; id?: string; editor?: boolean }) {
   let b: Record<string, unknown>
   try { b = await req.json() } catch { return json({ ok: false, error: 'Не удалось прочитать запрос.' }, 400) }
   const str = (k: string, max: number) => String(b[k] ?? '').trim().slice(0, max)
+  if (b.act === 'edit') {
+    if (!who.editor) return json({ ok: false, error: 'Править скрипт может только редактор.' }, 403)
+    const r = (b.ref ?? {}) as Record<string, unknown>
+    const ref = { list: String(r.list ?? ''), id: String(r.id ?? ''), blok: r.blok == null ? undefined : String(r.blok), tip: r.tip == null ? undefined : String(r.tip) }
+    const changes: EditChange[] = (Array.isArray(b.changes) ? b.changes : []).slice(0, 20).map((c: Record<string, unknown>) => ({
+      field: String(c?.field ?? ''), old: String(c?.old ?? '').slice(0, 8000), value: String(c?.value ?? '').slice(0, 8000),
+    }))
+    try {
+      const res = await applyEdit(ref, changes, who, { gde: str('gde', 200), comment: str('comment', 2000) })
+      return json({ ok: true, ...res })
+    } catch (e) {
+      return json({ ok: false, error: e instanceof EditError ? e.message : 'Не удалось сохранить — попробуйте ещё раз через минуту.' }, e instanceof EditError ? 409 : 502)
+    }
+  }
   if (b.act !== 'suggest') return json({ ok: false, error: 'Неизвестное действие.' }, 400)
   const variant = str('variant', 8000)
   if (!variant) return json({ ok: false, error: 'Напишите, как, по-вашему, лучше сказать.' }, 400)
